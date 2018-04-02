@@ -1,0 +1,2 @@
+class MINLPSolver(object):
+    pass

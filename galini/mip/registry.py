@@ -1,0 +1,8 @@
+"""MIP Solvers registry module."""
+from galini.registry import Registry
+
+
+class MIPSolversRegistry(Registry):
+    """Registry of MIP Solvers."""
+    def group_name(self):
+        return 'galini.mip_solvers'
