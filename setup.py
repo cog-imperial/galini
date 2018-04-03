@@ -13,6 +13,7 @@ setup(
         ],
         'galini.subcommands': [
             'solve=galini.subcommands.solve:SolveCommand',
+            'dot=galini.subcommands.dot:DotCommand',
         ],
         'galini.solvers': [
             'oa=galini.solvers.outer_approximation:OuterApproximationSolver',
