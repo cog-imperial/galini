@@ -1,20 +1,22 @@
-import sys
+# pylint: disable=invalid-name
+"""Arbitrary precision mathematical constants and comparison."""
 import mpmath
 
 
 mpf = mpmath.mpf
 inf = mpf('inf')
-
-# Re-export symbols from mpmath
-_EXPORTED_SYMBOLS = [
-    'pi', 'sin', 'cos', 'sqrt', 'log', 'sin', 'asin', 'cos', 'acos',
-    'tan', 'atan', 'exp']
-
-_module = sys.modules[__name__]
-for sym in _EXPORTED_SYMBOLS:
-    setattr(_module, sym, getattr(mpmath, sym))
-
-
+pi = mpmath.pi
+sin = mpmath.sin
+cos = mpmath.cos
+sqrt = mpmath.sqrt
+log = mpmath.log
+exp = mpmath.exp
+sin = mpmath.sin
+asin = mpmath.asin
+cos = mpmath.cos
+acos = mpmath.acos
+tan = mpmath.tan
+atan = mpmath.atan
 isnan = mpmath.isnan
 
 

@@ -5,7 +5,7 @@ from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
 import galini.dag.expressions as dex
 
 
-def _node_label(vertex):
+def _node_label(vertex: dex.Expression) -> str:
     if isinstance(vertex, (dex.Variable, dex.Constraint, dex.Objective)):
         return vertex.name
     elif isinstance(vertex, dex.Constant):
@@ -30,7 +30,11 @@ def _node_label(vertex):
         dex.AcosExpression: 'acos',
         dex.AtanExpression: 'atan',
     }
-    return cls_label.get(type(vertex), type(vertex))
+    return cls_label.get(
+        type(vertex),
+        str(type(vertex))
+    )
+
 
 def _dag_to_pydot_graph(dag):
     dot = pydot.Dot(rankdir='BT')
