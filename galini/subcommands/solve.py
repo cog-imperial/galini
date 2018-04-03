@@ -1,4 +1,4 @@
-""" GALINI solve subcommand."""
+"""GALINI solve subcommand."""
 import logging
 import sys
 from galini.config import GaliniConfig
