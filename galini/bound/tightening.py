@@ -94,12 +94,12 @@ class BoundsTighteningVisitor(BackwardVisitor):
 
 
 def _sum_child_and_siblings(children):
-    for i in range(len(children) - 1):
+    for i in range(len(children)):
         yield children[i], children[:i] + children[i+1:]
 
 
 def _linear_child_and_siblings(coefficients, children):
-    for i in range(len(children) - 1):
+    for i in range(len(children)):
         child = children[i]
         child_c = coefficients[i]
         other_children = children[:i] + children[i+1:]
