@@ -3,6 +3,11 @@ import pkg_resources
 import toml
 
 
+class ConfigGroupNotFound(Exception):
+    def __init__(self, group_name):
+        self.group_name = group_name
+
+
 class GaliniConfig(object):
     """GALINI Configuration object."""
 
@@ -15,3 +20,12 @@ class GaliniConfig(object):
         else:
             user_config = {}
         self._config = {**default_config, **user_config}
+
+    def get_group(self, name):
+        try:
+            group = self._config[name]
+            if not isinstance(group, dict):
+                raise RuntimeError('not a group')
+            return group
+        except KeyError:
+            raise ConfigGroupNotFound(name)

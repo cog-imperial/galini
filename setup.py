@@ -18,6 +18,9 @@ setup(
         'galini.solvers': [
             'oa=galini.solvers.outer_approximation:OuterApproximationSolver',
         ],
+        'galini.nlp_solvers': [
+            'ipopt=galini.nlp:IpoptNLPSolver'
+        ],
     },
     requires=['pyomo'],
     setup_requires=['pytest-runner'],

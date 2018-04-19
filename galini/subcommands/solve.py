@@ -6,6 +6,7 @@ from galini.subcommands import CliCommand
 from galini.solvers import SolversRegistry
 from galini.mip import MIPSolversRegistry
 from galini.nlp import NLPSolversRegistry
+from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
 
 
 DEFAULT_SOLVER = 'oa'
@@ -24,10 +25,15 @@ class SolveCommand(CliCommand):
                 args.solver, available
             )
             sys.exit(1)
+
         config = GaliniConfig(args.config)
         mip_solver_registry = MIPSolversRegistry()
         nlp_solver_registry = NLPSolversRegistry()
         solver = solver_cls(config, mip_solver_registry, nlp_solver_registry)
+
+        pyomo_model = read_pyomo_model(args.problem)
+        dag = dag_from_pyomo_model(pyomo_model)
+        solver.solve(dag)
 
     def help_message(self):
         return "Solve a MINLP"

@@ -10,7 +10,7 @@ class Registry(metaclass=abc.ABCMeta):
     def __init__(self):
         self.group = self.group_name()
         self._registered = {}
-        for entry_point in pkg_resources.iter_entry_points('galini.solvers'):
+        for entry_point in pkg_resources.iter_entry_points(self.group_name()):
             if entry_point.name in self._registered:
                 logging.error(
                     'Duplicate registered item %s found in %s registry.',
