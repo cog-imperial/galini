@@ -1,4 +1,5 @@
 from galini.ad import ProblemAutodiff
+from galini.solvers import Solver
 from pypopt import IpoptApplication, TNLP, NLPInfo
 import numpy as np
 
@@ -186,8 +187,8 @@ class GaliniTNLP(TNLP):
         print(np.array(x, dtype=np.float64))
 
 
-class IpoptNLPSolver(object):
-    def __init__(self, config):
+class IpoptNLPSolver(Solver):
+    def __init__(self, config, _mip_solver_registry, _nlp_solver_registry):
         self.config = config.get_group('ipopt')
         self.app = IpoptApplication()
         self.app.initialize()

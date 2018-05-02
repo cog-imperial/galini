@@ -17,6 +17,7 @@ setup(
         ],
         'galini.solvers': [
             'oa=galini.solvers.outer_approximation:OuterApproximationSolver',
+            'ipopt=galini.nlp:IpoptNLPSolver',
         ],
         'galini.nlp_solvers': [
             'ipopt=galini.nlp:IpoptNLPSolver'

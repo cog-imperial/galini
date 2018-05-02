@@ -1,11 +1,25 @@
+# Copyright 2018 Francesco Ceccon
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """GALINI solve subcommand."""
+
 import logging
 import sys
 from galini.config import GaliniConfig
 from galini.subcommands import CliCommand
 from galini.solvers import SolversRegistry
-from galini.mip import MIPSolversRegistry
-from galini.nlp import NLPSolversRegistry
+from galini.mip import MIPSolverRegistry
+from galini.nlp import NLPSolverRegistry
 from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
 
 
@@ -27,8 +41,8 @@ class SolveCommand(CliCommand):
             sys.exit(1)
 
         config = GaliniConfig(args.config)
-        mip_solver_registry = MIPSolversRegistry()
-        nlp_solver_registry = NLPSolversRegistry()
+        mip_solver_registry = MIPSolverRegistry()
+        nlp_solver_registry = NLPSolverRegistry()
         solver = solver_cls(config, mip_solver_registry, nlp_solver_registry)
 
         pyomo_model = read_pyomo_model(args.problem)

@@ -14,9 +14,11 @@
 
 # from suspect.monotonicity.monotonicity import Monotonicity
 # from suspect.convexity.convexity import Convexity
+"""Context module."""
 
 
 class SpecialStructurePropagationContext(object):
+    """Context for special structure propagation."""
     def __init__(self, bounds):
         self.bound = bounds
         self.monotonicity = {}
