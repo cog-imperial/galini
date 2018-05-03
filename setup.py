@@ -1,5 +1,17 @@
 from setuptools import setup, find_packages
+from setuptools.extension import Extension
+from Cython.Build import cythonize
 
+extensions = [
+    Extension(
+        'galini.core.dag',
+        sources=['galini/core/dag.pyx'],
+    ),
+    Extension(
+        'galini.core.ad',
+        sources=['galini/core/ad.pyx'],
+    ),
+]
 
 setup(
     name='galini',
@@ -23,7 +35,8 @@ setup(
             'ipopt=galini.nlp:IpoptNLPSolver'
         ],
     },
+    ext_modules=cythonize(extensions, annotate=True),
     requires=['pyomo'],
-    setup_requires=['pytest-runner'],
+    setup_requires=['pytest-runner', 'cython'],
     tests_require=['pytest', 'pytest-cov', 'hypothesis'],
 )

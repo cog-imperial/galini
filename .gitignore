@@ -11,3 +11,6 @@ __pycache__
 htmlcov
 venv
 docs/_build
+*.so
+galini/core/*.c
+galini/core/*.html
