@@ -16,21 +16,24 @@ cdef class Expression:
         # always come after variables (0) and constants(1)
         self.default_depth = 2
 
-    cdef reindex(self, index cutoff):
+    cdef void reindex(self, index cutoff) nogil:
         if self.idx >= cutoff:
             self.idx += 1
 
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         return 0.0
 
-    cdef float_t _d_v(self, index j, float_t[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
         return 0.0
 
-    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
         return 0.0
 
     cpdef index nth_children(self, index i):
-        raise RuntimeError()
+        return self._nth_children(i)
+
+    cdef index _nth_children(self, index i) nogil:
+        return 0
 
 
 cdef class UnaryExpression(Expression):
@@ -40,7 +43,8 @@ cdef class UnaryExpression(Expression):
         self.num_children = 1
         self.children[0] = children[0]
 
-    cdef reindex(self, index cutoff):
+    cdef void reindex(self, index cutoff) nogil:
+        cdef index children_idx
         if self.idx >= cutoff:
             self.idx += 1
 
@@ -48,8 +52,7 @@ cdef class UnaryExpression(Expression):
         if children_idx >= cutoff:
             self.children[0] = children_idx + 1
 
-    cpdef index nth_children(self, index i):
-        assert i == 0
+    cdef index _nth_children(self, index i) nogil:
         return self.children[0]
 
 
@@ -61,7 +64,8 @@ cdef class BinaryExpression(Expression):
         self.children[0] = children[0]
         self.children[1] = children[1]
 
-    cdef reindex(self, index cutoff):
+    cdef void reindex(self, index cutoff) nogil:
+        cdef index children_idx
         if self.idx >= cutoff:
             self.idx += 1
 
@@ -70,8 +74,7 @@ cdef class BinaryExpression(Expression):
             if children_idx >= cutoff:
                 self.children[i] = children_idx + 1
 
-    cpdef index nth_children(self, index i):
-        assert i < 2
+    cdef index _nth_children(self, index i) nogil:
         return self.children[i]
 
 
@@ -91,7 +94,8 @@ cdef class NaryExpression(Expression):
     def __dealloc__(self):
         PyMem_Free(self.children)
 
-    cdef reindex(self, index cutoff):
+    cdef void reindex(self, index cutoff) nogil:
+        cdef index children_idx
         if self.idx >= cutoff:
             self.idx += 1
 
@@ -100,22 +104,21 @@ cdef class NaryExpression(Expression):
             if children_idx >= cutoff:
                 self.children[i] = children_idx + 1
 
-    cpdef index nth_children(self, index i):
-        assert i < self.num_children
+    cdef index _nth_children(self, index i) nogil:
         return self.children[i]
 
 
 cdef class ProductExpression(BinaryExpression):
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         return v[self.children[0]] * v[self.children[1]]
 
-    cdef float_t _d_v(self, index j, float_t[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
         if j == self.children[0]:
             return v[self.children[1]]
         else:
             return v[self.children[0]]
 
-    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
         if j == k:
             return 0.0
         else:
@@ -123,10 +126,10 @@ cdef class ProductExpression(BinaryExpression):
 
 
 cdef class DivisionExpression(BinaryExpression):
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         return v[self.children[0]] / v[self.children[1]]
 
-    cdef float_t _d_v(self, index j, float_t[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
         cdef float_t y
         if j == self.children[0]:
             # d/dx (x/y) := 1/y
@@ -136,28 +139,28 @@ cdef class DivisionExpression(BinaryExpression):
             y = self.children[1]
             return -self.children[0] / (y*y)
 
-    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
         return 0.0
 
 
 
 cdef class SumExpression(NaryExpression):
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         cdef index i
         cdef float_t tot = 0
         for i in range(self.num_children):
             tot += v[self.children[i]]
         return tot
 
-    cdef float_t _d_v(self, index j, float_t[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
         return 1.0
 
-    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
         return 0.0
 
 
 cdef class PowExpression(BinaryExpression):
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         cdef float_t base = v[self.children[0]]
         cdef float_t expo = v[self.children[1]]
         if expo == 0:
@@ -179,17 +182,17 @@ cdef class LinearExpression(NaryExpression):
         cdef float_t[:] coefficients_view = <float_t[:self.num_children]>self.coefficients
         coefficients_view[:] = coefficients
 
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         cdef index i
         cdef float_t tot = self.constant
         for i in range(self.num_children):
             tot += self.coefficients[i] * v[self.children[i]]
         return tot
 
-    cdef float_t _d_v(self, index j, float_t[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
         return self.coefficients[j]
 
-    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
         return 0.0
 
 
@@ -203,7 +206,7 @@ cdef class NegationExpression(UnaryFunctionExpression):
     def __init__(self, object children, str funct_name):
         super().__init__(children, 'negation')
 
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         return -v[self.children[0]]
 
 
@@ -211,15 +214,19 @@ cdef class AbsExpression(UnaryFunctionExpression):
     def __init__(self, object children, str funct_name):
         super().__init__(children, 'abs')
 
-    cdef float_t _eval(self, float_t[:] v):
-        return abs(v[self.children[0]])
+    cdef float_t _eval(self, float_t[:] v) nogil:
+        cdef float_t x = v[self.children[0]]
+        if x >= 0:
+            return x
+        else:
+            return -x
 
 
 cdef class SqrtExpression(UnaryFunctionExpression):
     def __init__(self, object children, str funct_name):
         super().__init__(children, 'sqrt')
 
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         return math.sqrt(v[self.children[0]])
 
 
@@ -227,7 +234,7 @@ cdef class ExpExpression(UnaryFunctionExpression):
     def __init__(self, object children, str funct_name):
         super().__init__(children, 'exp')
 
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         return math.exp(v[self.children[0]])
 
 
@@ -235,7 +242,7 @@ cdef class LogExpression(UnaryFunctionExpression):
     def __init__(self, object children, str funct_name):
         super().__init__(children, 'log')
 
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         return math.log(v[self.children[0]])
 
 
@@ -243,7 +250,7 @@ cdef class SinExpression(UnaryFunctionExpression):
     def __init__(self, object children, str funct_name):
         super().__init__(children, 'sin')
 
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         return math.sin(v[self.children[0]])
 
 
@@ -251,7 +258,7 @@ cdef class CosExpression(UnaryFunctionExpression):
     def __init__(self, object children, str funct_name):
         super().__init__(children, 'cos')
 
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         return math.cos(v[self.children[0]])
 
 
@@ -259,7 +266,7 @@ cdef class TanExpression(UnaryFunctionExpression):
     def __init__(self, object children, str funct_name):
         super().__init__(children, 'tan')
 
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         return math.tan(v[self.children[0]])
 
 
@@ -267,7 +274,7 @@ cdef class AsinExpression(UnaryFunctionExpression):
     def __init__(self, object children, str funct_name):
         super().__init__(children, 'asin')
 
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         return math.asin(v[self.children[0]])
 
 
@@ -275,7 +282,7 @@ cdef class AcosExpression(UnaryFunctionExpression):
     def __init__(self, object children, str funct_name):
         super().__init__(children, 'acos')
 
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         return math.acos(v[self.children[0]])
 
 
@@ -283,7 +290,7 @@ cdef class AtanExpression(UnaryFunctionExpression):
     def __init__(self, object children, str funct_name):
         super().__init__(children, 'atan')
 
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         return math.atan(v[self.children[0]])
 
 
@@ -326,7 +333,7 @@ cdef class Variable(Expression):
     cpdef bint is_real(self):
         return self.domain == Domain.REALS
 
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         return v[self.idx]
 
 
@@ -337,7 +344,7 @@ cdef class Constant(Expression):
         # always come after variables
         self.default_depth = 1
 
-    cdef float_t _eval(self, float_t[:] v):
+    cdef float_t _eval(self, float_t[:] v) nogil:
         return self.value
 
 
@@ -448,7 +455,7 @@ cdef class Problem:
         # compute new expr depth
         depth = expr.default_depth
         for i in range(expr.num_children):
-            children_idx = expr.nth_children(i)
+            children_idx = expr._nth_children(i)
             assert children_idx < self.size
             depth = max(depth, self.depth[children_idx] + 1)
 

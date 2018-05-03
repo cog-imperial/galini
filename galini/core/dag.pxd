@@ -20,11 +20,12 @@ cdef class Expression:
     cdef readonly index idx
     cdef index default_depth
 
-    cdef reindex(self, index cutoff)
-    cdef float_t _eval(self, float_t[:] v)
-    cdef float_t _d_v(self, index j, float_t[:] v)
-    cdef float_t _dd_vv(self, index j, index k, float_t[:] v)
+    cdef void reindex(self, index cutoff) nogil
+    cdef float_t _eval(self, float_t[:] v) nogil
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil
     cpdef index nth_children(self, index i)
+    cdef index _nth_children(self, index i) nogil
 
 
 cdef class UnaryExpression(Expression):

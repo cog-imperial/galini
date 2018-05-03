@@ -86,7 +86,7 @@ cdef class ForwardJacobianEvaluator(_JacobianEvaluator):
             expr = self.vertices[i]
             values[i] = expr._eval(values)
             for j in range(expr.num_children):
-                j_idx = expr.nth_children(j)
+                j_idx = expr._nth_children(j)
                 d_v = expr._d_v(j, values)
                 for k in range(n_x):
                     dot[i, k] += d_v * dot[j_idx, k]
@@ -148,7 +148,7 @@ cdef class ReverseJacobianEvaluator(_JacobianEvaluator):
             for i in range(root_idx, n_x-1, -1):
                 expr = self.vertices[i]
                 for j in range(expr.num_children):
-                    child_idx = expr.nth_children(j)
+                    child_idx = expr._nth_children(j)
                     adj[child_idx] += adj[i] * expr._d_v(j, values)
             jacobian[cons_idx + num_objs, :] = adj[:n_x]
 
@@ -242,7 +242,7 @@ cdef class HessianEvaluator:
         for i in range(n_x, self.size):
             expr = self.vertices[i]
             for c in range(expr.num_children):
-                j = expr.nth_children(c)
+                j = expr._nth_children(c)
                 d_v = expr._d_v(c, values)
                 for k in range(n_x):
                     dot[i, k] += d_v * dot[j, k]
@@ -252,13 +252,13 @@ cdef class HessianEvaluator:
         for i in range(current, n_x-1, -1):
             expr = self.vertices[i]
             for c in range(expr.num_children):
-                j = expr.nth_children(c)
+                j = expr._nth_children(c)
                 d_v = expr._d_v(j, values)
                 adj[j] += adj[i] * d_v
                 for z in range(n_x):
                     adj_dot[j, z] = adj_dot[i, z] * d_v
                 for c2 in range(expr.num_children):
-                    k = expr.nth_children(c2)
+                    k = expr._nth_children(c2)
                     dd_vv = expr._dd_vv(j, k, values)
                     for z in range(n_x):
                         adj_dot[j, z] += adj[i] * dd_vv * dot[k, z]
