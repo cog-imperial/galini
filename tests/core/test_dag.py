@@ -15,7 +15,7 @@ from galini.core import (
 
 @pytest.fixture
 def problem():
-    return Problem()
+    return Problem('test')
 
 def test_problem_creation(problem):
     assert problem.size == 0

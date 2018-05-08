@@ -16,7 +16,7 @@ cpdef enum Sense:
 
 
 cdef class Expression:
-    cdef index num_children
+    cdef readonly index num_children
     cdef readonly index idx
     cdef index default_depth
 
@@ -57,8 +57,8 @@ cdef class PowExpression(BinaryExpression):
 
 
 cdef class LinearExpression(NaryExpression):
-    cdef float_t *coefficients
-    cdef float_t constant
+    cdef float_t *_coefficients
+    cdef readonly float_t constant
 
 
 cdef class UnaryFunctionExpression(UnaryExpression):
@@ -110,25 +110,25 @@ cdef class AtanExpression(UnaryFunctionExpression):
 
 
 cdef class Objective:
-    cdef Sense sense
-    cdef Expression root_expr
+    cdef readonly Sense sense
+    cdef readonly Expression root_expr
 
     cpdef bint is_minimizing(self)
     cpdef bint is_maximizing(self)
 
 
 cdef class Constraint:
-    cdef object lower_bound
-    cdef object upper_bound
-    cdef Expression root_expr
+    cdef readonly object lower_bound
+    cdef readonly object upper_bound
+    cdef readonly Expression root_expr
 
     cpdef bint is_equality(self)
 
 
 cdef class Variable(Expression):
-    cdef Domain domain
-    cdef object lower_bound
-    cdef object upper_bound
+    cdef readonly Domain domain
+    cdef readonly object lower_bound
+    cdef readonly object upper_bound
 
     cpdef bint is_binary(self)
     cpdef bint is_integer(self)
@@ -137,10 +137,11 @@ cdef class Variable(Expression):
 
 
 cdef class Constant(Expression):
-    cdef float_t value
+    cdef readonly float_t value
 
 
 cdef class Problem:
+    cdef readonly str name
     cdef object vertices
     cdef readonly index size
     cdef index *depth
@@ -169,5 +170,5 @@ cdef class Problem:
     cpdef Objective objective(self, str name)
 
     cpdef insert_vertex(self, Expression expr)
-    cdef _insert_vertex(self, Expression expr)
-    cdef _realloc_depth(self)
+    cdef index _insert_vertex(self, Expression expr)
+    cdef void _realloc_depth(self)

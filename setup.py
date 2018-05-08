@@ -2,14 +2,18 @@ from setuptools import setup, find_packages
 from setuptools.extension import Extension
 from Cython.Build import cythonize
 
+import numpy as np
+
 extensions = [
     Extension(
         'galini.core.dag',
         sources=['galini/core/dag.pyx'],
+        include_dirs=[np.get_include()],
     ),
     Extension(
         'galini.core.ad',
         sources=['galini/core/ad.pyx'],
+        include_dirs=[np.get_include()],
     ),
 ]
 

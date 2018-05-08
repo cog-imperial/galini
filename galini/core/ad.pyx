@@ -12,7 +12,7 @@ from galini.core.dag cimport (
 )
 
 cdef class _JacobianEvaluator:
-    cdef np.ndarray values
+    cdef readonly np.ndarray values
     cdef readonly np.ndarray jacobian
     cdef index num_var, num_cons, num_objs, size
     cdef object vertices
@@ -76,9 +76,12 @@ cdef class ForwardJacobianEvaluator(_JacobianEvaluator):
             return
 
         self._init_x(x)
+
         n_x = self.num_var
         cdef float_t[:] values = self.values
         cdef float_t[:, :] dot = self.dot
+
+        dot[:] = 0.0
         for i in range(n_x):
             dot[i, i] = 1.0
 
@@ -108,7 +111,7 @@ cdef class ReverseJacobianEvaluator(_JacobianEvaluator):
         self.adj = np.zeros(problem.size, dtype=float_)
 
     def eval_at_x(self, float_t[:] x, bint new_x):
-        cdef index i, j, root_idx, cons_idx, child_idx
+        cdef index i, j, root_idx
         cdef index num_objs, num_cons, n_x
         cdef Expression expr
         cdef Objective obj
@@ -135,29 +138,35 @@ cdef class ReverseJacobianEvaluator(_JacobianEvaluator):
         for i in range(num_objs):
             obj = self.objectives[i]
             root_idx = obj.root_expr.idx
-            self.adj[i] = 1.0
+            self._eval_jacobian_for_output(root_idx, n_x, values, adj)
+            jacobian[i, :] = adj[:n_x]
 
-        for cons_idx in range(num_cons):
-            cons = self.constraints[cons_idx]
+        for i in range(num_cons):
+            cons = self.constraints[i]
             root_idx = cons.root_expr.idx
+            self._eval_jacobian_for_output(root_idx, n_x, values, adj)
+            jacobian[i + num_objs, :] = adj[:n_x]
 
-            # reset from previous iterations/calls
-            adj[:] = 0.0
+    cdef void _eval_jacobian_for_output(self, index root_idx, index n_x, float_t[:] values, float_t[:] adj):
+        cdef index i, j, child_idx
+        cdef Expression expr
+        adj[:] = 0.0
+        adj[root_idx] = 1.0
+        for i in range(root_idx, n_x-1, -1):
+            expr = self.vertices[i]
+            if adj[i] == 0.0:
+                continue
+            for j in range(expr.num_children):
+                child_idx = expr._nth_children(j)
+                adj[child_idx] += adj[i] * expr._d_v(j, values)
 
-            self.adj[root_idx] = 1.0
-            for i in range(root_idx, n_x-1, -1):
-                expr = self.vertices[i]
-                for j in range(expr.num_children):
-                    child_idx = expr._nth_children(j)
-                    adj[child_idx] += adj[i] * expr._d_v(j, values)
-            jacobian[cons_idx + num_objs, :] = adj[:n_x]
 
-
-def JacobianEvaluator(Problem problem):
-    if problem.num_variables > problem.num_constraints:
-        return ReverseJacobianEvaluator(problem)
-    else:
-        return ForwardJacobianEvaluator(problem)
+class JacobianEvaluator(object):
+    def __new__(cls, Problem problem):
+        if problem.num_variables > problem.num_constraints:
+            return ReverseJacobianEvaluator(problem)
+        else:
+            return ForwardJacobianEvaluator(problem)
 
 
 cdef class HessianEvaluator:

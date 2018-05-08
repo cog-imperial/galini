@@ -1,68 +1,20 @@
+# Copyright 2018 Francesco Ceccon
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """GALINI dot subcommand."""
-import pydot
 from galini.subcommands import CliCommand
 from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
-import galini.dag.expressions as dex
-
-
-def _node_label(vertex: dex.Expression) -> str:
-    if isinstance(vertex, (dex.Variable, dex.Constraint, dex.Objective)):
-        return vertex.name
-    elif isinstance(vertex, dex.Constant):
-        if int(vertex.value) == vertex.value:
-            return '{:.0f}'.format(vertex.value)
-        return '{:.3f}'.format(vertex.value)
-    cls_label = {
-        dex.ProductExpression: '*',
-        dex.DivisionExpression: '/',
-        dex.SumExpression: '+',
-        dex.PowExpression: '^',
-        dex.LinearExpression: 'Σ',
-        dex.NegationExpression: '-',
-        dex.AbsExpression: '|.|',
-        dex.SqrtExpression: '√',
-        dex.ExpExpression: 'exp',
-        dex.LogExpression: 'log',
-        dex.SinExpression: 'sin',
-        dex.CosExpression: 'cos',
-        dex.TanExpression: 'tan',
-        dex.AsinExpression: 'asin',
-        dex.AcosExpression: 'acos',
-        dex.AtanExpression: 'atan',
-    }
-    return cls_label.get(
-        type(vertex),
-        str(type(vertex))
-    )
-
-
-def _dag_to_pydot_graph(dag):
-    dot = pydot.Dot(rankdir='BT')
-    nodes = {}
-    # first add nodes...
-    subrank = pydot.Subgraph(rank='same')
-    old_depth = 0
-    for vertex in dag.vertices:
-        label = _node_label(vertex)
-        node = pydot.Node(id(vertex), label=label)
-        if isinstance(vertex, (dex.Constraint, dex.Objective)):
-            node.set_shape('box')
-        nodes[vertex] = node
-        assert vertex.depth >= old_depth
-        if vertex.depth > old_depth:
-            dot.add_subgraph(subrank)
-            subrank = pydot.Subgraph(rank='same')
-            old_depth = vertex.depth
-        subrank.add_node(node)
-    dot.add_subgraph(subrank)
-    # ... then edges
-    for vertex in dag.vertices:
-        for i, child in enumerate(vertex.children):
-            to = nodes[vertex]
-            from_ = nodes[child]
-            edge = pydot.Edge(from_, to, taillabel=str(i))
-            dot.add_edge(edge)
-    return dot
+from galini.dot import dag_to_pydot_graph
 
 
 class DotCommand(CliCommand):
@@ -71,7 +23,7 @@ class DotCommand(CliCommand):
         assert args.problem
         pyomo_model = read_pyomo_model(args.problem)
         dag = dag_from_pyomo_model(pyomo_model)
-        graph = _dag_to_pydot_graph(dag)
+        graph = dag_to_pydot_graph(dag)
 
         if args.out:
             graph.write(args.out)

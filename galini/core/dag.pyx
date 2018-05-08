@@ -2,6 +2,7 @@
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 cimport libc.math as math
 cimport numpy as np
+from numpy.math cimport INFINITY
 import numpy as np
 
 
@@ -113,10 +114,12 @@ cdef class ProductExpression(BinaryExpression):
         return v[self.children[0]] * v[self.children[1]]
 
     cdef float_t _d_v(self, index j, float_t[:] v) nogil:
-        if j == self.children[0]:
+        if j == 0:
             return v[self.children[1]]
-        else:
+        elif j == 1:
             return v[self.children[0]]
+        return INFINITY
+
 
     cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
         if j == k:
@@ -131,13 +134,15 @@ cdef class DivisionExpression(BinaryExpression):
 
     cdef float_t _d_v(self, index j, float_t[:] v) nogil:
         cdef float_t y
-        if j == self.children[0]:
+        if j == 0:
             # d/dx (x/y) := 1/y
             return 1.0/v[self.children[1]]
-        else:
+        elif j == 1:
             # d/dy (x/y) := -x/y^2
             y = self.children[1]
             return -self.children[0] / (y*y)
+        else:
+            return INFINITY
 
     cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
         return 0.0
@@ -172,25 +177,54 @@ cdef class PowExpression(BinaryExpression):
         else:
             return math.pow(base, expo)
 
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
+        cdef float_t base = v[self.children[0]]
+        cdef float_t expo = v[self.children[1]]
+        if j == 0:
+            # derive over base
+            if expo == 1.0:
+                return 1.0
+            elif expo == 2.0:
+                return 2*base
+                #elif ceilf(expo) == expo:
+                #    return expo * math.pow(base, expo-1)
+            else:
+                return math.pow(base, expo) * (expo / base)
+        elif j == 1:
+            # derive over exponent
+            if base < 1e-8:
+                return -INFINITY
+            return math.pow(base, expo) * math.log(base)
+        else:
+            return INFINITY
+
 
 cdef class LinearExpression(NaryExpression):
     def __init__(self, object children, float_t[:] coefficients, float_t constant):
         super().__init__(children)
 
         self.constant = constant
-        self.coefficients = <float_t *>PyMem_Malloc(self.num_children * sizeof(index))
-        cdef float_t[:] coefficients_view = <float_t[:self.num_children]>self.coefficients
+        self._coefficients = <float_t *>PyMem_Malloc(self.num_children * sizeof(float_t))
+        cdef float_t[:] coefficients_view = <float_t[:self.num_children]>self._coefficients
+        assert self.num_children == len(coefficients)
         coefficients_view[:] = coefficients
+
+    def __dealloc__(self):
+        PyMem_Free(self._coefficients)
+
+    @property
+    def coefficients(self):
+        return <float_t[:self.num_children]>self._coefficients
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         cdef index i
         cdef float_t tot = self.constant
         for i in range(self.num_children):
-            tot += self.coefficients[i] * v[self.children[i]]
+            tot += self._coefficients[i] * v[self.children[i]]
         return tot
 
     cdef float_t _d_v(self, index j, float_t[:] v) nogil:
-        return self.coefficients[j]
+        return self._coefficients[j]
 
     cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
         return 0.0
@@ -203,7 +237,7 @@ cdef class UnaryFunctionExpression(UnaryExpression):
 
 
 cdef class NegationExpression(UnaryFunctionExpression):
-    def __init__(self, object children, str funct_name):
+    def __init__(self, object children):
         super().__init__(children, 'negation')
 
     cdef float_t _eval(self, float_t[:] v) nogil:
@@ -211,7 +245,7 @@ cdef class NegationExpression(UnaryFunctionExpression):
 
 
 cdef class AbsExpression(UnaryFunctionExpression):
-    def __init__(self, object children, str funct_name):
+    def __init__(self, object children):
         super().__init__(children, 'abs')
 
     cdef float_t _eval(self, float_t[:] v) nogil:
@@ -223,7 +257,7 @@ cdef class AbsExpression(UnaryFunctionExpression):
 
 
 cdef class SqrtExpression(UnaryFunctionExpression):
-    def __init__(self, object children, str funct_name):
+    def __init__(self, object children):
         super().__init__(children, 'sqrt')
 
     cdef float_t _eval(self, float_t[:] v) nogil:
@@ -231,7 +265,7 @@ cdef class SqrtExpression(UnaryFunctionExpression):
 
 
 cdef class ExpExpression(UnaryFunctionExpression):
-    def __init__(self, object children, str funct_name):
+    def __init__(self, object children):
         super().__init__(children, 'exp')
 
     cdef float_t _eval(self, float_t[:] v) nogil:
@@ -239,7 +273,7 @@ cdef class ExpExpression(UnaryFunctionExpression):
 
 
 cdef class LogExpression(UnaryFunctionExpression):
-    def __init__(self, object children, str funct_name):
+    def __init__(self, object children):
         super().__init__(children, 'log')
 
     cdef float_t _eval(self, float_t[:] v) nogil:
@@ -247,7 +281,7 @@ cdef class LogExpression(UnaryFunctionExpression):
 
 
 cdef class SinExpression(UnaryFunctionExpression):
-    def __init__(self, object children, str funct_name):
+    def __init__(self, object children):
         super().__init__(children, 'sin')
 
     cdef float_t _eval(self, float_t[:] v) nogil:
@@ -255,7 +289,7 @@ cdef class SinExpression(UnaryFunctionExpression):
 
 
 cdef class CosExpression(UnaryFunctionExpression):
-    def __init__(self, object children, str funct_name):
+    def __init__(self, object children):
         super().__init__(children, 'cos')
 
     cdef float_t _eval(self, float_t[:] v) nogil:
@@ -263,7 +297,7 @@ cdef class CosExpression(UnaryFunctionExpression):
 
 
 cdef class TanExpression(UnaryFunctionExpression):
-    def __init__(self, object children, str funct_name):
+    def __init__(self, object children):
         super().__init__(children, 'tan')
 
     cdef float_t _eval(self, float_t[:] v) nogil:
@@ -271,7 +305,7 @@ cdef class TanExpression(UnaryFunctionExpression):
 
 
 cdef class AsinExpression(UnaryFunctionExpression):
-    def __init__(self, object children, str funct_name):
+    def __init__(self, object children):
         super().__init__(children, 'asin')
 
     cdef float_t _eval(self, float_t[:] v) nogil:
@@ -279,7 +313,7 @@ cdef class AsinExpression(UnaryFunctionExpression):
 
 
 cdef class AcosExpression(UnaryFunctionExpression):
-    def __init__(self, object children, str funct_name):
+    def __init__(self, object children):
         super().__init__(children, 'acos')
 
     cdef float_t _eval(self, float_t[:] v) nogil:
@@ -287,7 +321,7 @@ cdef class AcosExpression(UnaryFunctionExpression):
 
 
 cdef class AtanExpression(UnaryFunctionExpression):
-    def __init__(self, object children, str funct_name):
+    def __init__(self, object children):
         super().__init__(children, 'atan')
 
     cdef float_t _eval(self, float_t[:] v) nogil:
@@ -361,14 +395,17 @@ cdef index _bisect_left(index[:] depths, index target):
     """
     cdef index i
     cdef index n = len(depths)
+    if n == 0:
+        return 0
     for i in range(n):
         if depths[i] > target:
             return i
-    return n - 1
+    return n
 
 
 cdef class Problem:
-    def __init__(self):
+    def __init__(self, str name):
+        self.name = name
         self.vertices = []
         self.size = 0
 
@@ -414,6 +451,10 @@ cdef class Problem:
     cpdef Variable variable(self, str name):
         return self._variables_by_name[name]
 
+    @property
+    def variables(self):
+        return self._variables_by_name
+
     cpdef Constraint add_constraint(self, str name, Expression root_expr, object lower_bound, object upper_bound):
         if name in self._constraints_by_name:
             raise RuntimeError('constraint {} already exists'.format(name))
@@ -426,6 +467,10 @@ cdef class Problem:
 
     cpdef Constraint constraint(self, str name):
         return self._constraints_by_name[name]
+
+    @property
+    def constraints(self):
+        return self._constraints_by_name
 
     cpdef Objective add_objective(self, str name, Expression root_expr, Sense sense):
         if name in self._objectives_by_name:
@@ -440,15 +485,52 @@ cdef class Problem:
     cpdef Objective objective(self, str name):
         return self._objectives_by_name[name]
 
+    @property
+    def objectives(self):
+        return self._objectives_by_name
+
+    def first_child(self, Expression expr):
+        cdef index idx = expr._nth_children(0)
+        return self.vertices[idx]
+
+    def second_child(self, Expression expr):
+        cdef index idx = expr._nth_children(1)
+        return self.vertices[idx]
+
+    def nth_child(self, Expression expr, index i):
+        cdef index idx = expr._nth_children(i)
+        return self.vertices[idx]
+
+    def children(self, Expression expr):
+        cdef index i, idx
+        cdef index n = expr.num_children
+        for i in range(n):
+            idx = expr._nth_children(i)
+            yield self.vertices[idx]
+
+    def sorted_vertices(self):
+        cdef index i
+        for i in range(self.size):
+            yield self.vertices[i]
+
     cpdef insert_vertex(self, Expression expr):
         if isinstance(expr, (Variable, Constraint, Objective)):
             raise RuntimeError('insert variable, constraint, objective')
 
-        self._insert_vertex(expr)
+        return self._insert_vertex(expr)
 
-    cdef _insert_vertex(self, Expression expr):
+    cdef index _insert_vertex(self, Expression expr):
         cdef index i, children_idx, ins_idx
         cdef Expression cur_expr
+
+        # special case for first element
+        if self.size == 0:
+            self.vertices.append(expr)
+            expr.idx = 0
+            self.depth[0] = expr.default_depth
+            self.size = 1
+            return 0
+
         if self.size >= self.depth_size:
             self._realloc_depth()
 
@@ -460,10 +542,11 @@ cdef class Problem:
             depth = max(depth, self.depth[children_idx] + 1)
 
         # insert new node in vertices
-        ins_idx = _bisect_left(<index[:self.depth_size]>self.depth, depth)
+        ins_idx = _bisect_left(<index[:self.size]>self.depth, depth)
 
         self.vertices.insert(ins_idx, expr)
         self.size += 1
+
         # shift depths right by 1
         for i in range(self.depth_size, ins_idx - 1, -1):
             self.depth[i+1] = self.depth[i]
@@ -473,8 +556,9 @@ cdef class Problem:
             cur_expr = self.vertices[i]
             cur_expr.reindex(ins_idx)
         expr.idx = ins_idx
+        return ins_idx
 
-    cdef _realloc_depth(self):
+    cdef void _realloc_depth(self):
         cdef index new_size = 2 * self.depth_size
         cdef index *new_depth = <index *>PyMem_Realloc(self.depth, new_size * sizeof(index))
         if not new_depth:

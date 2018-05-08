@@ -1,8 +1,10 @@
+# pylint: skip-file
+import numpy as np
 import pytest
 import pyomo.environ as aml
-from galini.dag import ProblemDag
+import galini.core as core
 import galini.dag.expressions as dex
-from galini.pyomo.convert import ComponentFactory, dag_from_pyomo_model
+from galini.pyomo.convert import _ComponentFactory, dag_from_pyomo_model
 from galini.pyomo.util import model_variables, model_constraints
 from galini.math.arbitrary_precision import inf
 
@@ -13,15 +15,14 @@ class TestConvertVariable(object):
         # 10 continuous variables in [-inf, inf]
         m.x = aml.Var(range(10))
 
-        dag = ProblemDag()
-        factory = ComponentFactory(dag)
+        dag = core.Problem('test')
+        factory = _ComponentFactory(dag)
         count = 0
         for omo_var in model_variables(m):
-            new_var = factory.variable(omo_var)
-            assert new_var.name.startswith('x')
+            new_var = factory.add_variable(omo_var)
             assert new_var.lower_bound is None
             assert new_var.upper_bound is None
-            assert new_var.domain == dex.Domain.REALS
+            assert new_var.domain == core.Domain.REALS
             count += 1
         assert count == 10
 
@@ -30,15 +31,14 @@ class TestConvertVariable(object):
         # 5 integer variables in [-10, 5]
         m.y = aml.Var(range(5), bounds=(-10, 5), domain=aml.Integers)
 
-        dag = ProblemDag()
-        factory = ComponentFactory(dag)
+        dag = core.Problem('test')
+        factory = _ComponentFactory(dag)
         count = 0
         for omo_var in model_variables(m):
-            new_var = factory.variable(omo_var)
-            assert new_var.name.startswith('y')
+            new_var = factory.add_variable(omo_var)
             assert new_var.lower_bound == -10
             assert new_var.upper_bound == 5
-            assert new_var.domain == dex.Domain.INTEGERS
+            assert new_var.domain == core.Domain.INTEGERS
             count += 1
         assert count == 5
 
@@ -47,15 +47,14 @@ class TestConvertVariable(object):
         # 10 binary variables
         m.b = aml.Var(range(10), domain=aml.Binary)
 
-        dag = ProblemDag()
-        factory = ComponentFactory(dag)
+        dag = core.Problem('test')
+        factory = _ComponentFactory(dag)
         count = 0
         for omo_var in model_variables(m):
-            new_var = factory.variable(omo_var)
-            assert new_var.name.startswith('b')
+            new_var = factory.add_variable(omo_var)
             assert new_var.lower_bound == 0
             assert new_var.upper_bound == 1
-            assert new_var.domain == dex.Domain.BINARY
+            assert new_var.domain == core.Domain.BINARY
             count += 1
         assert count == 10
 
@@ -74,12 +73,12 @@ class TestConvertExpression(object):
         for constraint in dag.constraints.values():
             assert constraint.lower_bound == 0.0
             assert constraint.upper_bound == inf
-            assert len(constraint.children) == 1
-            root = constraint.children[0]
-            assert isinstance(root, dex.LinearExpression)
-            assert len(root.children) == 1
-            assert root.constant_term == 2.0
-            assert isinstance(root.children[0], dex.Variable)
+            root = constraint.root_expr
+            assert isinstance(root, core.LinearExpression)
+            assert root.num_children == 1
+            assert root.constant == 2.0
+            v = dag.first_child(root)
+            assert isinstance(v, core.Variable)
 
     def test_nested_expressions(self):
         m = aml.ConcreteModel()
@@ -95,17 +94,17 @@ class TestConvertExpression(object):
         for constraint in dag.constraints.values():
             assert constraint.lower_bound == -inf
             assert constraint.upper_bound == 100
-            assert len(constraint.children) == 1
-            root = constraint.children[0]
-            assert isinstance(root, dex.DivisionExpression)
-            num, den = root.children
-            assert isinstance(num, dex.SinExpression)
-            assert len(num.children) == 1
-            num_inner = num.children[0]
-            assert isinstance(num_inner, dex.LinearExpression)
-            assert num_inner.coefficients == [2.0, -1.0]
-            assert isinstance(den, dex.LinearExpression)
-            assert den.constant_term == 1.0
+            root = constraint.root_expr
+            assert isinstance(root, core.DivisionExpression)
+            num = dag.first_child(root)
+            den = dag.second_child(root)
+            assert isinstance(num, core.SinExpression)
+            assert num.num_children == 1
+            num_inner = dag.first_child(num)
+            assert isinstance(num_inner, core.LinearExpression)
+            assert np.array_equal(np.array(num_inner.coefficients), np.array([2.0, -1.0]))
+            assert isinstance(den, core.LinearExpression)
+            assert den.constant == 1.0
 
     def test_product(self):
         m = aml.ConcreteModel()
@@ -118,14 +117,14 @@ class TestConvertExpression(object):
 
         assert len(dag.constraints) == 9
         for constraint in dag.constraints.values():
-            root = constraint.children[0]
-            assert isinstance(root, dex.ProductExpression)
-            assert len(root.children) == 2
-            linear = root.children[0]
-            var = root.children[1]
-            assert isinstance(var, dex.Variable)
-            assert isinstance(linear, dex.LinearExpression)
-            assert linear.coefficients == [6.0]
+            root = constraint.root_expr
+            assert isinstance(root, core.ProductExpression)
+            assert root.num_children == 2
+            linear = dag.first_child(root)
+            var = dag.second_child(root)
+            assert isinstance(var, core.Variable)
+            assert isinstance(linear, core.LinearExpression)
+            assert np.array_equal(linear.coefficients, [6.0])
 
     def test_sum(self):
         m = aml.ConcreteModel()
@@ -138,10 +137,10 @@ class TestConvertExpression(object):
 
         assert len(dag.constraints) == 8
         for constraint in dag.constraints.values():
-            root = constraint.children[0]
-            assert isinstance(root, dex.SumExpression)
-            for c in root.children:
-                assert isinstance(c, dex.ProductExpression)
+            root = constraint.root_expr
+            assert isinstance(root, core.SumExpression)
+            for c in dag.children(root):
+                assert isinstance(c, core.ProductExpression)
 
     def test_negation(self):
         m = aml.ConcreteModel()
@@ -153,8 +152,8 @@ class TestConvertExpression(object):
         dag = dag_from_pyomo_model(m)
 
         constraint = dag.constraints['c']
-        root = constraint.children[0]
-        assert isinstance(root, dex.NegationExpression)
+        root = constraint.root_expr
+        assert isinstance(root, core.NegationExpression)
 
     def test_abs(self):
         m = aml.ConcreteModel()
@@ -166,8 +165,8 @@ class TestConvertExpression(object):
         dag = dag_from_pyomo_model(m)
 
         constraint = dag.constraints['c']
-        root = constraint.children[0]
-        assert isinstance(root, dex.AbsExpression)
+        root = constraint.root_expr
+        assert isinstance(root, core.AbsExpression)
 
     def test_pow(self):
         m = aml.ConcreteModel()
@@ -180,19 +179,19 @@ class TestConvertExpression(object):
         dag = dag_from_pyomo_model(m)
 
         c0 = dag.constraints['c0']
-        root_c0 = c0.children[0]
-        assert isinstance(root_c0, dex.PowExpression)
-        assert len(root_c0.children) == 2
-        assert isinstance(root_c0.children[0], dex.CosExpression)
-        assert isinstance(root_c0.children[1], dex.Constant)
-        assert root_c0.children[1].value == 2.0
+        root_c0 = c0.root_expr
+        assert isinstance(root_c0, core.PowExpression)
+        assert root_c0.num_children == 2
+        assert isinstance(dag.first_child(root_c0), core.CosExpression)
+        assert isinstance(dag.second_child(root_c0), core.Constant)
+        assert dag.second_child(root_c0).value == 2.0
 
         c1 = dag.constraints['c1']
-        root_c1 = c1.children[0]
-        assert isinstance(root_c1, dex.PowExpression)
-        assert len(root_c1.children) == 2
-        assert isinstance(root_c1.children[0], dex.Constant)
-        assert isinstance(root_c1.children[1], dex.SinExpression)
+        root_c1 = c1.root_expr
+        assert isinstance(root_c1, core.PowExpression)
+        assert root_c1.num_children == 2
+        assert isinstance(dag.first_child(root_c1), core.Constant)
+        assert isinstance(dag.second_child(root_c1), core.SinExpression)
 
 
 class TestConvertObjective(object):
@@ -205,8 +204,8 @@ class TestConvertObjective(object):
         dag = dag_from_pyomo_model(m)
         assert len(dag.objectives) == 1
         obj = dag.objectives['obj']
-        assert isinstance(obj.children[0], dex.LinearExpression)
-        assert obj.sense == dex.Sense.MINIMIZE
+        assert isinstance(obj.root_expr, core.LinearExpression)
+        assert obj.sense == core.Sense.MINIMIZE
 
     def test_max(self):
         m = aml.ConcreteModel()
@@ -217,5 +216,5 @@ class TestConvertObjective(object):
         dag = dag_from_pyomo_model(m)
         assert len(dag.objectives) == 1
         obj = dag.objectives['obj']
-        assert isinstance(obj.children[0], dex.LinearExpression)
-        assert obj.sense == dex.Sense.MAXIMIZE
+        assert isinstance(obj.root_expr, core.LinearExpression)
+        assert obj.sense == core.Sense.MAXIMIZE

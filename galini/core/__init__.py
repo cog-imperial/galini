@@ -14,24 +14,53 @@
 """Galini Core module."""
 
 __all__ = [
-    'Domain', 'Problem', 'Variable', 'Constant', 'ProductExpression', 'Constraint',
-    'DivisionExpression', 'SumExpression', 'PowExpression', 'LinearExpression',
-    'JacobianEvaluator', 'HessianEvaluator',
+    'float_', 'Domain', 'Sense', 'Problem', 'Variable', 'Constant', 'Constraint', 'Objective',
+    'Expression', 'UnaryExpression', 'BinaryExpression', 'NaryExpression',
+    'ProductExpression', 'DivisionExpression', 'SumExpression', 'PowExpression',
+    'LinearExpression', 'UnaryFunctionExpression', 'NegationExpression', 'AbsExpression',
+    'SqrtExpression', 'ExpExpression', 'LogExpression', 'SinExpression', 'CosExpression',
+    'TanExpression', 'AsinExpression', 'AcosExpression', 'AtanExpression',
+    'JacobianEvaluator', 'ForwardJacobianEvaluator', 'ReverseJacobianEvaluator',
+    'HessianEvaluator',
 ]
 
 
 # pylint: disable=no-name-in-module
 from galini.core.dag import (
+    float_,
     Domain,
+    Sense,
     Problem,
     Variable,
     Constant,
     Constraint,
+    Objective,
+    Expression,
+    UnaryExpression,
+    BinaryExpression,
+    NaryExpression,
     ProductExpression,
     DivisionExpression,
     SumExpression,
     PowExpression,
     LinearExpression,
+    UnaryFunctionExpression,
+    NegationExpression,
+    AbsExpression,
+    SqrtExpression,
+    ExpExpression,
+    LogExpression,
+    SinExpression,
+    CosExpression,
+    TanExpression,
+    AsinExpression,
+    AcosExpression,
+    AtanExpression,
 )
 
-from galini.core.ad import JacobianEvaluator, HessianEvaluator
+from galini.core.ad import (
+    JacobianEvaluator,
+    ForwardJacobianEvaluator,
+    ReverseJacobianEvaluator,
+    HessianEvaluator,
+)
