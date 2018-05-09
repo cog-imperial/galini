@@ -129,10 +129,13 @@ cdef class Variable(Expression):
     cdef readonly Domain domain
     cdef readonly object lower_bound
     cdef readonly object upper_bound
+    cdef readonly float_t starting_point
+    cdef readonly bint has_starting_point
 
     cpdef bint is_binary(self)
     cpdef bint is_integer(self)
     cpdef bint is_real(self)
+    cpdef void set_starting_point(self, float_t point)
 
 
 

@@ -267,6 +267,8 @@ cdef class NegationExpression(UnaryFunctionExpression):
     cdef float_t _eval(self, float_t[:] v) nogil:
         return -v[self.children[0]]
 
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
+        return -1.0
 
 cdef class AbsExpression(UnaryFunctionExpression):
     def __init__(self, object children):
@@ -278,6 +280,13 @@ cdef class AbsExpression(UnaryFunctionExpression):
             return x
         else:
             return -x
+
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
+        cdef float_t x = v[self.children[0]]
+        if x >= 0:
+            return 1.0
+        else:
+            return -1.0
 
 
 cdef class SqrtExpression(UnaryFunctionExpression):
@@ -388,6 +397,12 @@ cdef class Variable(Expression):
         self.upper_bound = upper_bound
         self.domain = domain
         self.default_depth = 0
+        self.has_starting_point = 0
+        self.starting_point = 0.0
+
+    cpdef void set_starting_point(self, float_t point):
+        self.starting_point = point
+        self.has_starting_point = 1
 
     cpdef bint is_binary(self):
         return self.domain == Domain.BINARY

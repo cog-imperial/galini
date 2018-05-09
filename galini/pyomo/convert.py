@@ -71,6 +71,8 @@ class _ComponentFactory(object):
             return comp
         domain = _convert_domain(omo_var.domain)
         new_var = self.dag.add_variable(omo_var.name, omo_var.lb, omo_var.ub, domain)
+        if omo_var.value:
+            new_var.set_starting_point(omo_var.value)
         self._components[omo_var] = new_var
         return new_var
 

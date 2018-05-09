@@ -28,7 +28,8 @@ class GaliniTNLP(TNLP):
 
         objectives = list(problem.objectives.values())
         assert len(objectives) == 1
-        self.objective_idx = objectives[0].root_expr.idx
+        objective = objectives[0]
+        self.objective_idx = objective.root_expr.idx
 
         self.constraints_idx = np.zeros(self.m, dtype=np.int32)
         for i, constraint in enumerate(problem.constraints.values()):
@@ -47,8 +48,8 @@ class GaliniTNLP(TNLP):
         )
 
     def fill_bounds_info(self, x_l, x_u, g_l, g_u):
-        assert x_l.shape[0] == x_u.shape[0] == self.n
-        assert g_l.shape[0] == g_u.shape[0] == self.m
+        # assert x_l.shape[0] == x_u.shape[0] == self.n
+        # assert g_l.shape[0] == g_u.shape[0] == self.m
 
         # TODO: use correct infinity value
         for i, v in enumerate(self._problem.variables.values()):
@@ -64,9 +65,12 @@ class GaliniTNLP(TNLP):
     def fill_starting_point(self, init_x, x, init_z, z_l, z_u, init_lambda, lambda_):
         # TODO: real starting point
         for i, v in enumerate(self._problem.variables.values()):
-            l = v.lower_bound if v.lower_bound is not None else -2e19
-            u = v.upper_bound if v.upper_bound is not None else 2e19
-            x[i] = max(l, min(u, 0))
+            if v.has_starting_point:
+                x[i] = v.starting_point
+            else:
+                l = v.lower_bound if v.lower_bound is not None else -2e19
+                u = v.upper_bound if v.upper_bound is not None else 2e19
+                x[i] = max(l, min(u, 0))
         return True
 
     def fill_jacobian_g_structure(self, row, col):
