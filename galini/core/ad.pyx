@@ -170,8 +170,8 @@ class JacobianEvaluator(object):
 
 
 cdef class HessianEvaluator:
-    cdef readonly np.ndarray jacobian, hessian
-    cdef np.ndarray values, dot, adj, adj_dot
+    cdef readonly np.ndarray values, jacobian, hessian
+    cdef np.ndarray dot, adj, adj_dot
     cdef index num_var, num_cons, num_objs, size
     cdef np.ndarray output_idx
     cdef object vertices
@@ -239,7 +239,6 @@ cdef class HessianEvaluator:
             expr = self.vertices[i]
             values[i] = expr._eval(values)
 
-
         # forward iteration, compute tangents
         for i in range(n_x, self.size):
             expr = self.vertices[i]
@@ -297,6 +296,7 @@ cdef class HessianEvaluator:
         if n_x != self.num_var:
             raise RuntimeError('input size mismatch: {} expected {}'.format(n_x, self.num_var))
 
+        dot[:] = 0.0
         for i in range(n_x):
             values[i] = x[i]
             dot[i, i] = 1.0

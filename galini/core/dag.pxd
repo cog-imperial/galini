@@ -147,9 +147,9 @@ cdef class Problem:
     cdef index *depth
     cdef index depth_size
 
-    cdef index num_variables
-    cdef index num_constraints
-    cdef index num_objectives
+    cdef readonly index num_variables
+    cdef readonly index num_constraints
+    cdef readonly index num_objectives
 
     cdef object _constraints
     cdef object _objectives

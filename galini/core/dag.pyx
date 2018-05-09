@@ -2,12 +2,12 @@
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 cimport libc.math as math
 cimport numpy as np
-from numpy.math cimport INFINITY
 import numpy as np
 
 
 float_ = np.float64
 index_ = np.uint32
+cdef float_t INFINITY = 2e19
 
 
 cdef class Expression:
@@ -198,6 +198,30 @@ cdef class PowExpression(BinaryExpression):
         else:
             return INFINITY
 
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
+        cdef float_t a, l, b, c
+        cdef float_t base = v[self.children[0]]
+        cdef float_t expo = v[self.children[1]]
+        if j != k:
+            # derivative^2 over base,expo
+            a = math.pow(base, expo)
+            l = math.log(base)
+            b = expo / base
+            c = a / base
+            return a*l*b + c
+        else:  # j == k
+            if k == 0:
+                # derivative^2 over base^2
+                a = math.pow(base, expo)
+                b = expo / base
+                c = expo / (base*base)
+                return a*(b*b - c)
+            else:
+                # derivative^2 over expo^2
+                a = math.pow(base, expo)
+                l = math.log(base)
+                return a * l * l
+
 
 cdef class LinearExpression(NaryExpression):
     def __init__(self, object children, float_t[:] coefficients, float_t constant):
@@ -262,6 +286,13 @@ cdef class SqrtExpression(UnaryFunctionExpression):
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.sqrt(v[self.children[0]])
+
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
+        return 1.0 / (2.0 * math.sqrt(v[self.children[0]]))
+
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
+        cdef float_t s = math.sqrt(v[self.children[0]])
+        return -1.0/(4.0 * math.pow(s, 3))
 
 
 cdef class ExpExpression(UnaryFunctionExpression):
@@ -566,3 +597,4 @@ cdef class Problem:
         if not new_depth:
             raise MemoryError()
         self.depth = new_depth
+        self.depth_size = new_size
