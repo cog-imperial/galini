@@ -521,7 +521,9 @@ cdef class Problem:
 
     cdef index _insert_vertex(self, Expression expr):
         cdef index i, children_idx, ins_idx
+        cdef index depth
         cdef Expression cur_expr
+        cdef index[:] depth_arr
 
         # special case for first element
         if self.size == 0:
@@ -534,23 +536,24 @@ cdef class Problem:
         if self.size >= self.depth_size:
             self._realloc_depth()
 
+        depth_arr = <index[:self.depth_size]>self.depth
         # compute new expr depth
         depth = expr.default_depth
         for i in range(expr.num_children):
             children_idx = expr._nth_children(i)
             assert children_idx < self.size
-            depth = max(depth, self.depth[children_idx] + 1)
+            depth = max(depth, depth_arr[children_idx] + 1)
 
         # insert new node in vertices
-        ins_idx = _bisect_left(<index[:self.size]>self.depth, depth)
+        ins_idx = _bisect_left(depth_arr, depth)
 
         self.vertices.insert(ins_idx, expr)
         self.size += 1
 
         # shift depths right by 1
         for i in range(self.depth_size, ins_idx - 1, -1):
-            self.depth[i+1] = self.depth[i]
-        self.depth[ins_idx] = depth
+            depth_arr[i+1] = depth_arr[i]
+        depth_arr[ins_idx] = depth
 
         for i in range(self.size):
             cur_expr = self.vertices[i]

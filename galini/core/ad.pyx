@@ -193,25 +193,39 @@ cdef class HessianEvaluator:
         self.adj_dot = np.zeros((problem.size, self.num_var), dtype=float_)
 
         self.jacobian = np.zeros((self.num_cons + self.num_objs, self.num_var), dtype=float_)
-        self.hessian = np.zeros((self.num_cons, self.num_var, self.num_var), dtype=float_)
+        self.hessian = np.zeros((self.num_cons + self.num_objs, self.num_var, self.num_var), dtype=float_)
 
         # precompute indexes of output nodes (objectives and constraints)
         self.output_idx = np.zeros(self.num_cons + self.num_objs, dtype=index_)
         for i in range(self.num_objs):
             obj = problem._objectives[i]
             self.output_idx[i] = obj.root_expr.idx
+
         for i in range(self.num_cons):
             cons = problem._constraints[i]
             self.output_idx[self.num_objs+i] = cons.root_expr.idx
 
-    def eval_at_x(self, float_t[:] x, bint new_x):
+    def eval_at_x(self, float_t[:] x, new_x=True):
+        cdef bint new_x_
+        if new_x:
+            new_x_ = 1
+        else:
+            new_x_ = 0
+        return self._eval_at_x(x, new_x_)
+
+    cdef void _eval_at_x(self, float_t[:] x, bint new_x):
         cdef index i, current, n_x
         cdef Expression expr
+        cdef float_t d_v
         cdef float_t[:] values = self.values
         cdef float_t[:] adj = self.adj
+        cdef float_t[:, :] dot = self.dot
         cdef float_t[:, :] adj_dot = self.adj_dot
         cdef float_t[:, :] jacobian = self.jacobian
         cdef float_t[:, :, :] hessian = self.hessian
+
+        cdef index num_cons = self.num_cons
+        cdef index num_objs = self.num_objs
 
         if not new_x:
             return
@@ -224,6 +238,16 @@ cdef class HessianEvaluator:
         for i in range(n_x, self.size):
             expr = self.vertices[i]
             values[i] = expr._eval(values)
+
+
+        # forward iteration, compute tangents
+        for i in range(n_x, self.size):
+            expr = self.vertices[i]
+            for c in range(expr.num_children):
+                j = expr._nth_children(c)
+                d_v = expr._d_v(c, values)
+                for k in range(n_x):
+                    dot[i, k] += d_v * dot[j, k]
 
         for i in range(self.num_cons + self.num_objs):
             current = self.output_idx[i]
@@ -243,18 +267,8 @@ cdef class HessianEvaluator:
         n_x = self.num_var
 
         # reset from previous iterations/calls
-        dot[n_x:, :] = 0.0
         adj[:] = 0.0
         adj_dot[:, :] = 0.0
-
-        # forward iteration, compute tangents
-        for i in range(n_x, self.size):
-            expr = self.vertices[i]
-            for c in range(expr.num_children):
-                j = expr._nth_children(c)
-                d_v = expr._d_v(c, values)
-                for k in range(n_x):
-                    dot[i, k] += d_v * dot[j, k]
 
         adj[current] = 1.0
 
@@ -262,13 +276,15 @@ cdef class HessianEvaluator:
             expr = self.vertices[i]
             for c in range(expr.num_children):
                 j = expr._nth_children(c)
-                d_v = expr._d_v(j, values)
+                d_v = expr._d_v(c, values)
                 adj[j] += adj[i] * d_v
+
                 for z in range(n_x):
-                    adj_dot[j, z] = adj_dot[i, z] * d_v
+                    adj_dot[j, z] += adj_dot[i, z] * d_v
+
                 for c2 in range(expr.num_children):
                     k = expr._nth_children(c2)
-                    dd_vv = expr._dd_vv(j, k, values)
+                    dd_vv = expr._dd_vv(c, c2, values)
                     for z in range(n_x):
                         adj_dot[j, z] += adj[i] * dd_vv * dot[k, z]
 
