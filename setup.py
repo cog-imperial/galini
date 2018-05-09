@@ -1,8 +1,31 @@
+# Copyright 2018 Francesco Ceccon
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# pylint: skip-file
+from pathlib import Path
 from setuptools import setup, find_packages
 from setuptools.extension import Extension
 from Cython.Build import cythonize
 
 import numpy as np
+
+project_root = Path(__file__).resolve().parent
+
+about = {}
+version_path = project_root / 'galini' / '__version__.py'
+with version_path.open() as f:
+    exec(f.read(), about)
 
 extensions = [
     Extension(
@@ -19,9 +42,11 @@ extensions = [
 
 setup(
     name='galini',
-    description='',
-    author='Francesco Ceccon',
-    author_email='francesco.ceccon14@imperial.ac.uk',
+    description=about['__description__'],
+    author=about['__author__'],
+    author_email=about['__author_email__'],
+    licens=about['__license__'],
+    version=about['__version__'],
     packages=find_packages(exclude=['tests']),
     entry_points={
         'console_scripts': [
