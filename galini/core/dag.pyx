@@ -382,7 +382,7 @@ cdef class Constant(Expression):
         return self.value
 
 
-cdef index _bisect_left(index[:] depths, index target):
+cdef index _bisect_left(index[:] depths, index n, index target):
     """Return insertion index for target depth.
 
     Returns index i such that
@@ -394,7 +394,6 @@ cdef index _bisect_left(index[:] depths, index target):
         min(depth[j] for j in j > i) > depth
     """
     cdef index i
-    cdef index n = len(depths)
     if n == 0:
         return 0
     for i in range(n):
@@ -545,7 +544,7 @@ cdef class Problem:
             depth = max(depth, depth_arr[children_idx] + 1)
 
         # insert new node in vertices
-        ins_idx = _bisect_left(depth_arr, depth)
+        ins_idx = _bisect_left(depth_arr, self.size, depth)
 
         self.vertices.insert(ins_idx, expr)
         self.size += 1
