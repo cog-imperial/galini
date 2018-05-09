@@ -146,13 +146,22 @@ class IpoptNLPSolver(Solver):
         self.config = config.get_group('ipopt')
         self.app = IpoptApplication()
         self.app.initialize()
+        self._apply_config()
 
     def solve(self, problem, **kwargs):
         if problem.num_objectives != 1:
             raise RuntimeError('IpoptNLPSolver expects problems with 1 objective function.')
         tnlp = GaliniTNLP(problem)
-        # self.app.journalist().delete_all_journals()
-        self.app.options().set_string_value('derivative_test', 'second-order')
-        # self.app.options().set_numeric_value('bound_relax_factor', 0.0)
-        # self.app.options().set_numeric_value('point_perturbation_factor', 0.0)
         self.app.optimize_tnlp(tnlp)
+
+    def _apply_config(self):
+        options = self.app.options()
+        for key, value in self.config.items():
+            if isinstance(value, str):
+                options.set_string_value(key, value)
+            elif isinstance(value, int):
+                options.set_integer_value(key, value)
+            elif isinstance(value, float):
+                options.set_numeric_value(key, value)
+            else:
+                raise RuntimeError('Invalid option type for {}'.format(key))
