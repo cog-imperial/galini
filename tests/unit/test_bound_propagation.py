@@ -3,7 +3,7 @@ from hypothesis import given, assume
 from galini.bound.propagation import BoundsPropagationVisitor
 import galini.dag.expressions as dex
 from galini.bound import ArbitraryPrecisionBound as Bound
-from tests.conftest import (
+from tests.unit.conftest import (
     PlaceholderExpression,
     bound_description_to_bound,
     coefficients,

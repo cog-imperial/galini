@@ -1,5 +1,5 @@
 import pytest
-from tests.conftest import PlaceholderExpression
+from tests.unit.conftest import PlaceholderExpression
 from galini.dag.dag import VerticesList
 from hypothesis import given, assume
 import hypothesis.strategies as st

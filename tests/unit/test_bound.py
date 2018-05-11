@@ -5,7 +5,7 @@ from galini.bound import ArbitraryPrecisionBound
 from galini.math.arbitrary_precision import (
     inf, almostlte, almostgte, almosteq, pi, log, exp, cos
 )
-from tests.conftest import reals
+from tests.unit.conftest import reals
 
 
 @st.composite

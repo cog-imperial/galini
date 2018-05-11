@@ -2,7 +2,7 @@ import pytest
 import pyomo.environ as aml
 from galini.pyomo.expr_dict import *
 from galini.float_hash import RoundFloatHasher
-from tests.fixtures import model
+from tests.unit.fixtures import model
 
 
 def test_expr_hash_linear_expr(model):
