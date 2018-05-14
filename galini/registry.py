@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Registry module."""
-
+from typing import Any, Dict, Iterable
 import abc
 import logging
 import sys
@@ -21,9 +21,9 @@ import pkg_resources
 
 class Registry(metaclass=abc.ABCMeta):
     """Registry for pkg_resources entry points."""
-    def __init__(self):
+    def __init__(self) -> None:
         self.group = self.group_name()
-        self._registered = {}
+        self._registered: Dict[str, Any] = {}
         for entry_point in pkg_resources.iter_entry_points(self.group_name()):
             if entry_point.name in self._registered:
                 logging.error(
@@ -34,15 +34,15 @@ class Registry(metaclass=abc.ABCMeta):
             obj_cls = entry_point.load()
             self._registered[entry_point.name] = obj_cls
 
-    def get(self, name, default=None):
+    def get(self, name: str, default: Any = None) -> Any:
         """Return entry point associated with name."""
         return self._registered.get(name, default)
 
-    def keys(self):
+    def keys(self) -> Iterable[str]:
         """Return the registered objects names."""
         return self._registered.keys()
 
     @abc.abstractmethod
-    def group_name(self):
+    def group_name(self) -> str:
         """Return this registry group name."""
         pass

@@ -15,6 +15,7 @@
 
 import logging
 import sys
+from argparse import ArgumentParser, Namespace
 from galini.config import GaliniConfig
 from galini.subcommands import CliCommand
 from galini.solvers import SolversRegistry
@@ -29,7 +30,7 @@ DEFAULT_SOLVER = 'oa'
 class SolveCommand(CliCommand):
     """Command to solve an optimization problem."""
 
-    def execute(self, args):
+    def execute(self, args: Namespace) -> None:
         solvers_reg = SolversRegistry()
         solver_cls = solvers_reg.get(args.solver.lower())
         if solver_cls is None:
@@ -49,10 +50,10 @@ class SolveCommand(CliCommand):
         dag = dag_from_pyomo_model(pyomo_model)
         solver.solve(dag)
 
-    def help_message(self):
+    def help_message(self) -> str:
         return "Solve a MINLP"
 
-    def add_parser_arguments(self, parser):
+    def add_parser_arguments(self, parser: ArgumentParser) -> None:
         parser.add_argument('problem')
         parser.add_argument('--solver', help='Specify the solver to use', default=DEFAULT_SOLVER)
         parser.add_argument('--config', help='Specify the configuration file')

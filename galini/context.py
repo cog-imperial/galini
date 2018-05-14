@@ -15,11 +15,12 @@
 # from suspect.monotonicity.monotonicity import Monotonicity
 # from suspect.convexity.convexity import Convexity
 """Context module."""
-
+from typing import Dict
+from galini.bound import Bound
 
 class SpecialStructurePropagationContext(object):
     """Context for special structure propagation."""
-    def __init__(self, bounds):
+    def __init__(self, bounds: Dict[, Bound]) -> None:
         self.bound = bounds
         self.monotonicity = {}
         self.convexity = {}

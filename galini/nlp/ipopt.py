@@ -11,15 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """Solve NLP using Ipopt."""
+from typing import Optional
 from pypopt import IpoptApplication, TNLP, NLPInfo
 import numpy as np
-from galini.core import HessianEvaluator
+from galini.core import Problem, HessianEvaluator
 from galini.solvers import Solver
 
 
 class GaliniTNLP(TNLP):
-    def __init__(self, problem):
+    """Implementation of the TNLP interface from pypopt for a Galini Problem."""
+
+    # pylint: disable=invalid-name
+    def __init__(self, problem: Problem) -> None:
         super().__init__()
         self.n = problem.num_variables
         self.m = problem.num_constraints
@@ -35,11 +40,11 @@ class GaliniTNLP(TNLP):
         for i, constraint in enumerate(problem.constraints.values()):
             self.constraints_idx[i] = constraint.root_expr.idx
 
-    def get_nlp_info(self):
+    def get_nlp_info(self) -> NLPInfo:
         n = self.n
         m = self.m
-        nnz_jac=n*m
-        nnz_hess=(n*n + n)/2
+        nnz_jac = n*m
+        nnz_hess = (n*n + n)/2
         return NLPInfo(
             n=n,
             m=m,
@@ -47,18 +52,19 @@ class GaliniTNLP(TNLP):
             nnz_hess=nnz_hess,
         )
 
-    def fill_bounds_info(self, x_l, x_u, g_l, g_u):
-        # assert x_l.shape[0] == x_u.shape[0] == self.n
-        # assert g_l.shape[0] == g_u.shape[0] == self.m
+    def fill_bounds_info(self, x_l: Optional[memoryview], x_u: Optional[memoryview],
+                         g_l: Optional[memoryview], g_u: Optional[memoryview]) -> bool:
 
         # TODO: use correct infinity value
-        for i, v in enumerate(self._problem.variables.values()):
-            x_l[i] = v.lower_bound if v.lower_bound is not None else -2e19
-            x_u[i] = v.upper_bound if v.upper_bound is not None else 2e19
+        if x_l is not None and x_u is not None:
+            for i, v in enumerate(self._problem.variables.values()):
+                x_l[i] = v.lower_bound if v.lower_bound is not None else -2e19
+                x_u[i] = v.upper_bound if v.upper_bound is not None else 2e19
 
-        for i, c in enumerate(self._problem.constraints.values()):
-            g_l[i] = c.lower_bound if c.lower_bound is not None else -2e19
-            g_u[i] = c.upper_bound if c.upper_bound is not None else 2e19
+        if g_l is not None and g_u is not None:
+            for i, c in enumerate(self._problem.constraints.values()):
+                g_l[i] = c.lower_bound if c.lower_bound is not None else -2e19
+                g_u[i] = c.upper_bound if c.upper_bound is not None else 2e19
 
         return True
 
@@ -70,6 +76,7 @@ class GaliniTNLP(TNLP):
                 l = v.lower_bound if v.lower_bound is not None else -2e19
                 u = v.upper_bound if v.upper_bound is not None else 2e19
                 x[i] = max(l, min(u, 0))
+        return 10
         return True
 
     def fill_jacobian_g_structure(self, row, col):

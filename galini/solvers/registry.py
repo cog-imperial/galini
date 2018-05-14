@@ -18,5 +18,5 @@ from galini.registry import Registry
 
 class SolversRegistry(Registry):
     """Registry of MINLP Solvers."""
-    def group_name(self):
+    def group_name(self) -> str:
         return 'galini.solvers'

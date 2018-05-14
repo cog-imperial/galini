@@ -1,3 +1,4 @@
+from .bound import Bound
 from .arbitrary_precision_bound import ArbitraryPrecisionBound
 from .initialization import initialize_bounds
 from .propagation import propagate_bounds

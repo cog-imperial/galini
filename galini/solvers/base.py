@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Base classes for solvers."""
+from typing import Any
+from galini.core import Problem
+from galini.config import GaliniConfig
+from galini.nlp import NLPSolverRegistry
+from galini.mip import MIPSolverRegistry
 
 
 class Solver(object):
@@ -26,10 +31,12 @@ class Solver(object):
     nl_solver_registry: NLPSolverRegistry
        registry of available NLP solvers.
     """
-    def __init__(self, config, _mip_solver_registry, _nlp_solver_registry):
+    def __init__(self, config: GaliniConfig,
+                 _mip_solver_registry: MIPSolverRegistry,
+                 _nlp_solver_registry: NLPSolverRegistry) -> None:
         pass
 
-    def solve(self, problem, **kwargs):
+    def solve(self, problem: Problem, **kwargs: Any) -> Any:
         """Solve the optimization problem.
 
         Arguments
