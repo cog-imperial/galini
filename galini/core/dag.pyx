@@ -139,13 +139,24 @@ cdef class DivisionExpression(BinaryExpression):
             return 1.0/v[self.children[1]]
         elif j == 1:
             # d/dy (x/y) := -x/y^2
-            y = self.children[1]
-            return -self.children[0] / (y*y)
+            y = v[self.children[1]]
+            return -v[self.children[0]] / (y*y)
         else:
             return INFINITY
 
     cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
-        return 0.0
+        cdef float_t x
+        cdef float_t y = v[self.children[1]]
+        if j == k:
+            if j == 0:
+                # d/dx^2
+                return 0.0
+            else:
+                x = v[self.children[0]]
+                return 2*x / (y*y*y)
+        else:
+            # d/dxdy == d/dydx == -1/y^2
+            return -1.0 / (y*y)
 
 
 
@@ -270,6 +281,7 @@ cdef class NegationExpression(UnaryFunctionExpression):
     cdef float_t _d_v(self, index j, float_t[:] v) nogil:
         return -1.0
 
+
 cdef class AbsExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, 'abs')
@@ -311,6 +323,12 @@ cdef class ExpExpression(UnaryFunctionExpression):
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.exp(v[self.children[0]])
 
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
+        return math.exp(v[self.children[0]])
+
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
+        return math.exp(v[self.children[0]])
+
 
 cdef class LogExpression(UnaryFunctionExpression):
     def __init__(self, object children):
@@ -318,6 +336,13 @@ cdef class LogExpression(UnaryFunctionExpression):
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.log(v[self.children[0]])
+
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
+        return 1.0 / v[self.children[0]]
+
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
+        cdef float_t x = v[self.children[0]]
+        return -1.0 / (x*x)
 
 
 cdef class SinExpression(UnaryFunctionExpression):
@@ -327,6 +352,12 @@ cdef class SinExpression(UnaryFunctionExpression):
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.sin(v[self.children[0]])
 
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
+        return math.cos(v[self.children[0]])
+
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
+        return -math.sin(v[self.children[0]])
+
 
 cdef class CosExpression(UnaryFunctionExpression):
     def __init__(self, object children):
@@ -334,6 +365,12 @@ cdef class CosExpression(UnaryFunctionExpression):
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.cos(v[self.children[0]])
+
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
+        return -math.sin(v[self.children[0]])
+
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
+        return -math.cos(v[self.children[0]])
 
 
 cdef class TanExpression(UnaryFunctionExpression):
@@ -343,6 +380,15 @@ cdef class TanExpression(UnaryFunctionExpression):
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.tan(v[self.children[0]])
 
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
+        cdef float_t s = 1.0/math.cos(v[self.children[0]])
+        return s*s
+
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
+        cdef float_t x = v[self.children[0]]
+        cdef float_t s = 1.0/math.cos(x)
+        return 2.0*s*s*math.tan(x)
+
 
 cdef class AsinExpression(UnaryFunctionExpression):
     def __init__(self, object children):
@@ -350,6 +396,14 @@ cdef class AsinExpression(UnaryFunctionExpression):
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.asin(v[self.children[0]])
+
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
+        cdef float_t x = v[self.children[0]]
+        return 1.0 / math.sqrt(1-x*x)
+
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
+        cdef float_t x = v[self.children[0]]
+        return x / math.pow(1-x*x, 1.5)
 
 
 cdef class AcosExpression(UnaryFunctionExpression):
@@ -359,6 +413,14 @@ cdef class AcosExpression(UnaryFunctionExpression):
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.acos(v[self.children[0]])
 
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
+        cdef float_t x = v[self.children[0]]
+        return -1.0 / math.sqrt(1-x*x)
+
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
+        cdef float_t x = v[self.children[0]]
+        return -x / math.pow(1-x*x, 1.5)
+
 
 cdef class AtanExpression(UnaryFunctionExpression):
     def __init__(self, object children):
@@ -366,6 +428,15 @@ cdef class AtanExpression(UnaryFunctionExpression):
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.atan(v[self.children[0]])
+
+    cdef float_t _d_v(self, index j, float_t[:] v) nogil:
+        cdef float_t x = v[self.children[0]]
+        return 1.0/(1+x*x)
+
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v) nogil:
+        cdef float_t x = v[self.children[0]]
+        cdef float_t y = x*x
+        return -(2*x) / ((1+y)*(1+y))
 
 
 cdef class Objective:

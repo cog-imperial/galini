@@ -63,7 +63,6 @@ class GaliniTNLP(TNLP):
         return True
 
     def fill_starting_point(self, init_x, x, init_z, z_l, z_u, init_lambda, lambda_):
-        # TODO: real starting point
         for i, v in enumerate(self._problem.variables.values()):
             if v.has_starting_point:
                 x[i] = v.starting_point
@@ -140,7 +139,8 @@ class GaliniTNLP(TNLP):
         return True
 
     def finalize_solution(self, x, z_l, z_u, g, lambda_, obj_value):
-        print(np.array(x, dtype=np.float64))
+        # print(np.array(x, dtype=np.float64))
+        pass
 
 
 class IpoptNLPSolver(Solver):
