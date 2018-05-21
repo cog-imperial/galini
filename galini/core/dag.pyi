@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # pylint: skip-file
-from typing import Dict, Any, Iterable
+from typing import Dict, Any, Iterable, Optional
 
 float_ = float
 
@@ -59,12 +59,12 @@ class Objective(Any):
 
 
 class Constraint(Any):
-    # TODO(fracek): Add bound type
-    lower_bound: Any
-    upper_bound: Any
+    lower_bound: Optional[float]
+    upper_bound: Optional[float]
     root_expr: Expression
 
     def is_equality(self) -> bool: ...
+
 
 class Variable(Expression):
     domain: Domain
@@ -77,6 +77,7 @@ class Variable(Expression):
     def is_integer(self) -> bool: ...
     def is_real(self) -> bool: ...
     def set_starting_point(self, point: float) -> None: ...
+    def fix(self, point: float) -> None: ...
 
 
 class Constant(Expression):

@@ -471,6 +471,10 @@ cdef class Variable(Expression):
         self.has_starting_point = 0
         self.starting_point = 0.0
 
+    cpdef void fix(self, float_t point):
+        self.lower_bound = point
+        self.upper_bound = point
+
     cpdef void set_starting_point(self, float_t point):
         self.starting_point = point
         self.has_starting_point = 1

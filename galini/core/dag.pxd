@@ -136,6 +136,7 @@ cdef class Variable(Expression):
     cpdef bint is_integer(self)
     cpdef bint is_real(self)
     cpdef void set_starting_point(self, float_t point)
+    cpdef void fix(self, float_t point)
 
 
 
