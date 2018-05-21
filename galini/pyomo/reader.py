@@ -1,4 +1,18 @@
+# Copyright 2018 Francesco Ceccon
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """Pyomo reader module."""
+from typing import Any, Callable, Dict
 import os
 import importlib
 import importlib.util
@@ -9,7 +23,7 @@ from galini.error import (
 )
 
 
-def read_python(filename, **_kwargs):
+def read_python(filename: str, **_kwargs: Any) -> Any:
     """Read Pyomo model from Python file.
 
     Arguments
@@ -23,14 +37,14 @@ def read_python(filename, **_kwargs):
         Pyomo concrete model.
     """
     spec = importlib.util.spec_from_file_location('_input_model_module', filename)
-    module = importlib.util.module_from_spec(spec)
+    module: Any = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     if not hasattr(module, 'get_pyomo_model'):
         raise InvalidPythonInputError('invalid python input')
     return module.get_pyomo_model()
 
 
-READER_BY_EXT = {
+READER_BY_EXT: Dict[str, Callable[..., Any]] = {
     '.osil': read_osil,
     '.xml': read_osil,
     '.py': read_python,
@@ -38,7 +52,7 @@ READER_BY_EXT = {
 
 
 
-def read_pyomo_model(filename, **kwargs):
+def read_pyomo_model(filename: str, **kwargs: Any) -> Any:
     """Read Pyomo model from file.
 
     Arguments

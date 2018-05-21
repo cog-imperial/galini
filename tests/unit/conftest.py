@@ -1,7 +1,5 @@
 import pytest
 import hypothesis.strategies as st
-from galini.bound import ArbitraryPrecisionBound as Bound
-from galini.context import SpecialStructurePropagationContext
 
 
 @st.composite
@@ -24,24 +22,3 @@ def coefficients(draw, min_value=None, max_value=None):
 
 class PlaceholderExpression(object):
     depth = 0
-
-
-@pytest.fixture
-def ctx():
-    return SpecialStructurePropagationContext({})
-
-
-def bound_description_to_bound(bound_str):
-    if isinstance(bound_str, str):
-        return {
-            'zero': Bound.zero(),
-            'nonpositive': Bound(None, 0),
-            'nonnegative': Bound(0, None),
-            'positive': Bound(1, None),
-            'negative': Bound(None, -1),
-            'unbounded': Bound(None, None),
-        }[bound_str]
-    elif isinstance(bound_str, Bound):
-        return bound_str
-    else:
-        return Bound(bound_str, bound_str)

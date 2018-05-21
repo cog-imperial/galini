@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""Classes to hash floating point numbers."""
+from typing import Optional
 import abc
 from galini.math import (
     mpf,
@@ -21,8 +22,10 @@ from galini.math import (
 
 
 class FloatHasher(abc.ABC):
+    """Hashes floating point numbers."""
     @abc.abstractmethod
-    def hash(self, f):
+    def hash(self, number: float) -> int:
+        """Return `f` hash."""
         raise NotImplementedError('hash')
 
 
@@ -35,43 +38,44 @@ class BTreeFloatHasher(FloatHasher):
     """
 
     class Node(object):
-        def __init__(self, num, hash_, left=None, right=None):
+        """BTree Node"""
+        def __init__(self, num: float, hash_: int) -> None:
             self.num = num
             self.hash = hash_
-            self.left = left
-            self.right = right
+            self.left: Optional[BTreeFloatHasher.Node] = None
+            self.right: Optional[BTreeFloatHasher.Node] = None
 
-    def __init__(self):
-        self.root = None
-        self.node_count = 0
+    def __init__(self) -> None:
+        self.root: Optional[BTreeFloatHasher.Node] = None
+        self.node_count: int = 0
 
-    def hash(self, f):
-        f = mpf(f)
+    def hash(self, number: float) -> int:
+        number = mpf(number)
         if self.root is None:
-            self.root = self._make_node(f)
+            self.root = self._make_node(number)
             return self.root.hash
 
         curr_node = self.root
         while True:
-            if almosteq(f, curr_node.num):
+            if almosteq(number, curr_node.num):
                 return curr_node.hash
-            elif almostlte(f, curr_node.num):
+            elif almostlte(number, curr_node.num):
                 if curr_node.left is None:
-                    new_node = self._make_node(f)
+                    new_node = self._make_node(number)
                     curr_node.left = new_node
                     return new_node.hash
                 else:
                     curr_node = curr_node.left
             else:
                 if curr_node.right is None:
-                    new_node = self._make_node(f)
+                    new_node = self._make_node(number)
                     curr_node.right = new_node
                     return new_node.hash
                 else:
                     curr_node = curr_node.right
 
-    def _make_node(self, f):
-        node = self.Node(f, self.node_count, None, None)
+    def _make_node(self, number: float) -> 'BTreeFloatHasher.Node':
+        node = self.Node(number, self.node_count)
         self.node_count += 1
         return node
 
@@ -80,8 +84,8 @@ class RoundFloatHasher(FloatHasher):
     """A float hasher that hashes floats up to the n-th
     decimal place.
     """
-    def __init__(self, n=2):
-        self.n = 10**n
+    def __init__(self, n: int = 2) -> None:
+        self.n: int = 10**n
 
-    def hash(self, f):
-        return hash(int(f * self.n))
+    def hash(self, number: float) -> int:
+        return hash(int(number * self.n))

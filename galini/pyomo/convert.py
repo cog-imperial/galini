@@ -24,7 +24,7 @@ from galini.pyomo.util import (
 )
 from galini.pyomo.expr_visitor import ExpressionHandler, bottom_up_visit
 from galini.pyomo.expr_dict import ExpressionDict
-from galini.float_hash import BTreeFloatHasher
+from galini.pyomo.float_hash import BTreeFloatHasher
 import galini.core as core
 
 
@@ -78,13 +78,13 @@ class _ComponentFactory(object):
 
     def add_constraint(self, omo_cons):
         """Convert and add constraint to the problem."""
-        bounds, expr = bounds_and_expr(omo_cons.expr)
+        (lower_bound, upper_bound), expr = bounds_and_expr(omo_cons.expr)
         root_expr = self._expression(expr)
         constraint = self.dag.add_constraint(
             omo_cons.name,
             root_expr,
-            bounds.lower,
-            bounds.upper,
+            lower_bound,
+            upper_bound,
         )
         return constraint
 

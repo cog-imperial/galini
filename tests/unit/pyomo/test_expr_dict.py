@@ -1,7 +1,7 @@
 import pytest
 import pyomo.environ as aml
 from galini.pyomo.expr_dict import *
-from galini.float_hash import RoundFloatHasher
+from galini.pyomo.float_hash import RoundFloatHasher
 from tests.unit.fixtures import model
 
 

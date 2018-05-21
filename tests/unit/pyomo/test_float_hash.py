@@ -1,6 +1,6 @@
 import pytest
 from galini.math import mpf
-from galini.float_hash import BTreeFloatHasher, RoundFloatHasher
+from galini.pyomo.float_hash import BTreeFloatHasher, RoundFloatHasher
 
 
 def test_btree_float_hasher():
