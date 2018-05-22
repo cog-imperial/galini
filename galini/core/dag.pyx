@@ -471,13 +471,23 @@ cdef class Variable(Expression):
         self.has_starting_point = 0
         self.starting_point = 0.0
 
-    cpdef void fix(self, float_t point):
-        self.lower_bound = point
-        self.upper_bound = point
-
     cpdef void set_starting_point(self, float_t point):
         self.starting_point = point
         self.has_starting_point = 1
+
+    cpdef void set_value(self, float_t value):
+        self.value = value
+        self.has_value = 1
+
+    cpdef void unset_value(self):
+        self.has_value = 0
+
+    cpdef void fix(self, float_t point):
+        self.value = point
+        self.is_fixed = 1
+
+    cpdef void unfix(self):
+        self.is_fixed = 0
 
     cpdef bint is_binary(self):
         return self.domain == Domain.BINARY

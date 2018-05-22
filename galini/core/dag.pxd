@@ -131,12 +131,18 @@ cdef class Variable(Expression):
     cdef readonly object upper_bound
     cdef readonly float_t starting_point
     cdef readonly bint has_starting_point
+    cdef readonly float_t value
+    cdef readonly bint has_value
+    cdef readonly bint is_fixed
 
     cpdef bint is_binary(self)
     cpdef bint is_integer(self)
     cpdef bint is_real(self)
     cpdef void set_starting_point(self, float_t point)
+    cpdef void set_value(self, float_t value)
+    cpdef void unset_value(self)
     cpdef void fix(self, float_t point)
+    cpdef void unfix(self)
 
 
 
