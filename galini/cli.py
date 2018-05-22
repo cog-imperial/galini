@@ -14,9 +14,9 @@
 """GALINI CLI entry point."""
 
 import sys
-import logging
 import argparse
 import pkg_resources
+import galini.logging as log
 from galini.pyomo import set_pyomo4_expression_tree
 
 
@@ -31,7 +31,7 @@ def collect_subcommands(parser):
     subcommands = {}
     for entry_point in pkg_resources.iter_entry_points('galini.subcommands'):
         if entry_point.name in subcommands:
-            logging.error('Duplicate entry point %s found.', entry_point.name)
+            log.error('Duplicate entry point %s found.', entry_point.name)
             sys.exit(1)
         sub_cls = entry_point.load()
         sub = sub_cls()
@@ -58,7 +58,7 @@ def main():
     command = subcommands.get(args.command)
 
     if command is None:
-        logging.error('Invalid command %s', command)
+        log.error('Invalid command %s', command)
         sys.exit(1)
 
     command.execute(args)

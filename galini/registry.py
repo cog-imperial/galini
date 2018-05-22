@@ -14,9 +14,9 @@
 """Registry module."""
 from typing import Any, Dict, Iterable
 import abc
-import logging
 import sys
 import pkg_resources
+import galini.logging as log
 
 
 class Registry(metaclass=abc.ABCMeta):
@@ -26,7 +26,7 @@ class Registry(metaclass=abc.ABCMeta):
         self._registered: Dict[str, Any] = {}
         for entry_point in pkg_resources.iter_entry_points(self.group_name()):
             if entry_point.name in self._registered:
-                logging.error(
+                log.error(
                     'Duplicate registered item %s found in %s registry.',
                     entry_point.name, self.group,
                 )

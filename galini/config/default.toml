@@ -1,2 +1,10 @@
 [ipopt]
 tol = 1e-7
+
+[logging.message_storage]
+class = 'BuiltinLoggingMessageStorage'
+level = 0
+
+[logging.matrix_storage]
+class = ''
+hdf5_file = ''

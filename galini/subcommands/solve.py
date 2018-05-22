@@ -13,9 +13,9 @@
 # limitations under the License.
 """GALINI solve subcommand."""
 
-import logging
 import sys
 from argparse import ArgumentParser, Namespace
+import galini.logging as log
 from galini.config import GaliniConfig
 from galini.subcommands import CliCommand
 from galini.solvers import SolversRegistry
@@ -35,13 +35,16 @@ class SolveCommand(CliCommand):
         solver_cls = solvers_reg.get(args.solver.lower())
         if solver_cls is None:
             available = ', '.join(solvers_reg.keys())
-            logging.error(
+            log.error(
                 'Solver %s not available. Available solvers: %s',
                 args.solver, available
             )
             sys.exit(1)
 
         config = GaliniConfig(args.config)
+
+        log.apply_config(config)
+
         mip_solver_registry = MIPSolverRegistry()
         nlp_solver_registry = NLPSolverRegistry()
         solver = solver_cls(config, mip_solver_registry, nlp_solver_registry)
