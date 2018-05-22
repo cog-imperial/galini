@@ -15,8 +15,6 @@
 from typing import Any
 from galini.core import Problem
 from galini.config import GaliniConfig
-from galini.nlp import NLPSolverRegistry
-from galini.mip import MIPSolverRegistry
 
 
 class Solver(object):
@@ -32,8 +30,8 @@ class Solver(object):
        registry of available NLP solvers.
     """
     def __init__(self, config: GaliniConfig,
-                 _mip_solver_registry: MIPSolverRegistry,
-                 _nlp_solver_registry: NLPSolverRegistry) -> None:
+                 _mip_solver_registry: 'MIPSolverRegistry',
+                 _nlp_solver_registry: 'NLPSolverRegistry') -> None:
         pass
 
     def solve(self, problem: Problem, **kwargs: Any) -> Any:
