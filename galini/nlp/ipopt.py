@@ -16,6 +16,7 @@
 from typing import Optional
 from pypopt import IpoptApplication, TNLP, NLPInfo
 import numpy as np
+import  galini.logging as log
 from galini.core import Problem, HessianEvaluator
 from galini.solvers import Solver
 
@@ -61,10 +62,16 @@ class GaliniTNLP(TNLP):
                 x_l[i] = v.lower_bound if v.lower_bound is not None else -2e19
                 x_u[i] = v.upper_bound if v.upper_bound is not None else 2e19
 
+        log.matrix('ipopt/bounds/x_l', np.array(x_l))
+        log.matrix('ipopt/bounds/x_u', np.array(x_u))
+
         if g_l is not None and g_u is not None:
             for i, c in enumerate(self._problem.constraints.values()):
                 g_l[i] = c.lower_bound if c.lower_bound is not None else -2e19
                 g_u[i] = c.upper_bound if c.upper_bound is not None else 2e19
+
+        log.matrix('ipopt/bounds/g_l', np.array(g_l))
+        log.matrix('ipopt/bounds/g_u', np.array(g_u))
 
         return True
 
@@ -76,7 +83,7 @@ class GaliniTNLP(TNLP):
                 l = v.lower_bound if v.lower_bound is not None else -2e19
                 u = v.upper_bound if v.upper_bound is not None else 2e19
                 x[i] = max(l, min(u, 0))
-        return 10
+        log.matrix('ipopt/starting_point', np.array(x))
         return True
 
     def fill_jacobian_g_structure(self, row, col):
@@ -86,6 +93,8 @@ class GaliniTNLP(TNLP):
                 row[j*self.n+i] = j
                 col[j*self.n+i] = i
 
+        log.matrix('ipopt/jacobian_g_structure/row', np.array(row))
+        log.matrix('ipopt/jacobian_g_structure/col', np.array(col))
         return True
 
     def fill_hessian_structure(self, row, col):
@@ -97,6 +106,8 @@ class GaliniTNLP(TNLP):
                 col[idx] = j
                 idx += 1
 
+        log.matrix('ipopt/hessian_structure/row', np.array(row))
+        log.matrix('ipopt/hessian_structure/col', np.array(col))
         return True
 
     def eval_f(self, x, new_x):
@@ -108,6 +119,7 @@ class GaliniTNLP(TNLP):
         grad = self._ad.jacobian[0, :]
         for i in range(self.n):
             grad_f[i] = grad[i]
+        log.matrix('ipopt/grad_f', np.array(grad_f))
         return True
 
     def eval_g(self, x, new_x, g):
@@ -115,6 +127,7 @@ class GaliniTNLP(TNLP):
         values = self._ad.values
         for i in range(self.m):
             g[i] = values[self.constraints_idx[i]]
+        log.matrix('ipopt/g', np.array(g))
         return True
 
     def eval_jacobian_g(self, x, new_x, jacobian):
@@ -125,6 +138,8 @@ class GaliniTNLP(TNLP):
             for c in range(self.n):
                 jacobian[i] = jac[r+1, c]
                 i += 1
+        log.matrix('ipopt/jacobian_x', np.array(x))
+        log.matrix('ipopt/jacobian', np.array(jacobian))
         return True
 
     def eval_hessian(self, x, new_x, obj_factor, lambda_, new_lambda, hess):
@@ -143,11 +158,18 @@ class GaliniTNLP(TNLP):
                 for j in range(i+1):
                     hess[idx] += lambda_[c] * hessian[c+1, i, j]
                     idx += 1
+        log.matrix('ipopt/hessian_x', np.array(x))
+        log.matrix('ipopt/hessian', np.array(hess))
         return True
 
     def finalize_solution(self, x, z_l, z_u, g, lambda_, obj_value):
         # print(np.array(x, dtype=np.float64))
-        pass
+        log.matrix('ipopt/solution/x', np.array(x))
+        log.matrix('ipopt/solution/z_l', np.array(z_l))
+        log.matrix('ipopt/solution/z_u', np.array(z_u))
+        log.matrix('ipopt/solution/g', np.array(g))
+        log.matrix('ipopt/solution/lambda', np.array(lambda_))
+        log.matrix('ipopt/solution/obj_value', obj_value)
 
 
 class IpoptNLPSolver(Solver):
