@@ -1,6 +1,9 @@
 [ipopt]
 tol = 1e-7
 
+[logging]
+level = 0
+
 [logging.message_storage]
 class = 'BuiltinLoggingMessageStorage'
 level = 0

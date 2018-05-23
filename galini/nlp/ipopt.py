@@ -176,7 +176,7 @@ class IpoptNLPSolver(Solver):
     """Solver for NLP problems that uses Ipopt."""
     def __init__(self, config, mip_solver_registry, nlp_solver_registry):
         super().__init__(config, mip_solver_registry, nlp_solver_registry)
-        self.config = config.get_group('ipopt')
+        self.config = config.ipopt
         self.app = IpoptApplication()
         self.app.initialize()
         self._apply_config()

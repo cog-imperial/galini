@@ -145,12 +145,12 @@ set_matrix_storage = _logger.set_matrix_storage
 
 
 def apply_config(config: 'GaliniConfig') -> None:
-    config = config.get_group('logging')
+    config = config.logging
     _apply_matrix_storage_config(config)
 
 
 def _apply_matrix_storage_config(config):
-    config = config['matrix_storage']
+    config = config.matrix_storage
     if config['class']:
         class_ = config['class']
         if class_ == 'Hdf5MatrixStorage':

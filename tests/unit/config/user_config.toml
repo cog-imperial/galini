@@ -1,0 +1,6 @@
+[logging]
+level = 100
+
+[ipopt]
+tol = 1e-17
+derivative_test = 'second-order'
