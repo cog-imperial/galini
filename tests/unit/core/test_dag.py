@@ -1,16 +1,8 @@
+# pylint: skip-file
 import pytest
 import numpy as np
-from galini.core import (
-    Problem,
-    Variable,
-    Constant,
-    Domain,
-    SumExpression,
-    ProductExpression,
-    Constraint,
-    JacobianEvaluator,
-    HessianEvaluator,
-)
+from galini.core import *
+from suspect.expression import ExpressionType, UnaryFunctionType
 
 
 @pytest.fixture
@@ -58,3 +50,32 @@ def test_children_are_updated(problem):
     assert problem.vertex_depth(s0.idx) == 2
     assert problem.vertex_depth(c0.idx) == 1
     assert problem.size == 4
+
+
+@pytest.mark.parametrize('expr,expected', [
+    (ProductExpression([0, 1]), ExpressionType.Product),
+    (DivisionExpression([0, 1]), ExpressionType.Division),
+    (SumExpression([0, 1]), ExpressionType.Sum),
+    (PowExpression([0, 1]), ExpressionType.Power),
+    (LinearExpression([0], np.array([1.0]), 0.0), ExpressionType.Linear),
+    (NegationExpression([0]), ExpressionType.Negation),
+    (Variable(None, None, Domain.REALS), ExpressionType.Variable),
+    (Constant(0.0), ExpressionType.Constant),
+])
+def test_suspect_expression_types(expr, expected):
+    assert expr.expression_type == expected
+
+@pytest.mark.parametrize('expr,expected', [
+    (AbsExpression([0]), UnaryFunctionType.Abs),
+    (SqrtExpression([0]), UnaryFunctionType.Sqrt),
+    (ExpExpression([0]), UnaryFunctionType.Exp),
+    (LogExpression([0]), UnaryFunctionType.Log),
+    (SinExpression([0]), UnaryFunctionType.Sin),
+    (CosExpression([0]), UnaryFunctionType.Cos),
+    (TanExpression([0]), UnaryFunctionType.Tan),
+    (AsinExpression([0]), UnaryFunctionType.Asin),
+    (AcosExpression([0]), UnaryFunctionType.Acos),
+    (AtanExpression([0]), UnaryFunctionType.Atan),
+])
+def test_suspect_unary_function_type(expr, expected):
+    assert expr.func_type == expected

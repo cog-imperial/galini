@@ -3,6 +3,7 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 cimport libc.math as math
 cimport numpy as np
 import numpy as np
+from suspect.expression import ExpressionType, UnaryFunctionType
 
 
 float_ = np.float64
@@ -11,11 +12,12 @@ cdef float_t INFINITY = 2e19
 
 
 cdef class Expression:
-    def __init__(self):
+    def __init__(self, int expression_type):
         self.num_children = 0
         self.idx = 0
         # always come after variables (0) and constants(1)
         self.default_depth = 2
+        self.expression_type = expression_type
 
     cdef void reindex(self, index cutoff) nogil:
         if self.idx >= cutoff:
@@ -38,8 +40,8 @@ cdef class Expression:
 
 
 cdef class UnaryExpression(Expression):
-    def __init__(self, object children):
-        super().__init__()
+    def __init__(self, object children, int expression_type):
+        super().__init__(expression_type)
         assert len(children) == 1
         self.num_children = 1
         self.children[0] = children[0]
@@ -58,8 +60,8 @@ cdef class UnaryExpression(Expression):
 
 
 cdef class BinaryExpression(Expression):
-    def __init__(self, object children):
-        super().__init__()
+    def __init__(self, object children, int expression_type):
+        super().__init__(expression_type)
         assert len(children) == 2
         self.num_children = 2
         self.children[0] = children[0]
@@ -80,8 +82,8 @@ cdef class BinaryExpression(Expression):
 
 
 cdef class NaryExpression(Expression):
-    def __init__(self, object children):
-        super().__init__()
+    def __init__(self, object children, int expression_type):
+        super().__init__(expression_type)
 
         cdef index num_children = len(children)
         assert num_children > 0
@@ -110,6 +112,9 @@ cdef class NaryExpression(Expression):
 
 
 cdef class ProductExpression(BinaryExpression):
+    def __init__(self, object children):
+        super().__init__(children, ExpressionType.Product)
+
     cdef float_t _eval(self, float_t[:] v) nogil:
         return v[self.children[0]] * v[self.children[1]]
 
@@ -129,6 +134,9 @@ cdef class ProductExpression(BinaryExpression):
 
 
 cdef class DivisionExpression(BinaryExpression):
+    def __init__(self, object children):
+        super().__init__(children, ExpressionType.Division)
+
     cdef float_t _eval(self, float_t[:] v) nogil:
         return v[self.children[0]] / v[self.children[1]]
 
@@ -161,6 +169,9 @@ cdef class DivisionExpression(BinaryExpression):
 
 
 cdef class SumExpression(NaryExpression):
+    def __init__(self, object children):
+        super().__init__(children, ExpressionType.Sum)
+
     cdef float_t _eval(self, float_t[:] v) nogil:
         cdef index i
         cdef float_t tot = 0
@@ -176,6 +187,9 @@ cdef class SumExpression(NaryExpression):
 
 
 cdef class PowExpression(BinaryExpression):
+    def __init__(self, object children):
+        super().__init__(children, ExpressionType.Power)
+
     cdef float_t _eval(self, float_t[:] v) nogil:
         cdef float_t base = v[self.children[0]]
         cdef float_t expo = v[self.children[1]]
@@ -236,7 +250,7 @@ cdef class PowExpression(BinaryExpression):
 
 cdef class LinearExpression(NaryExpression):
     def __init__(self, object children, float_t[:] coefficients, float_t constant):
-        super().__init__(children)
+        super().__init__(children, ExpressionType.Linear)
 
         self.constant = constant
         self._coefficients = <float_t *>PyMem_Malloc(self.num_children * sizeof(float_t))
@@ -265,15 +279,9 @@ cdef class LinearExpression(NaryExpression):
         return 0.0
 
 
-cdef class UnaryFunctionExpression(UnaryExpression):
-    def __init__(self, object children, str funct_name):
-        super().__init__(children)
-        self.funct_name = funct_name
-
-
-cdef class NegationExpression(UnaryFunctionExpression):
+cdef class NegationExpression(UnaryExpression):
     def __init__(self, object children):
-        super().__init__(children, 'negation')
+        super().__init__(children, ExpressionType.Negation)
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         return -v[self.children[0]]
@@ -282,9 +290,15 @@ cdef class NegationExpression(UnaryFunctionExpression):
         return -1.0
 
 
+cdef class UnaryFunctionExpression(UnaryExpression):
+    def __init__(self, object children, int func_type):
+        super().__init__(children, ExpressionType.UnaryFunction)
+        self.func_type = func_type
+
+
 cdef class AbsExpression(UnaryFunctionExpression):
     def __init__(self, object children):
-        super().__init__(children, 'abs')
+        super().__init__(children, UnaryFunctionType.Abs)
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         cdef float_t x = v[self.children[0]]
@@ -303,7 +317,7 @@ cdef class AbsExpression(UnaryFunctionExpression):
 
 cdef class SqrtExpression(UnaryFunctionExpression):
     def __init__(self, object children):
-        super().__init__(children, 'sqrt')
+        super().__init__(children, UnaryFunctionType.Sqrt)
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.sqrt(v[self.children[0]])
@@ -318,7 +332,7 @@ cdef class SqrtExpression(UnaryFunctionExpression):
 
 cdef class ExpExpression(UnaryFunctionExpression):
     def __init__(self, object children):
-        super().__init__(children, 'exp')
+        super().__init__(children, UnaryFunctionType.Exp)
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.exp(v[self.children[0]])
@@ -332,7 +346,7 @@ cdef class ExpExpression(UnaryFunctionExpression):
 
 cdef class LogExpression(UnaryFunctionExpression):
     def __init__(self, object children):
-        super().__init__(children, 'log')
+        super().__init__(children, UnaryFunctionType.Log)
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.log(v[self.children[0]])
@@ -347,7 +361,7 @@ cdef class LogExpression(UnaryFunctionExpression):
 
 cdef class SinExpression(UnaryFunctionExpression):
     def __init__(self, object children):
-        super().__init__(children, 'sin')
+        super().__init__(children, UnaryFunctionType.Sin)
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.sin(v[self.children[0]])
@@ -361,7 +375,7 @@ cdef class SinExpression(UnaryFunctionExpression):
 
 cdef class CosExpression(UnaryFunctionExpression):
     def __init__(self, object children):
-        super().__init__(children, 'cos')
+        super().__init__(children, UnaryFunctionType.Cos)
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.cos(v[self.children[0]])
@@ -375,7 +389,7 @@ cdef class CosExpression(UnaryFunctionExpression):
 
 cdef class TanExpression(UnaryFunctionExpression):
     def __init__(self, object children):
-        super().__init__(children, 'tan')
+        super().__init__(children, UnaryFunctionType.Tan)
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.tan(v[self.children[0]])
@@ -392,7 +406,7 @@ cdef class TanExpression(UnaryFunctionExpression):
 
 cdef class AsinExpression(UnaryFunctionExpression):
     def __init__(self, object children):
-        super().__init__(children, 'asin')
+        super().__init__(children, UnaryFunctionType.Asin)
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.asin(v[self.children[0]])
@@ -408,7 +422,7 @@ cdef class AsinExpression(UnaryFunctionExpression):
 
 cdef class AcosExpression(UnaryFunctionExpression):
     def __init__(self, object children):
-        super().__init__(children, 'acos')
+        super().__init__(children, UnaryFunctionType.Acos)
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.acos(v[self.children[0]])
@@ -424,7 +438,7 @@ cdef class AcosExpression(UnaryFunctionExpression):
 
 cdef class AtanExpression(UnaryFunctionExpression):
     def __init__(self, object children):
-        super().__init__(children, 'atan')
+        super().__init__(children, UnaryFunctionType.Atan)
 
     cdef float_t _eval(self, float_t[:] v) nogil:
         return math.atan(v[self.children[0]])
@@ -463,7 +477,7 @@ cdef class Constraint:
 
 cdef class Variable(Expression):
     def __init__(self, object lower_bound, object upper_bound, Domain domain):
-        super().__init__()
+        super().__init__(ExpressionType.Variable)
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
         self.domain = domain
@@ -504,7 +518,7 @@ cdef class Variable(Expression):
 
 cdef class Constant(Expression):
     def __init__(self, float_t value):
-        super().__init__()
+        super().__init__(ExpressionType.Constant)
         self.value = value
         # always come after variables
         self.default_depth = 1

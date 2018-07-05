@@ -19,6 +19,7 @@ cdef class Expression:
     cdef readonly index num_children
     cdef readonly index idx
     cdef index default_depth
+    cdef readonly int expression_type
 
     cdef void reindex(self, index cutoff) nogil
     cdef float_t _eval(self, float_t[:] v) nogil
@@ -61,12 +62,12 @@ cdef class LinearExpression(NaryExpression):
     cdef readonly float_t constant
 
 
-cdef class UnaryFunctionExpression(UnaryExpression):
-    cdef readonly str funct_name
-
-
-cdef class NegationExpression(UnaryFunctionExpression):
+cdef class NegationExpression(UnaryExpression):
     pass
+
+
+cdef class UnaryFunctionExpression(UnaryExpression):
+    cdef readonly int func_type
 
 
 cdef class AbsExpression(UnaryFunctionExpression):
