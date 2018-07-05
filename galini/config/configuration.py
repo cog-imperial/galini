@@ -13,17 +13,16 @@
 # limitations under the License.
 
 """GALINI Configuration module."""
-from typing import Any, Dict, Iterable, Tuple
 import pkg_resources
 import toml
 
 
 class _ConfigGroup(object):
-    def __init__(self, items: Dict[str, Any]) -> None:
+    def __init__(self, items):
         self._items = items
 
     @classmethod
-    def from_dict(cls, dict_: Dict[str, Any]) -> '_ConfigGroup':
+    def from_dict(cls, dict_):
         """Build _ConfigGroup from dictionary."""
         items = {}
         for key, value in dict_.items():
@@ -32,26 +31,26 @@ class _ConfigGroup(object):
             items[key] = value
         return cls(items)
 
-    def keys(self) -> Iterable[str]:
+    def keys(self):
         """Return group keys."""
         return self._items.keys()
 
-    def items(self) -> Iterable[Tuple[str, Any]]:
+    def items(self):
         """Return group items."""
         return self._items.items()
 
-    def get(self, key: str) -> Any:
+    def get(self, key):
         """Get value for key."""
         return self._items.get(key)
 
-    def __getitem__(self, key: str) -> Any:
+    def __getitem__(self, key):
         """Get value for key."""
         return self._items[key]
 
-    def __getattr__(self, attr: str) -> Any:
+    def __getattr__(self, attr):
         return self._items[attr]
 
-    def update(self, other: '_ConfigGroup') -> None:
+    def update(self, other):
         """Update self with values from other."""
         for key, value in other.items():
             if isinstance(value, _ConfigGroup):
@@ -68,28 +67,28 @@ class _ConfigGroup(object):
 
 
 class _Config(object):
-    def __init__(self, path: str) -> None:
+    def __init__(self, path):
         self._root = _ConfigGroup.from_dict(toml.load(path))
 
-    def keys(self) -> Iterable[str]:
+    def keys(self):
         """Return config keys."""
         return self._root.keys()
 
-    def items(self) -> Iterable[Tuple[str, Any]]:
+    def items(self):
         """Return config items."""
         return self._root.items()
 
-    def get(self, key: str) -> Any:
+    def get(self, key):
         """Get config key."""
         return self._root.get(key)
 
-    def __getitem__(self, key: str) -> Any:
+    def __getitem__(self, key):
         return self._root[key]
 
-    def __getattr__(self, attr: str) -> Any:
+    def __getattr__(self, attr):
         return getattr(self._root, attr)
 
-    def update(self, other: '_Config') -> None:
+    def update(self, other):
         """Update config with other."""
         # pylint: disable=protected-access
         self._root.update(other._root)
@@ -98,7 +97,7 @@ class _Config(object):
 class GaliniConfig(object):
     """GALINI Configuration object."""
 
-    def __init__(self, user_config_path: str = None) -> None:
+    def __init__(self, user_config_path=None):
         default_config_path = 'default.toml'
         template = pkg_resources.resource_filename(__name__, default_config_path)
         default_config = _Config(template)
@@ -107,14 +106,14 @@ class GaliniConfig(object):
             default_config.update(user_config)
         self._config = default_config
 
-    def get(self, key: str) -> Any:
+    def get(self, key):
         """Get configuration value or group for key. Returns None if not present."""
         return self._config.get(key)
 
-    def __getitem__(self, key: str) -> Any:
+    def __getitem__(self, key):
         """Get configuration value or group for key. Raise KeyError if not present."""
         return self._config[key]
 
-    def __getattr__(self, attr: str) -> Any:
+    def __getattr__(self, attr):
         """Get configuration value or group for key. Raise KeyError if not present."""
         return getattr(self._config, attr)

@@ -8,7 +8,7 @@ if False:
     import galini.dag.expressions as dex
     from galini.pyomo.convert import _ComponentFactory, dag_from_pyomo_model
     from galini.pyomo.util import model_variables, model_constraints
-    from galini.math.arbitrary_precision import inf
+    from suspect.math import inf
 
 
     class TestConvertVariable(object):

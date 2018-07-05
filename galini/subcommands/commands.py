@@ -12,23 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """CLI Subcommands base class."""
-from argparse import Namespace, ArgumentParser
 import abc
 
 
 class CliCommand(metaclass=abc.ABCMeta):
     """Abstract class for CLI commands."""
     @abc.abstractmethod
-    def execute(self, args: Namespace) -> None:
+    def execute(self, args):
         """Run the command."""
         pass
 
     @abc.abstractmethod
-    def help_message(self) -> str:
+    def help_message(self):
         """Return the command help message."""
         pass
 
     @abc.abstractmethod
-    def add_parser_arguments(self, parser: ArgumentParser) -> None:
+    def add_parser_arguments(self, parser):
         """Add arguments specific to this command to the argument parser."""
         pass

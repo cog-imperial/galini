@@ -1,5 +1,5 @@
 import pytest
-from galini.math import mpf
+from suspect.math import make_number
 from galini.pyomo.float_hash import BTreeFloatHasher, RoundFloatHasher
 
 
@@ -8,8 +8,8 @@ def test_btree_float_hasher():
 
     # fill hasher with some numbers
     for i in range(100):
-        hasher.hash(mpf(i) / 10.0)
-        hasher.hash(mpf(-i) / 5.0)
+        hasher.hash(make_number(i) / 10.0)
+        hasher.hash(make_number(-i) / 5.0)
 
     h1 = hasher.hash(10.123)
     h2 = hasher.hash(10.123)

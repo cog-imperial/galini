@@ -1,5 +1,18 @@
+# Copyright 2018 Francesco Ceccon
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """OSiL reader module."""
-from typing import Any, Optional, Dict, TypeVar, Iterable, List, Iterator
 import xml.etree.ElementTree as ET
 import gc
 from contextlib import contextmanager
@@ -7,11 +20,8 @@ from functools import reduce
 import operator as op
 import pyomo.environ as aml
 
-T = TypeVar('T')
 
-
-def read_osil(filename: str, objective_prefix: Optional[str] = None,
-              constraint_prefix: Optional[str] = None) -> Any:
+def read_osil(filename, objective_prefix=None, constraint_prefix=None):
     """Read OSiL-formatted problem into a Pyomo model.
 
     It's possible to optionally specify a prefix for objectives/constraints
@@ -48,7 +58,7 @@ STR_TO_SENSE = {
 
 
 @contextmanager
-def _gc_disabled() -> Iterator[None]:
+def _gc_disabled():
     if gc.isenabled():
         gc.disable()
         yield
@@ -57,19 +67,19 @@ def _gc_disabled() -> Iterator[None]:
         yield
 
 
-def _tag_name(node: Any) -> str:
+def _tag_name(node):
     prefix = len('{os.optimizationservices.org}')
     return node.tag[prefix:]
 
 
-def _instance_name(root: Any) -> str:
+def _instance_name(root):
     name = root.find('osil:instanceHeader/osil:name', NS)
     if name is not None:
         return name.text
     return None
 
 
-def _instance_variables(root: Any) -> Iterable[Dict[str, Any]]:
+def _instance_variables(root):
     variables = root.find('osil:instanceData/osil:variables', NS)
     num_variables = int(variables.attrib['numberOfVariables'])
     vars_ = variables.getchildren()
@@ -91,15 +101,15 @@ def _instance_variables(root: Any) -> Iterable[Dict[str, Any]]:
         }
 
 
-def _instance_objectives(root: Any) -> Any:
+def _instance_objectives(root):
     return root.findall('osil:instanceData/osil:objectives/osil:obj', NS)
 
 
-def _instance_constraints(root: Any) -> Any:
+def _instance_constraints(root):
     return root.findall('osil:instanceData/osil:constraints/osil:con', NS)
 
 
-def _quadratic_coefficients(root: Any, i: int) -> Iterable[Dict[str, Any]]:
+def _quadratic_coefficients(root, i):
     qterms = root.findall(
         'osil:instanceData/osil:quadraticCoefficients/osil:qTerm[@idx="{}"]'.format(i),
         NS
@@ -116,13 +126,13 @@ def _quadratic_coefficients(root: Any, i: int) -> Iterable[Dict[str, Any]]:
         }
 
 
-def _flatten(xs: List[List[T]]) -> List[T]:
+def _flatten(xs):
     return [y for x in xs for y in x]
 
 
 class SparseLinearCoefficientsStorage(object):
     """Represent linear terms as sparse matrix."""
-    def __init__(self, root: Any) -> None:
+    def __init__(self, root):
         self.root = root
         if self.root is None:
             return
@@ -152,7 +162,7 @@ class SparseLinearCoefficientsStorage(object):
         ]
         self.value = _flatten(value)
 
-    def row(self, i: int) -> Any:
+    def row(self, i):
         """Return variables at row i with their coefficients."""
         if self.root is None:
             return []
@@ -163,7 +173,7 @@ class SparseLinearCoefficientsStorage(object):
         )
         return vars_with_coef
 
-    def _expand(self, ele: Any, text_fun: Any = int) -> Any:
+    def _expand(self, ele, text_fun=int):
         mult = int(ele.attrib.get('mult', 1))
         incr = int(ele.attrib.get('incr', 0))
         start = text_fun(ele.text)
@@ -175,30 +185,29 @@ class SparseLinearCoefficientsStorage(object):
 
 class OsilParser(object):
     """Parser for OSiL files."""
-    def __init__(self, filename: str, objective_prefix: Optional[str] = None,
-                 constraint_prefix: Optional[str] = None) -> None:
+    def __init__(self, filename, objective_prefix=None, constraint_prefix=None):
         self.tree = ET.parse(filename)
         self.root = self.tree.getroot()
         self.model = aml.ConcreteModel()
         self.objective_prefix = objective_prefix
         self.constraint_prefix = constraint_prefix
 
-        self.indexed_vars: List[Any] = []
+        self.indexed_vars = []
 
-    def _v(self, i: int) -> Any:
+    def _v(self, i):
         vname = self.indexed_vars[i]
         return getattr(self.model, vname)
 
-    def _quadratic_terms(self, i: int) -> float:
+    def _quadratic_terms(self, i):
         return sum(
             c['coef'] * self._v(c['idx_one']) * self._v(c['idx_two'])
             for c in _quadratic_coefficients(self.root, i)
         )
 
     # pylint: disable=invalid-name
-    def _nonlinear_terms(self, i: int) -> Any:
+    def _nonlinear_terms(self, i):
         # pylint: disable=too-many-return-statements, too-many-branches
-        def _eval(node: Any) -> Any:
+        def _eval(node):
             name = _tag_name(node)
             cs = node.getchildren()
 
@@ -264,25 +273,25 @@ class OsilParser(object):
             expr = _eval(nl.getchildren()[0])
         return expr
 
-    def _objective_linear(self, objective: Any) -> float:
+    def _objective_linear(self, objective):
         assert len(objective.getchildren()) == len(objective.findall('osil:coef', NS))
         return sum(
             float(c.text) * self._v(int(c.attrib['idx']))
             for c in objective.getchildren()
         )
 
-    def _objective_name(self, objective: Any) -> str:
+    def _objective_name(self, objective):
         if self.objective_prefix is None:
             return objective.attrib['name']
         return self.objective_prefix + objective.attrib['name']
 
-    def _constraint_name(self, constraint: Any) -> str:
+    def _constraint_name(self, constraint):
         if self.constraint_prefix is None:
             return constraint.attrib['name']
         return self.constraint_prefix + constraint.attrib['name']
 
     # pylint: disable=too-many-locals
-    def parse(self) -> Any:
+    def parse(self):
         """Do the parsing of the file."""
         self.model.name = _instance_name(self.root)
 

@@ -13,11 +13,10 @@
 # limitations under the License.
 
 """Solve NLP using Ipopt."""
-from typing import Optional
-from pypopt import IpoptApplication, TNLP, NLPInfo
 import numpy as np
+from pypopt import IpoptApplication, TNLP, NLPInfo
 import  galini.logging as log
-from galini.core import Problem, HessianEvaluator
+from galini.core import HessianEvaluator
 from galini.solvers import Solver
 
 
@@ -25,8 +24,7 @@ class GaliniTNLP(TNLP):
     """Implementation of the TNLP interface from pypopt for a Galini Problem."""
 
     # pylint: disable=invalid-name
-    def __init__(self, problem: Problem) -> None:
-        super().__init__()
+    def __init__(self, problem):
         self.n = problem.num_variables
         self.m = problem.num_constraints
         self._problem = problem
@@ -41,7 +39,7 @@ class GaliniTNLP(TNLP):
         for i, constraint in enumerate(problem.constraints.values()):
             self.constraints_idx[i] = constraint.root_expr.idx
 
-    def get_nlp_info(self) -> NLPInfo:
+    def get_nlp_info(self):
         n = self.n
         m = self.m
         nnz_jac = n*m
@@ -53,9 +51,7 @@ class GaliniTNLP(TNLP):
             nnz_hess=nnz_hess,
         )
 
-    def fill_bounds_info(self, x_l: Optional[memoryview], x_u: Optional[memoryview],
-                         g_l: Optional[memoryview], g_u: Optional[memoryview]) -> bool:
-
+    def fill_bounds_info(self, x_l, x_u, g_l, g_u):
         # TODO: use correct infinity value
         if x_l is not None and x_u is not None:
             for i, v in enumerate(self._problem.variables.values()):

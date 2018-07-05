@@ -34,7 +34,6 @@ def dag_to_pydot_graph(dag, ctx=None):
     nodes = {}
     # first add variables...
     subrank = pydot.Subgraph(rank='same')
-    print(ctx)
     for name, variable in dag.variables.items():
         label = '\n'.join([name, str(variable.idx)])
         if ctx is not None:

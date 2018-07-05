@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Convert Pyomo problems to GALINI Problem."""
-import sys
 from numbers import Number
 import numpy as np
 import pyomo.environ as aml

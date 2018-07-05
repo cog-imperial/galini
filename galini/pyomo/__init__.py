@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""GALINI"""
+
 __all__ = ['dag_from_pyomo_model', 'read_pyomo_model', 'read_osil', 'set_pyomo4_expression_tree']
 
 from .convert import dag_from_pyomo_model

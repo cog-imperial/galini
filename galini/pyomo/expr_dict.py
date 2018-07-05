@@ -14,6 +14,7 @@
 """Expression dictionary."""
 from numbers import Number
 from functools import reduce
+from suspect.math import almosteq
 from galini.pyomo.expr_visitor import (
     bottom_up_visit as visit_expression,
     ExpressionHandler,
@@ -21,7 +22,6 @@ from galini.pyomo.expr_visitor import (
     UnaryFunctionExpression,
 )
 from galini.pyomo.util import (numeric_types, numeric_value)
-from galini.math import almosteq
 from galini.pyomo.float_hash import RoundFloatHasher
 from pyomo.core.base import (
     _VarData,

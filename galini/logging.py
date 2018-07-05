@@ -12,10 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Log messages and data to disk."""
-from typing import Any, Optional, Union
-from pathlib import Path
 import logging
-import numpy as np
 
 CRITICAL = logging.CRITICAL
 ERROR = logging.ERROR
@@ -26,7 +23,8 @@ NOTSET = logging.NOTSET
 
 
 class MessageStorage(object):
-    def log(self, lvl: int, msg: str, *args: Any, **kwargs: Any) -> None:
+    """Message storage class."""
+    def log(self, lvl, msg, *args, **kwargs):
         """Log msg with lvl level.
 
         Arguments
@@ -40,36 +38,39 @@ class MessageStorage(object):
         kwargs: Any
             keyword arguments passed to msg.format
         """
+        pass
 
 
 class MatrixStorage(object):
-    pass
+    """Matrix storage class."""
+    def matrix(self, _path, _mat):
+        """Log matrix to storage."""
+        pass
 
 
 class Logger(object):
     """Object used to log data to disk."""
-    def __init__(self, message_storage: Optional[MessageStorage] = None,
-                 matrix_storage: Optional[MatrixStorage] = None):
+    def __init__(self, message_storage=None, matrix_storage=None):
         self._message_storage = message_storage
         self._matrix_storage = matrix_storage
 
-    def debug(self, msg: str, *args: Any, **kwargs: Any) -> None:
+    def debug(self, msg, *args, **kwargs):
         """Log msg with DEBUG level."""
         return self.log(DEBUG, msg, *args, **kwargs)
 
-    def info(self, msg: str, *args: Any, **kwargs: Any) -> None:
+    def info(self, msg, *args, **kwargs):
         """Log msg with INFO level."""
         return self.log(INFO, msg, *args, **kwargs)
 
-    def warning(self, msg: str, *args: Any, **kwargs: Any) -> None:
+    def warning(self, msg, *args, **kwargs):
         """Log msg with WARNING level."""
         return self.log(WARNING, msg, *args, **kwargs)
 
-    def error(self, msg: str, *args: Any, **kwargs: Any) -> None:
+    def error(self, msg, *args, **kwargs):
         """Log msg with ERROR level."""
         return self.log(ERROR, msg, *args, **kwargs)
 
-    def log(self, lvl: int, msg: str, *args: Any, **kwargs: Any) -> None:
+    def log(self, lvl, msg, *args, **kwargs):
         """Log msg with lvl level.
 
         Arguments
@@ -86,7 +87,7 @@ class Logger(object):
         if self._message_storage:
             self._message_storage.log(lvl, msg, *args, **kwargs)
 
-    def matrix(self, path: str, mat: np.array):
+    def matrix(self, path, mat):
         """Log numpy.array to archive.
 
         Arguments
@@ -110,7 +111,7 @@ class Logger(object):
 
 class BuiltinLoggingMessageStorage(MessageStorage):
     """A MessageStorage that uses the builtin logging module."""
-    def log(self, lvl: int, msg: str, *args: Any, **kwargs: Any) -> None:
+    def log(self, lvl, msg, *args, **kwargs):
         logging.log(lvl, msg, *args, **kwargs)
 
 
@@ -120,7 +121,7 @@ class Hdf5MatrixStorage(MatrixStorage):
         import h5py
         self._file = h5py.File(h5_file, 'w')
 
-    def matrix(self, path: str, mat: np.array) -> None:
+    def matrix(self, path, mat):
         if path not in self._file:
             grp = self._file.create_group(path)
             grp.attrs['size'] = 0
@@ -144,7 +145,8 @@ set_message_storage = _logger.set_message_storage
 set_matrix_storage = _logger.set_matrix_storage
 
 
-def apply_config(config: 'GaliniConfig') -> None:
+def apply_config(config):
+    """Apply config to current logger."""
     config = config.logging
     _apply_matrix_storage_config(config)
 

@@ -30,7 +30,7 @@ DEFAULT_SOLVER = 'oa'
 class SolveCommand(CliCommand):
     """Command to solve an optimization problem."""
 
-    def execute(self, args: Namespace) -> None:
+    def execute(self, args):
         solvers_reg = SolversRegistry()
         solver_cls = solvers_reg.get(args.solver.lower())
         if solver_cls is None:
@@ -53,10 +53,10 @@ class SolveCommand(CliCommand):
         dag = dag_from_pyomo_model(pyomo_model)
         solver.solve(dag)
 
-    def help_message(self) -> str:
+    def help_message(self):
         return "Solve a MINLP"
 
-    def add_parser_arguments(self, parser: ArgumentParser) -> None:
+    def add_parser_arguments(self, parser):
         parser.add_argument('problem')
         parser.add_argument('--solver', help='Specify the solver to use', default=DEFAULT_SOLVER)
         parser.add_argument('--config', help='Specify the configuration file')
