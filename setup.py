@@ -29,6 +29,12 @@ version_path = project_root / 'galini' / '__version__.py'
 with version_path.open() as f:
     exec(f.read(), about)
 
+with (project_root / 'README.rst').open() as f:
+    readme = f.read()
+
+with (project_root / 'CHANGELOG.rst').open() as f:
+    changelog = f.read()
+
 
 class PyTestCommand(TestCommand):
     user_options = [
@@ -84,6 +90,7 @@ setup(
     author_email=about['__author_email__'],
     license=about['__license__'],
     version=about['__version__'],
+    long_description=readme + '\n\n' + changelog,
     packages=find_packages(exclude=['tests']),
     entry_points={
         'console_scripts': [
@@ -103,7 +110,7 @@ setup(
     },
     ext_modules=cythonize(extensions, annotate=True),
     cmdclass={'test': PyTestCommand},
-    requires=['pyomo'],
+    install_requires=['pyomo>=5.2', 'cog-suspect>=1.0.6'],
     setup_requires=['pytest-runner', 'cython'],
     tests_require=['pytest', 'pytest-cov', 'hypothesis'],
 )
