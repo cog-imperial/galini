@@ -15,7 +15,7 @@
 import abc
 
 
-class CliCommand(metaclass=abc.ABCMeta):
+class CliCommand(metaclass=abc.ABCMeta): # pragma: no cover
     """Abstract class for CLI commands."""
     @abc.abstractmethod
     def execute(self, args):

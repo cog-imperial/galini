@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Registry module."""
-from typing import Any, Dict, Iterable
 import abc
 import sys
 import pkg_resources
@@ -21,10 +20,10 @@ import galini.logging as log
 
 class Registry(metaclass=abc.ABCMeta):
     """Registry for pkg_resources entry points."""
-    def __init__(self) -> None:
+    def __init__(self):
         self.group = self.group_name()
-        self._registered: Dict[str, Any] = {}
-        for entry_point in pkg_resources.iter_entry_points(self.group_name()):
+        self._registered = {}
+        for entry_point in self.iter_entry_points():
             if entry_point.name in self._registered:
                 log.error(
                     'Duplicate registered item %s found in %s registry.',
@@ -34,15 +33,19 @@ class Registry(metaclass=abc.ABCMeta):
             obj_cls = entry_point.load()
             self._registered[entry_point.name] = obj_cls
 
-    def get(self, name: str, default: Any = None) -> Any:
+    def get(self, name, default=None):
         """Return entry point associated with name."""
         return self._registered.get(name, default)
 
-    def keys(self) -> Iterable[str]:
+    def keys(self):
         """Return the registered objects names."""
         return self._registered.keys()
 
     @abc.abstractmethod
-    def group_name(self) -> str:
+    def group_name(self): # pragma: no cover
         """Return this registry group name."""
         pass
+
+    def iter_entry_points(self): # pragma: no cover
+        """Return an iterator over this registry entry points."""
+        return pkg_resources.iter_entry_points(self.group_name())
