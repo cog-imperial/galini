@@ -1,0 +1,14 @@
+site_name: GALINI
+repo_name: cog-imperial/galini
+repo_url: https://github.com/cog-imperial/galini
+nav:
+  - Home: index.md
+  - Commands:
+      - dot: commands/dot.md
+  - Configuration: configuration.md
+  - Logging: logging.md
+theme:
+  name: material
+  palette:
+    primary: blue
+    accent: pink
