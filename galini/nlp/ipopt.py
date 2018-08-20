@@ -51,7 +51,7 @@ class GaliniTNLP(TNLP):
             nnz_hess=nnz_hess,
         )
 
-    def fill_bounds_info(self, x_l, x_u, g_l, g_u):
+    def get_bounds_info(self, x_l, x_u, g_l, g_u):
         # TODO: use correct infinity value
         if x_l is not None and x_u is not None:
             for i, v in enumerate(self._problem.variables.values()):
@@ -71,7 +71,7 @@ class GaliniTNLP(TNLP):
 
         return True
 
-    def fill_starting_point(self, init_x, x, init_z, z_l, z_u, init_lambda, lambda_):
+    def get_starting_point(self, init_x, x, init_z, z_l, z_u, init_lambda, lambda_):
         for i, v in enumerate(self._problem.variables.values()):
             if v.has_starting_point:
                 x[i] = v.starting_point
@@ -82,7 +82,7 @@ class GaliniTNLP(TNLP):
         log.matrix('ipopt/starting_point', np.array(x))
         return True
 
-    def fill_jacobian_g_structure(self, row, col):
+    def get_jac_g_structure(self, row, col):
         # TODO: real (sparse) structure
         for j in range(self.m):
             for i in range(self.n):
@@ -93,7 +93,7 @@ class GaliniTNLP(TNLP):
         log.matrix('ipopt/jacobian_g_structure/col', np.array(col))
         return True
 
-    def fill_hessian_structure(self, row, col):
+    def get_h_structure(self, row, col):
         # TODO: real (sparse) structure
         idx = 0
         for i in range(self.n):
@@ -126,7 +126,7 @@ class GaliniTNLP(TNLP):
         log.matrix('ipopt/g', np.array(g))
         return True
 
-    def eval_jacobian_g(self, x, new_x, jacobian):
+    def eval_jac_g(self, x, new_x, jacobian):
         self._ad.eval_at_x(x, new_x)
         jac = self._ad.jacobian
         i = 0
@@ -138,7 +138,7 @@ class GaliniTNLP(TNLP):
         log.matrix('ipopt/jacobian', np.array(jacobian))
         return True
 
-    def eval_hessian(self, x, new_x, obj_factor, lambda_, new_lambda, hess):
+    def eval_h(self, x, new_x, obj_factor, lambda_, new_lambda, hess):
         self._ad.eval_at_x(x, new_x)
         hessian = self._ad.hessian
 
@@ -158,7 +158,7 @@ class GaliniTNLP(TNLP):
         log.matrix('ipopt/hessian', np.array(hess))
         return True
 
-    def finalize_solution(self, x, z_l, z_u, g, lambda_, obj_value):
+    def finalize_solution(self, _status, x, z_l, z_u, g, lambda_, obj_value):
         # print(np.array(x, dtype=np.float64))
         log.matrix('ipopt/solution/x', np.array(x))
         log.matrix('ipopt/solution/z_l', np.array(z_l))
