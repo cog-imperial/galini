@@ -110,7 +110,13 @@ setup(
     },
     ext_modules=cythonize(extensions, annotate=True),
     cmdclass={'test': PyTestCommand},
-    install_requires=['pyomo>=5.2', 'cog-suspect>=1.0.6'],
+    install_requires=[
+        'pyomo>=5.2',
+        'cog-suspect>=1.0.6',
+        'pypopt>=0.4.3',
+        'numpy',
+        'toml',
+    ],
     setup_requires=['pytest-runner', 'cython'],
     tests_require=['pytest', 'pytest-cov', 'hypothesis'],
 )
