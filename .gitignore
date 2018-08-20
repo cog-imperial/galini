@@ -8,6 +8,10 @@ __pycache__
 .eggs
 .hypothesis
 .tox
+.idea
+build
+.mypy_cache
+.pytest_cache
 htmlcov
 venv
 docs/_build
