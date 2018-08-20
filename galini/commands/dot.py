@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """GALINI dot subcommand."""
-from galini.subcommands import CliCommand
+from galini.commands import CliCommand
 from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
 from galini.dot import dag_to_pydot_graph
 

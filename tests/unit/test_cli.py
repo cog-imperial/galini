@@ -1,7 +1,7 @@
 # pylint: skip-file
 import pytest
 import argparse
-from galini.cli import collect_subcommands
+from galini.cli import collect_commands
 
 
 class _MockCommand():
@@ -28,7 +28,7 @@ def mock_entry_points_iter(entry_points):
 def test_collect_subcommands():
     parser = argparse.ArgumentParser()
     subparser = parser.add_subparsers(dest='command')
-    subcommands = collect_subcommands(
+    subcommands = collect_commands(
         subparser,
         mock_entry_points_iter(['one', 'two', 'three']),
     )
@@ -41,7 +41,7 @@ def test_collect_subcommands_fails_with_duplicate_subcommand():
     parser = argparse.ArgumentParser(prog='tests')
     subparser = parser.add_subparsers(dest='command')
     with pytest.raises(SystemExit) as exc:
-        subcommands = collect_subcommands(
+        subcommands = collect_commands(
             subparser,
             mock_entry_points_iter(['test', 'test']),
         )

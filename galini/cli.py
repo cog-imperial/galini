@@ -20,26 +20,26 @@ import galini.logging as log
 from galini.pyomo import set_pyomo4_expression_tree
 
 
-def collect_subcommands(parser, subcommands_entry_points_iter):
-    """Collect all subcommands registered with `galini.subcommands`.
+def collect_commands(parser, subcommands_entry_points_iter):
+    """Collect all commands registered with `galini.commands`.
 
     Returns
     -------
     dict
         a dict of command names and objects.
     """
-    subcommands = {}
+    commands = {}
     for entry_point in subcommands_entry_points_iter:
-        if entry_point.name in subcommands:
+        if entry_point.name in commands:
             log.error('Duplicate entry point %s found.', entry_point.name)
             sys.exit(1)
         sub_cls = entry_point.load()
         sub = sub_cls()
         subparser = parser.add_parser(entry_point.name, help=sub.help_message())
         sub.add_parser_arguments(subparser)
-        subcommands[entry_point.name] = sub
+        commands[entry_point.name] = sub
 
-    return subcommands
+    return commands
 
 
 def main(): # pragma: no cover
@@ -48,9 +48,9 @@ def main(): # pragma: no cover
 
     parser = argparse.ArgumentParser(prog='galini')
     subparser = parser.add_subparsers(dest='command')
-    subcommands = collect_subcommands(
+    subcommands = collect_commands(
         subparser,
-        pkg_resources.iter_entry_points('galini.subcommands'),
+        pkg_resources.iter_entry_points('galini.commands'),
     )
     args = parser.parse_args()
 

@@ -17,7 +17,7 @@ import sys
 from argparse import ArgumentParser, Namespace
 import galini.logging as log
 from galini.config import GaliniConfig
-from galini.subcommands import CliCommand
+from galini.commands import CliCommand
 from galini.solvers import SolversRegistry
 from galini.mip import MIPSolverRegistry
 from galini.nlp import NLPSolverRegistry
