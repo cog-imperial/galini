@@ -1,15 +1,16 @@
 # cython: cdivision=True, boundscheck=False, wraparound=False
 cimport numpy as np
 import numpy as np
-from galini.core.dag import float_, index_
-from galini.core.dag cimport (
+from galini.core.expression import float_, index_
+from galini.core.expression cimport (
+    foo,
     float_t,
     index,
-    Problem,
     Expression,
     Objective,
     Constraint,
 )
+from galini.core.problem cimport Problem
 
 cdef class _JacobianEvaluator:
     cdef readonly np.ndarray values
@@ -26,9 +27,9 @@ cdef class _JacobianEvaluator:
         self.values = np.zeros(problem.size, dtype=float_)
         self.jacobian = np.zeros((self.num_cons + self.num_objs, self.num_var), dtype=float_)
 
-    cdef _init_x(self, float_t[:] x):
+    cdef _init_x(self, foo[:] x):
         cdef index n_x, i
-        cdef float_t[:] values = self.values
+        cdef foo[:] values = self.values
 
         n_x = len(x)
         if n_x != self.num_var:
@@ -37,7 +38,7 @@ cdef class _JacobianEvaluator:
         for i in range(n_x):
             self.values[i] = x[i]
 
-    def eval_at_x(self, float_t[:] x, bint new_x):
+    def eval_at_x(self, foo[:] x, bint new_x):
         pass
 
 
@@ -66,9 +67,9 @@ cdef class ForwardJacobianEvaluator(_JacobianEvaluator):
             cons = problem._constraints[i]
             self.output_idx[num_objs+i] = cons.root_expr.idx
 
-    def eval_at_x(self, float_t[:] x, bint new_x):
+    def eval_at_x(self, foo[:] x, bint new_x):
         cdef index i, j, k, j_idx
-        cdef float_t d_v
+        cdef foo d_v
         cdef Expression expr
         cdef index n_x
 
@@ -78,8 +79,8 @@ cdef class ForwardJacobianEvaluator(_JacobianEvaluator):
         self._init_x(x)
 
         n_x = self.num_var
-        cdef float_t[:] values = self.values
-        cdef float_t[:, :] dot = self.dot
+        cdef foo[:] values = self.values
+        cdef foo[:, :] dot = self.dot
 
         dot[:] = 0.0
         for i in range(n_x):
@@ -87,12 +88,12 @@ cdef class ForwardJacobianEvaluator(_JacobianEvaluator):
 
         for i in range(n_x, self.size):
             expr = self.vertices[i]
-            values[i] = expr._eval(values)
+            values[i] = expr.eval(values)
             for j in range(expr.num_children):
                 j_idx = expr._nth_children(j)
-                d_v = expr._d_v(j, values)
+                d_v = expr.d_v(j, values)
                 for k in range(n_x):
-                    dot[i, k] += d_v * dot[j_idx, k]
+                    dot[i, k] = dot[i, k] + d_v * dot[j_idx, k]
 
         self.jacobian = self.dot[self.output_idx]
 
@@ -110,14 +111,14 @@ cdef class ReverseJacobianEvaluator(_JacobianEvaluator):
         # contains the adjoints at x
         self.adj = np.zeros(problem.size, dtype=float_)
 
-    def eval_at_x(self, float_t[:] x, bint new_x):
+    def eval_at_x(self, foo[:] x, bint new_x):
         cdef index i, j, root_idx
         cdef index num_objs, num_cons, n_x
         cdef Expression expr
         cdef Objective obj
         cdef Constraint cons
-        cdef float_t[:] adj, values
-        cdef float_t[:, :] jacobian = self.jacobian
+        cdef foo[:] adj, values
+        cdef foo[:, :] jacobian = self.jacobian
 
         if not new_x:
             return
@@ -133,7 +134,7 @@ cdef class ReverseJacobianEvaluator(_JacobianEvaluator):
 
         for i in range(n_x, self.size):
             expr = self.vertices[i]
-            values[i] = expr._eval(values)
+            values[i] = expr.eval(values)
 
         for i in range(num_objs):
             obj = self.objectives[i]
@@ -147,7 +148,7 @@ cdef class ReverseJacobianEvaluator(_JacobianEvaluator):
             self._eval_jacobian_for_output(root_idx, n_x, values, adj)
             jacobian[i + num_objs, :] = adj[:n_x]
 
-    cdef void _eval_jacobian_for_output(self, index root_idx, index n_x, float_t[:] values, float_t[:] adj):
+    cdef void _eval_jacobian_for_output(self, index root_idx, index n_x, foo[:] values, foo[:] adj):
         cdef index i, j, child_idx
         cdef Expression expr
         adj[:] = 0.0
@@ -158,7 +159,7 @@ cdef class ReverseJacobianEvaluator(_JacobianEvaluator):
                 continue
             for j in range(expr.num_children):
                 child_idx = expr._nth_children(j)
-                adj[child_idx] += adj[i] * expr._d_v(j, values)
+                adj[child_idx] = adj[child_idx] + adj[i] * expr.d_v(j, values)
 
 
 class JacobianEvaluator(object):
@@ -205,7 +206,7 @@ cdef class HessianEvaluator:
             cons = problem._constraints[i]
             self.output_idx[self.num_objs+i] = cons.root_expr.idx
 
-    def eval_at_x(self, float_t[:] x, new_x=True):
+    def eval_at_x(self, foo[:] x, new_x=True):
         cdef bint new_x_
         if new_x:
             new_x_ = 1
@@ -213,16 +214,16 @@ cdef class HessianEvaluator:
             new_x_ = 0
         return self._eval_at_x(x, new_x_)
 
-    cdef void _eval_at_x(self, float_t[:] x, bint new_x):
+    cdef void _eval_at_x(self, foo[:] x, bint new_x):
         cdef index i, current, n_x
         cdef Expression expr
-        cdef float_t d_v
-        cdef float_t[:] values = self.values
-        cdef float_t[:] adj = self.adj
-        cdef float_t[:, :] dot = self.dot
-        cdef float_t[:, :] adj_dot = self.adj_dot
-        cdef float_t[:, :] jacobian = self.jacobian
-        cdef float_t[:, :, :] hessian = self.hessian
+        cdef foo d_v
+        cdef foo[:] values = self.values
+        cdef foo[:] adj = self.adj
+        cdef foo[:, :] dot = self.dot
+        cdef foo[:, :] adj_dot = self.adj_dot
+        cdef foo[:, :] jacobian = self.jacobian
+        cdef foo[:, :, :] hessian = self.hessian
 
         cdef index num_cons = self.num_cons
         cdef index num_objs = self.num_objs
@@ -237,16 +238,16 @@ cdef class HessianEvaluator:
         # compute values only once
         for i in range(n_x, self.size):
             expr = self.vertices[i]
-            values[i] = expr._eval(values)
+            values[i] = expr.eval(values)
 
         # forward iteration, compute tangents
         for i in range(n_x, self.size):
             expr = self.vertices[i]
             for c in range(expr.num_children):
                 j = expr._nth_children(c)
-                d_v = expr._d_v(c, values)
+                d_v = expr.d_v(c, values)
                 for k in range(n_x):
-                    dot[i, k] += d_v * dot[j, k]
+                    dot[i, k] = dot[i, k] + d_v * dot[j, k]
 
         for i in range(self.num_cons + self.num_objs):
             current = self.output_idx[i]
@@ -257,11 +258,11 @@ cdef class HessianEvaluator:
     cdef void _compute_hessian(self, index current):
         cdef index n_x, i, j, k, z, c, c2
         cdef Expression expr
-        cdef float_t d_v, dd_vv
-        cdef float_t[:] values = self.values
-        cdef float_t[:, :] dot = self.dot
-        cdef float_t[:] adj = self.adj
-        cdef float_t[:, :] adj_dot = self.adj_dot
+        cdef foo d_v, dd_vv
+        cdef foo[:] values = self.values
+        cdef foo[:, :] dot = self.dot
+        cdef foo[:] adj = self.adj
+        cdef foo[:, :] adj_dot = self.adj_dot
 
         n_x = self.num_var
 
@@ -275,22 +276,22 @@ cdef class HessianEvaluator:
             expr = self.vertices[i]
             for c in range(expr.num_children):
                 j = expr._nth_children(c)
-                d_v = expr._d_v(c, values)
-                adj[j] += adj[i] * d_v
+                d_v = expr.d_v(c, values)
+                adj[j] = adj[j] + adj[i] * d_v
 
                 for z in range(n_x):
-                    adj_dot[j, z] += adj_dot[i, z] * d_v
+                    adj_dot[j, z] = adj_dot[j, z] + adj_dot[i, z] * d_v
 
                 for c2 in range(expr.num_children):
                     k = expr._nth_children(c2)
-                    dd_vv = expr._dd_vv(c, c2, values)
+                    dd_vv = expr.dd_vv(c, c2, values)
                     for z in range(n_x):
-                        adj_dot[j, z] += adj[i] * dd_vv * dot[k, z]
+                        adj_dot[j, z] = adj_dot[j, z] + adj[i] * dd_vv * dot[k, z]
 
-    cdef _init_x(self, float_t[:] x):
+    cdef _init_x(self, foo[:] x):
         cdef index n_x, i
-        cdef float_t[:] values = self.values
-        cdef float_t[:, :] dot = self.dot
+        cdef foo[:] values = self.values
+        cdef foo[:, :] dot = self.dot
 
         n_x = len(x)
         if n_x != self.num_var:

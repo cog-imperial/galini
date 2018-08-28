@@ -26,11 +26,10 @@ __all__ = [
 
 
 # pylint: disable=no-name-in-module
-from galini.core.dag import (
+from galini.core.expression import (
     float_,
     Domain,
     Sense,
-    Problem,
     Variable,
     Constant,
     Constraint,
@@ -56,6 +55,11 @@ from galini.core.dag import (
     AsinExpression,
     AcosExpression,
     AtanExpression,
+)
+
+# pylint: disable=no-name-in-module
+from galini.core.problem import (
+    Problem,
 )
 
 from galini.core.ad import (

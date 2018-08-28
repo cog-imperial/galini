@@ -72,8 +72,13 @@ class PyTestCommand(TestCommand):
 
 extensions = [
     Extension(
-        'galini.core.dag',
-        sources=['galini/core/dag.pyx'],
+        'galini.core.expression',
+        sources=['galini/core/expression.pyx'],
+        include_dirs=[np.get_include()],
+    ),
+    Extension(
+        'galini.core.problem',
+        sources=['galini/core/problem.pyx'],
         include_dirs=[np.get_include()],
     ),
     Extension(
