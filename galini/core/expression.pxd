@@ -28,6 +28,14 @@ cpdef enum Sense:
     MAXIMIZE = 1
 
 
+# Fused type to write generic functions over objects and floats.
+# Unfortunately, it seems fused types mess with cdef classes method inheritance
+# so we have to write a generic implementation method for each expression type.
+ctypedef fused _foo:
+    float_t
+    object
+
+
 cdef class Expression:
     cdef readonly index num_children
     cdef readonly index idx
@@ -35,11 +43,8 @@ cdef class Expression:
     cdef readonly int expression_type
 
     cdef void reindex(self, index cutoff) nogil
-    cpdef float_t eval(self, float_t[:] v)
     cdef float_t _eval(self, float_t[:] v)
-    cpdef float_t d_v(self, index j, float_t[:] v)
     cdef float_t _d_v(self, index j, float_t[:] v)
-    cpdef float_t dd_vv(self, index j, index k, float_t[:] v)
     cdef float_t _dd_vv(self, index j, index k, float_t[:] v)
     cpdef index nth_children(self, index i)
     cdef index _nth_children(self, index i) nogil
@@ -58,15 +63,19 @@ cdef class NaryExpression(Expression):
 
 
 cdef class ProductExpression(BinaryExpression):
-    pass
+    cdef _foo __eval(self, _foo[:] v)
+    cdef _foo __d_v(self, index j, _foo[:] v)
+    cdef _foo __dd_vv(self, index j, index k, _foo[:] v)
 
 
 cdef class DivisionExpression(BinaryExpression):
-    pass
+    cdef _foo __eval(self, _foo[:] v)
+    cdef _foo __d_v(self, index j, _foo[:] v)
+    cdef _foo __dd_vv(self, index j, index k, _foo[:] v)
 
 
 cdef class SumExpression(NaryExpression):
-    pass
+    cdef _foo __eval(self, _foo[:] v)
 
 
 cdef class PowExpression(BinaryExpression):
@@ -76,6 +85,8 @@ cdef class PowExpression(BinaryExpression):
 cdef class LinearExpression(NaryExpression):
     cdef float_t *_coefficients
     cdef readonly float_t constant
+
+    cdef _foo __eval(self, _foo[:] v)
 
 
 cdef class NegationExpression(UnaryExpression):
@@ -87,7 +98,8 @@ cdef class UnaryFunctionExpression(UnaryExpression):
 
 
 cdef class AbsExpression(UnaryFunctionExpression):
-    pass
+    cdef _foo __eval(self, _foo[:] v)
+    cdef _foo __d_v(self, index j, _foo[:] v)
 
 
 cdef class SqrtExpression(UnaryFunctionExpression):
