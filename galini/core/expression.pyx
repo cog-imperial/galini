@@ -36,22 +36,22 @@ cdef class Expression:
         if self.idx >= cutoff:
             self.idx += 1
 
-    cpdef foo eval(self, foo[:] v):
+    cpdef float_t eval(self, float_t[:] v):
         return self._eval(v)
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         return 0.0
 
-    cpdef foo d_v(self, index j, foo[:] v):
+    cpdef float_t d_v(self, index j, float_t[:] v):
         return self._d_v(j, v)
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         return 0.0
 
-    cpdef foo dd_vv(self, index j, index k, foo[:] v):
+    cpdef float_t dd_vv(self, index j, index k, float_t[:] v):
         return self._dd_vv(j, k, v)
 
-    cdef foo _dd_vv(self, index j, index k, foo[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
         return 0.0
 
     cpdef index nth_children(self, index i):
@@ -137,10 +137,10 @@ cdef class ProductExpression(BinaryExpression):
     def __init__(self, object children):
         super().__init__(children, ExpressionType.Product)
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         return v[self.children[0]] * v[self.children[1]]
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         if j == 0:
             return v[self.children[1]]
         elif j == 1:
@@ -148,7 +148,7 @@ cdef class ProductExpression(BinaryExpression):
         return INFINITY
 
 
-    cdef foo _dd_vv(self, index j, index k, foo[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
         if j == k:
             return 0.0
         else:
@@ -159,10 +159,10 @@ cdef class DivisionExpression(BinaryExpression):
     def __init__(self, object children):
         super().__init__(children, ExpressionType.Division)
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         return v[self.children[0]] / v[self.children[1]]
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         cdef float_t y
         if j == 0:
             # d/dx (x/y) := 1/y
@@ -174,7 +174,7 @@ cdef class DivisionExpression(BinaryExpression):
         else:
             return INFINITY
 
-    cdef foo _dd_vv(self, index j, index k, foo[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
         cdef float_t x
         cdef float_t y = v[self.children[1]]
         if j == k:
@@ -194,17 +194,17 @@ cdef class SumExpression(NaryExpression):
     def __init__(self, object children):
         super().__init__(children, ExpressionType.Sum)
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         cdef index i
         cdef float_t tot = 0
         for i in range(self.num_children):
             tot += v[self.children[i]]
         return tot
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         return 1.0
 
-    cdef foo _dd_vv(self, index j, index k, foo[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
         return 0.0
 
 
@@ -212,7 +212,7 @@ cdef class PowExpression(BinaryExpression):
     def __init__(self, object children):
         super().__init__(children, ExpressionType.Power)
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         cdef float_t base = v[self.children[0]]
         cdef float_t expo = v[self.children[1]]
         if expo == 0:
@@ -224,7 +224,7 @@ cdef class PowExpression(BinaryExpression):
         else:
             return math.pow(base, expo)
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         cdef float_t base = v[self.children[0]]
         cdef float_t expo = v[self.children[1]]
         if j == 0:
@@ -245,7 +245,7 @@ cdef class PowExpression(BinaryExpression):
         else:
             return INFINITY
 
-    cdef foo _dd_vv(self, index j, index k, foo[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
         cdef float_t a, l, b, c
         cdef float_t base = v[self.children[0]]
         cdef float_t expo = v[self.children[1]]
@@ -287,17 +287,17 @@ cdef class LinearExpression(NaryExpression):
     def coefficients(self):
         return <float_t[:self.num_children]>self._coefficients
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         cdef index i
         cdef float_t tot = self.constant
         for i in range(self.num_children):
             tot += self._coefficients[i] * v[self.children[i]]
         return tot
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         return self._coefficients[j]
 
-    cdef foo _dd_vv(self, index j, index k, foo[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
         return 0.0
 
 
@@ -305,10 +305,10 @@ cdef class NegationExpression(UnaryExpression):
     def __init__(self, object children):
         super().__init__(children, ExpressionType.Negation)
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         return -v[self.children[0]]
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         return -1.0
 
 
@@ -322,14 +322,14 @@ cdef class AbsExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Abs)
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         cdef float_t x = v[self.children[0]]
         if x >= 0:
             return x
         else:
             return -x
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         cdef float_t x = v[self.children[0]]
         if x >= 0:
             return 1.0
@@ -341,13 +341,13 @@ cdef class SqrtExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Sqrt)
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         return math.sqrt(v[self.children[0]])
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         return 1.0 / (2.0 * math.sqrt(v[self.children[0]]))
 
-    cdef foo _dd_vv(self, index j, index k, foo[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
         cdef float_t s = math.sqrt(v[self.children[0]])
         return -1.0/(4.0 * math.pow(s, 3))
 
@@ -356,13 +356,13 @@ cdef class ExpExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Exp)
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         return math.exp(v[self.children[0]])
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         return math.exp(v[self.children[0]])
 
-    cdef foo _dd_vv(self, index j, index k, foo[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
         return math.exp(v[self.children[0]])
 
 
@@ -370,13 +370,13 @@ cdef class LogExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Log)
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         return math.log(v[self.children[0]])
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         return 1.0 / v[self.children[0]]
 
-    cdef foo _dd_vv(self, index j, index k, foo[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
         cdef float_t x = v[self.children[0]]
         return -1.0 / (x*x)
 
@@ -385,13 +385,13 @@ cdef class SinExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Sin)
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         return math.sin(v[self.children[0]])
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         return math.cos(v[self.children[0]])
 
-    cdef foo _dd_vv(self, index j, index k, foo[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
         return -math.sin(v[self.children[0]])
 
 
@@ -399,13 +399,13 @@ cdef class CosExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Cos)
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         return math.cos(v[self.children[0]])
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         return -math.sin(v[self.children[0]])
 
-    cdef foo _dd_vv(self, index j, index k, foo[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
         return -math.cos(v[self.children[0]])
 
 
@@ -413,14 +413,14 @@ cdef class TanExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Tan)
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         return math.tan(v[self.children[0]])
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         cdef float_t s = 1.0/math.cos(v[self.children[0]])
         return s*s
 
-    cdef foo _dd_vv(self, index j, index k, foo[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
         cdef float_t x = v[self.children[0]]
         cdef float_t s = 1.0/math.cos(x)
         return 2.0*s*s*math.tan(x)
@@ -430,14 +430,14 @@ cdef class AsinExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Asin)
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         return math.asin(v[self.children[0]])
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         cdef float_t x = v[self.children[0]]
         return 1.0 / math.sqrt(1-x*x)
 
-    cdef foo _dd_vv(self, index j, index k, foo[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
         cdef float_t x = v[self.children[0]]
         return x / math.pow(1-x*x, 1.5)
 
@@ -446,14 +446,14 @@ cdef class AcosExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Acos)
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         return math.acos(v[self.children[0]])
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         cdef float_t x = v[self.children[0]]
         return -1.0 / math.sqrt(1-x*x)
 
-    cdef foo _dd_vv(self, index j, index k, foo[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
         cdef float_t x = v[self.children[0]]
         return -x / math.pow(1-x*x, 1.5)
 
@@ -462,14 +462,14 @@ cdef class AtanExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Atan)
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         return math.atan(v[self.children[0]])
 
-    cdef foo _d_v(self, index j, foo[:] v):
+    cdef float_t _d_v(self, index j, float_t[:] v):
         cdef float_t x = v[self.children[0]]
         return 1.0/(1+x*x)
 
-    cdef foo _dd_vv(self, index j, index k, foo[:] v):
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
         cdef float_t x = v[self.children[0]]
         cdef float_t y = x*x
         return -(2*x) / ((1+y)*(1+y))
@@ -537,7 +537,7 @@ cdef class Variable(Expression):
     cpdef bint is_real(self):
         return self.domain == Domain.REALS
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         return v[self.idx]
 
 
@@ -548,5 +548,5 @@ cdef class Constant(Expression):
         # always come after variables
         self.default_depth = 1
 
-    cdef foo _eval(self, foo[:] v):
+    cdef float_t _eval(self, float_t[:] v):
         return self.value

@@ -72,7 +72,6 @@ class TestJacobian(object):
         jacobian = jac.jacobian
         assert jacobian.shape == (len(m.J) + 1, len(m.I))
 
-
         assert np.array_equal(jacobian[0, :], np.ones(3))
         assert np.array_equal(jacobian[1, :], np.ones(3))
         assert np.array_equal(jacobian[2, :], np.ones(3) * 4.0)

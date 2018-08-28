@@ -27,11 +27,6 @@ cpdef enum Sense:
     MINIMIZE = 0
     MAXIMIZE = 1
 
-# float or object type
-#ctypedef fused foo:
-#    float_t
-#    object
-ctypedef float_t foo
 
 cdef class Expression:
     cdef readonly index num_children
@@ -40,12 +35,12 @@ cdef class Expression:
     cdef readonly int expression_type
 
     cdef void reindex(self, index cutoff) nogil
-    cpdef foo eval(self, foo[:] v)
-    cdef foo _eval(self, foo[:] v)
-    cpdef foo d_v(self, index j, foo[:] v)
-    cdef foo _d_v(self, index j, foo[:] v)
-    cpdef foo dd_vv(self, index j, index k, foo[:] v)
-    cdef foo _dd_vv(self, index j, index k, foo[:] v)
+    cpdef float_t eval(self, float_t[:] v)
+    cdef float_t _eval(self, float_t[:] v)
+    cpdef float_t d_v(self, index j, float_t[:] v)
+    cdef float_t _d_v(self, index j, float_t[:] v)
+    cpdef float_t dd_vv(self, index j, index k, float_t[:] v)
+    cdef float_t _dd_vv(self, index j, index k, float_t[:] v)
     cpdef index nth_children(self, index i)
     cdef index _nth_children(self, index i) nogil
 
