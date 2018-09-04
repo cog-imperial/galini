@@ -24,7 +24,7 @@ from galini.core.expression cimport (
 
 cdef class Problem:
     cdef readonly str name
-    cdef object vertices
+    cdef readonly object vertices
     cdef readonly index size
     cdef index *depth
     cdef index depth_size
@@ -33,8 +33,8 @@ cdef class Problem:
     cdef readonly index num_constraints
     cdef readonly index num_objectives
 
-    cdef object _constraints
-    cdef object _objectives
+    cdef readonly object _constraints
+    cdef readonly object _objectives
     cdef object _variables_by_name
     cdef object _constraints_by_name
     cdef object _objectives_by_name

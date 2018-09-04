@@ -139,35 +139,33 @@ cdef class ProductExpression(BinaryExpression):
     def __init__(self, object children):
         super().__init__(children, ExpressionType.Product)
 
-    def eval(self, object[:] v):
-        return self.__eval(v)
-
-    cdef float_t _eval(self, float_t[:] v):
-        return self.__eval(v)
-
-    cdef _foo __eval(self, _foo[:] v):
+    def eval(self, np.ndarray v):
         return v[self.children[0]] * v[self.children[1]]
 
-    def d_v(self, index j, object[:] v):
-        return self.__d_v(j, v)
+    cdef float_t _eval(self, float_t[:] v):
+        return v[self.children[0]] * v[self.children[1]]
 
-    cdef float_t _d_v(self, index j, float_t[:] v):
-        return self.__d_v(j, v)
-
-    cdef _foo __d_v(self, index j, _foo[:] v):
+    def d_v(self, index j, np.ndarray v):
         if j == 0:
             return v[self.children[1]]
         elif j == 1:
             return v[self.children[0]]
         return 0
 
-    def dd_vv(self, index j, index k, object[:] v):
-        return self.__dd_vv(j, k, v)
+    cdef float_t _d_v(self, index j, float_t[:] v):
+        if j == 0:
+            return v[self.children[1]]
+        elif j == 1:
+            return v[self.children[0]]
+        return 0
+
+    def dd_vv(self, index j, index k, np.ndarray v):
+        if j == k:
+            return 0.0
+        else:
+            return 1.0
 
     cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
-        return self.__dd_vv(j, k, v)
-
-    cdef _foo __dd_vv(self, index j, index k, _foo[:] v):
         if j == k:
             return 0.0
         else:
@@ -178,23 +176,13 @@ cdef class DivisionExpression(BinaryExpression):
     def __init__(self, object children):
         super().__init__(children, ExpressionType.Division)
 
-    def eval(self, object[:] v):
-        return self.__eval(v)
-
-    cdef float_t _eval(self, float_t[:] v):
-        return self.__eval(v)
-
-    cdef _foo __eval(self, _foo[:] v):
+    def eval(self, np.ndarray v):
         return v[self.children[0]] / v[self.children[1]]
 
-    def d_v(self, index j, object[:] v):
-        return self.__d_v(j, v)
+    cdef float_t _eval(self, float_t[:] v):
+        return v[self.children[0]] / v[self.children[1]]
 
-    cdef float_t _d_v(self, index j, float_t[:] v):
-        return self.__d_v(j, v)
-
-    cdef _foo __d_v(self, index j, _foo[:] v):
-        cdef _foo y
+    def d_v(self, index j, np.ndarray v):
         if j == 0:
             # d/dx (x/y) := 1/y
             return 1.0/v[self.children[1]]
@@ -205,15 +193,34 @@ cdef class DivisionExpression(BinaryExpression):
         else:
             return 0
 
-    def dd_vv(self, index j, index k, object[:] v):
-        return self.__dd_vv(j, k, v)
+    cdef float_t _d_v(self, index j, float_t[:] v):
+        cdef float_t y
+        if j == 0:
+            # d/dx (x/y) := 1/y
+            return 1.0/v[self.children[1]]
+        elif j == 1:
+            # d/dy (x/y) := -x/y^2
+            y = v[self.children[1]]
+            return -v[self.children[0]] / (y*y)
+        else:
+            return 0
+
+    def dd_vv(self, index j, index k, np.ndarray v):
+        y = v[self.children[1]]
+        if j == k:
+            if j == 0:
+                # d/dx^2
+                return 0.0
+            else:
+                x = v[self.children[0]]
+                return 2*x / (y*y*y)
+        else:
+            # d/dxdy == d/dydx == -1/y^2
+            return -1.0 / (y*y)
 
     cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
-        return self.__dd_vv(j, k, v)
-
-    cdef _foo __dd_vv(self, index j, index k, _foo[:] v):
-        cdef _foo x
-        cdef _foo y = v[self.children[1]]
+        cdef float_t x
+        cdef float_t y = v[self.children[1]]
         if j == k:
             if j == 0:
                 # d/dx^2
@@ -230,27 +237,26 @@ cdef class SumExpression(NaryExpression):
     def __init__(self, object children):
         super().__init__(children, ExpressionType.Sum)
 
-    def eval(self, object[:] v):
-        return self.__eval(v)
-
-
-    cdef float_t _eval(self, float_t[:] v):
-        return self.__eval(v)
-
-    cdef _foo __eval(self, _foo[:] v):
-        cdef index i
-        cdef _foo tot = 0
+    def eval(self, np.ndarray v):
+        tot = 0
         for i in range(self.num_children):
             tot += v[self.children[i]]
         return tot
 
-    def d_v(self, index j, object[:] v):
+    cdef float_t _eval(self, float_t[:] v):
+        cdef index i
+        cdef float_t tot = 0
+        for i in range(self.num_children):
+            tot += v[self.children[i]]
+        return tot
+
+    def d_v(self, index j, np.ndarray v):
         return 1.0
 
     cdef float_t _d_v(self, index j, float_t[:] v):
         return 1.0
 
-    def dd_vv(self, index j, index k, object[:] v):
+    def dd_vv(self, index j, index k, np.ndarray v):
         return 0.0
 
     cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
@@ -261,7 +267,7 @@ cdef class PowExpression(BinaryExpression):
     def __init__(self, object children):
         super().__init__(children, ExpressionType.Power)
 
-    def eval(self, object[:] v):
+    def eval(self, np.ndarray v):
         base = v[self.children[0]]
         expo = v[self.children[1]]
         if expo == 0:
@@ -285,7 +291,7 @@ cdef class PowExpression(BinaryExpression):
         else:
             return math.pow(base, expo)
 
-    def d_v(self, index j, object[:] v):
+    def d_v(self, index j, np.ndarray v):
         base = v[self.children[0]]
         expo = v[self.children[1]]
         if j == 0:
@@ -300,7 +306,9 @@ cdef class PowExpression(BinaryExpression):
                 return (base ** expo) * (expo / base)
         elif j == 1:
             # derive over exponent
-            if base < 1e-8:
+            if isinstance(expo, float):
+                return 0
+            if base.is_negative():
                 return -INFINITY
             return (base ** expo) * base.log()
         else:
@@ -327,7 +335,7 @@ cdef class PowExpression(BinaryExpression):
         else:
             return INFINITY
 
-    def dd_vv(self, index j, index k, object[:] v):
+    def dd_vv(self, index j, index k, np.ndarray v):
         base = v[self.children[0]]
         expo = v[self.children[1]]
         if j != k:
@@ -392,26 +400,26 @@ cdef class LinearExpression(NaryExpression):
     def coefficients(self):
         return <float_t[:self.num_children]>self._coefficients
 
-    def eval(self, object[:] v):
-        return self.__eval(v)
-
-    cdef float_t _eval(self, float_t[:] v):
-        return self.__eval(v)
-
-    cdef _foo __eval(self, _foo[:] v):
-        cdef index i
-        cdef _foo tot = self.constant
+    def eval(self, np.ndarray v):
+        tot = self.constant
         for i in range(self.num_children):
             tot += self._coefficients[i] * v[self.children[i]]
         return tot
 
-    def d_v(self, index j, object[:] v):
+    cdef float_t _eval(self, float_t[:] v):
+        cdef index i
+        cdef float_t tot = self.constant
+        for i in range(self.num_children):
+            tot += self._coefficients[i] * v[self.children[i]]
+        return tot
+
+    def d_v(self, index j, np.ndarray v):
         return self._coefficients[j]
 
     cdef float_t _d_v(self, index j, float_t[:] v):
         return self._coefficients[j]
 
-    def dd_vv(self, index j, index k, object[:] v):
+    def dd_vv(self, index j, index k, np.ndarray v):
         return 0.0
 
     cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
@@ -422,13 +430,13 @@ cdef class NegationExpression(UnaryExpression):
     def __init__(self, object children):
         super().__init__(children, ExpressionType.Negation)
 
-    def eval(self, object[:] v):
+    def eval(self, np.ndarray v):
         return -v[self.children[0]]
 
     cdef float_t _eval(self, float_t[:] v):
         return -v[self.children[0]]
 
-    def d_v(self, index j, object[:] v):
+    def d_v(self, index j, np.ndarray v):
         return -1.0
 
     cdef float_t _d_v(self, index j, float_t[:] v):
@@ -445,27 +453,29 @@ cdef class AbsExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Abs)
 
-    def eval(self, object[:] v):
-        return self.__eval(v)
+    def eval(self, np.ndarray v):
+        x = v[self.children[0]]
+        if x < 0:
+            return -x
+        else:
+            return x
 
     cdef float_t _eval(self, float_t[:] v):
-        return self.__eval(v)
-
-    cdef _foo __eval(self, _foo[:] v):
-        cdef _foo x = v[self.children[0]]
+        cdef float_t x = v[self.children[0]]
         if x >= 0:
             return x
         else:
             return -x
 
-    def d_v(self, index j, object[:] v):
-        return self.__d_v(j, v)
+    def d_v(self, index j, np.ndarray v):
+        x = v[self.children[0]]
+        if x < 0:
+            return -1.0
+        else:
+            return 1.0
 
     cdef float_t _d_v(self, index j, float_t[:] v):
-        return self.__d_v(j, v)
-
-    cdef _foo __d_v(self, index j, _foo[:] v):
-        cdef _foo x = v[self.children[0]]
+        cdef float_t x = v[self.children[0]]
         if x >= 0:
             return 1.0
         else:
@@ -476,20 +486,20 @@ cdef class SqrtExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Sqrt)
 
-    def eval(self, object[:] v):
+    def eval(self, np.ndarray v):
         return v[self.children[0]].sqrt()
 
     cdef float_t _eval(self, float_t[:] v):
         return math.sqrt(v[self.children[0]])
 
-    def d_v(self, index j, object[:] v):
+    def d_v(self, index j, np.ndarray v):
         a = v[self.children[0]]
         return 1.0 / (2.0 * a.sqrt())
 
     cdef float_t _d_v(self, index j, float_t[:] v):
         return 1.0 / (2.0 * math.sqrt(v[self.children[0]]))
 
-    def dd_vv(self, index j, index k, object[:] v):
+    def dd_vv(self, index j, index k, np.ndarray v):
         a = v[self.children[0]]
         s = a.pow()
         return -1.0/(4.0 * (s ** 3))
@@ -503,19 +513,19 @@ cdef class ExpExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Exp)
 
-    def eval(self, object[:] v):
+    def eval(self, np.ndarray v):
         return v[self.children[0]].exp()
 
     cdef float_t _eval(self, float_t[:] v):
         return math.exp(v[self.children[0]])
 
-    def d_v(self, index j, object[:] v):
+    def d_v(self, index j, np.ndarray v):
         return v[self.children[0]].exp()
 
     cdef float_t _d_v(self, index j, float_t[:] v):
         return math.exp(v[self.children[0]])
 
-    def dd_vv(self, index j, index k, object[:] v):
+    def dd_vv(self, index j, index k, np.ndarray v):
         return v[self.children[0]].exp()
 
     cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
@@ -526,19 +536,19 @@ cdef class LogExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Log)
 
-    def eval(self, object[:] v):
+    def eval(self, np.ndarray v):
         return v[self.children[0]].log()
 
     cdef float_t _eval(self, float_t[:] v):
         return math.log(v[self.children[0]])
 
-    def d_v(self, index j, object[:] v):
+    def d_v(self, index j, np.ndarray v):
         return 1.0 / v[self.children[0]]
 
     cdef float_t _d_v(self, index j, float_t[:] v):
         return 1.0 / v[self.children[0]]
 
-    def dd_vv(self, index j, index k, object[:] v):
+    def dd_vv(self, index j, index k, np.ndarray v):
         x = v[self.children[0]]
         return -1.0 / (x*x)
 
@@ -551,19 +561,19 @@ cdef class SinExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Sin)
 
-    def eval(self, object[:] v):
+    def eval(self, np.ndarray v):
         return v[self.children[0]].sin()
 
     cdef float_t _eval(self, float_t[:] v):
         return math.sin(v[self.children[0]])
 
-    def d_v(self, index j, object[:] v):
+    def d_v(self, index j, np.ndarray v):
         return v[self.children[0]].cos()
 
     cdef float_t _d_v(self, index j, float_t[:] v):
         return math.cos(v[self.children[0]])
 
-    def dd_vv(self, index j, index k, object[:] v):
+    def dd_vv(self, index j, index k, np.ndarray v):
         return -v[self.children[0]].sin()
 
     cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
@@ -574,19 +584,19 @@ cdef class CosExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Cos)
 
-    def eval(self, object[:] v):
+    def eval(self, np.ndarray v):
         return v[self.children[0]].cos()
 
     cdef float_t _eval(self, float_t[:] v):
         return math.cos(v[self.children[0]])
 
-    def d_v(self, index j, object[:] v):
+    def d_v(self, index j, np.ndarray v):
         return -v[self.children[0]].sin()
 
     cdef float_t _d_v(self, index j, float_t[:] v):
         return -math.sin(v[self.children[0]])
 
-    def dd_vv(self, index j, index k, object[:] v):
+    def dd_vv(self, index j, index k, np.ndarray v):
         return -v[self.children[0]].cos()
 
     cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
@@ -597,13 +607,13 @@ cdef class TanExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Tan)
 
-    def eval(self, object[:] v):
+    def eval(self, np.ndarray v):
         return v[self.children[0]].tan()
 
     cdef float_t _eval(self, float_t[:] v):
         return math.tan(v[self.children[0]])
 
-    def d_v(self, index j, object[:] v):
+    def d_v(self, index j, np.ndarray v):
         s = 1.0 / v[self.children[0]].cos()
         return s*s
 
@@ -611,7 +621,7 @@ cdef class TanExpression(UnaryFunctionExpression):
         cdef float_t s = 1.0/math.cos(v[self.children[0]])
         return s*s
 
-    def dd_vv(self, index j, index k, object[:] v):
+    def dd_vv(self, index j, index k, np.ndarray v):
         x = v[self.children[0]]
         s = 1.0/x.cos()
         return 2.0*s*s*x.tan()
@@ -626,13 +636,13 @@ cdef class AsinExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Asin)
 
-    def eval(self, object[:] v):
+    def eval(self, np.ndarray v):
         return v[self.children[0]].asin()
 
     cdef float_t _eval(self, float_t[:] v):
         return math.asin(v[self.children[0]])
 
-    def d_v(self, index j, object[:] v):
+    def d_v(self, index j, np.ndarray v):
         x = v[self.children[0]]
         return 1.0 / (1-x*x).sqrt()
 
@@ -640,7 +650,7 @@ cdef class AsinExpression(UnaryFunctionExpression):
         cdef float_t x = v[self.children[0]]
         return 1.0 / math.sqrt(1-x*x)
 
-    def dd_vv(self, index j, index k, object[:] v):
+    def dd_vv(self, index j, index k, np.ndarray v):
         x = v[self.children[0]]
         return x / ((1-x*x) ** 1.5)
 
@@ -653,13 +663,13 @@ cdef class AcosExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Acos)
 
-    def eval(self, object[:] v):
+    def eval(self, np.ndarray v):
         return v[self.children[0]].acos()
 
     cdef float_t _eval(self, float_t[:] v):
         return math.acos(v[self.children[0]])
 
-    def d_v(self, index j, object[:] v):
+    def d_v(self, index j, np.ndarray v):
         x = v[self.children[0]]
         return -1.0 / (1-x*x).sqrt()
 
@@ -667,7 +677,7 @@ cdef class AcosExpression(UnaryFunctionExpression):
         cdef float_t x = v[self.children[0]]
         return -1.0 / math.sqrt(1-x*x)
 
-    def dd_vv(self, index j, index k, object[:] v):
+    def dd_vv(self, index j, index k, np.ndarray v):
         x = v[self.children[0]]
         return -x / ((1-x*x) ** 1.5)
 
@@ -680,13 +690,13 @@ cdef class AtanExpression(UnaryFunctionExpression):
     def __init__(self, object children):
         super().__init__(children, UnaryFunctionType.Atan)
 
-    def eval(self, object[:] v):
+    def eval(self, np.ndarray v):
         return v[self.children[0]].atan()
 
     cdef float_t _eval(self, float_t[:] v):
         return math.atan(v[self.children[0]])
 
-    def d_v(self, index j, object[:] v):
+    def d_v(self, index j, np.ndarray v):
         x = v[self.children[0]]
         return 1.0/(1+x*x)
 
@@ -694,7 +704,7 @@ cdef class AtanExpression(UnaryFunctionExpression):
         cdef float_t x = v[self.children[0]]
         return 1.0/(1+x*x)
 
-    def dd_vv(self, index j, index k, object[:] v):
+    def dd_vv(self, index j, index k, np.ndarray v):
         x = v[self.children[0]]
         y = x*x
         return -(2*x) / ((1+y)*(1+y))
@@ -777,6 +787,9 @@ cdef class Constant(Expression):
         self.value = value
         # always come after variables
         self.default_depth = 1
+
+    def eval(self, np.ndarray v):
+        return self.value
 
     cdef float_t _eval(self, float_t[:] v):
         return self.value

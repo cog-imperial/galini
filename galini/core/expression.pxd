@@ -28,14 +28,6 @@ cpdef enum Sense:
     MAXIMIZE = 1
 
 
-# Fused type to write generic functions over objects and floats.
-# Unfortunately, it seems fused types mess with cdef classes method inheritance
-# so we have to write a generic implementation method for each expression type.
-ctypedef fused _foo:
-    float_t
-    object
-
-
 cdef class Expression:
     cdef readonly index num_children
     cdef readonly index idx
@@ -63,19 +55,15 @@ cdef class NaryExpression(Expression):
 
 
 cdef class ProductExpression(BinaryExpression):
-    cdef _foo __eval(self, _foo[:] v)
-    cdef _foo __d_v(self, index j, _foo[:] v)
-    cdef _foo __dd_vv(self, index j, index k, _foo[:] v)
+    pass
 
 
 cdef class DivisionExpression(BinaryExpression):
-    cdef _foo __eval(self, _foo[:] v)
-    cdef _foo __d_v(self, index j, _foo[:] v)
-    cdef _foo __dd_vv(self, index j, index k, _foo[:] v)
+    pass
 
 
 cdef class SumExpression(NaryExpression):
-    cdef _foo __eval(self, _foo[:] v)
+    pass
 
 
 cdef class PowExpression(BinaryExpression):
@@ -85,8 +73,6 @@ cdef class PowExpression(BinaryExpression):
 cdef class LinearExpression(NaryExpression):
     cdef float_t *_coefficients
     cdef readonly float_t constant
-
-    cdef _foo __eval(self, _foo[:] v)
 
 
 cdef class NegationExpression(UnaryExpression):
@@ -98,8 +84,7 @@ cdef class UnaryFunctionExpression(UnaryExpression):
 
 
 cdef class AbsExpression(UnaryFunctionExpression):
-    cdef _foo __eval(self, _foo[:] v)
-    cdef _foo __d_v(self, index j, _foo[:] v)
+    pass
 
 
 cdef class SqrtExpression(UnaryFunctionExpression):

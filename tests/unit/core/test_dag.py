@@ -4,10 +4,10 @@ import numpy as np
 from galini.core import *
 from suspect.expression import ExpressionType, UnaryFunctionType
 
-
 @pytest.fixture
 def problem():
     return Problem('test')
+
 
 def test_problem_creation(problem):
     assert problem.size == 0
