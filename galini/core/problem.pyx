@@ -33,11 +33,119 @@ cdef index _bisect_left(index[:] depths, index n, index target):
     return n
 
 
+cdef class VariableView:
+    def __init__(self, Problem problem, Variable variable):
+        self.problem = problem
+        self.variable = variable
+
+    cpdef void set_starting_point(self, float_t point):
+        self.problem.set_starting_point(self.variable, point)
+
+    cpdef bint has_starting_point(self):
+        return self.problem.has_starting_point(self.variable)
+
+    cpdef float_t starting_point(self):
+        return self.problem.starting_point(self.variable)
+
+    cpdef void set_value(self, float_t value):
+        self.problem.set_value(self.variable, value)
+
+    cpdef void unset_value(self):
+        self.problem.unset_value(self.variable)
+
+    cpdef void fix(self, float_t point):
+        self.problem.fix_variable(self.variable, point)
+
+    cpdef void unfix(self):
+        self.problem.unfix_variable(self.variable)
+
+    cpdef object lower_bound(self):
+        return self.problem.variable_lower_bound(self.variable)
+
+    cpdef object upper_bound(self):
+        return self.problem.variable_upper_bound(self.variable)
+
+    cpdef Domain _domain(self):
+        return self.problem.variable_domain(self.variable)
+
+    cpdef bint is_binary(self):
+        return self._domain() == Domain.BINARY
+
+    cpdef bint is_integer(self):
+        return self._domain() == Domain.INTEGERS
+
+    cpdef bint is_real(self):
+        return self._domain() == Domain.REALS
+
+
 cdef class Problem:
+    # We have to explicitly implement all methods in the base class
+    # RootProblem and ChildProblem will override them.
+
+    cpdef index max_depth(self):
+        pass
+
+    cpdef index vertex_depth(self, index i):
+        pass
+
+    cpdef VariableView variable(self, str name):
+        pass
+
+    cpdef VariableView variable_at_index(self, index i):
+        pass
+
+    cpdef Constraint constraint(self, str name):
+        pass
+
+    cpdef Objective objective(self, str name):
+        pass
+
+    cpdef void set_starting_point(self, Variable v, float_t point):
+        pass
+
+    cpdef bint has_starting_point(self, Variable v):
+        pass
+
+    cpdef float_t starting_point(self, Variable v):
+        pass
+
+    cpdef void set_value(self, Variable v, float_t value):
+        pass
+
+    cpdef void unset_value(self, Variable v):
+        pass
+
+    cpdef void fix_variable(self, Variable v, float_t point):
+        pass
+
+    cpdef void unfix_variable(self, Variable v):
+        pass
+
+    cpdef object variable_lower_bound(self, Variable v):
+        pass
+
+    cpdef object variable_upper_bound(self, Variable v):
+        pass
+
+    cpdef Domain variable_domain(self, Variable v):
+        pass
+
+
+cdef class RootProblem(Problem):
     def __init__(self, str name):
         self.name = name
         self.vertices = []
         self.size = 0
+
+        self.domains = []
+        self.lower_bounds = []
+        self.upper_bounds = []
+        self.starting_points = []
+        self.starting_points_mask = []
+        self.values = []
+        self.values_mask = []
+        self.fixed = []
+        self.fixed_mask = []
 
         starting_nodes = 512
         self.depth = <index *>PyMem_Malloc(starting_nodes * sizeof(index))
@@ -71,19 +179,39 @@ cdef class Problem:
     cpdef Variable add_variable(self, str name, object lower_bound, object upper_bound, Domain domain):
         if name in self._variables_by_name:
             raise RuntimeError('variable {} already exists'.format(name))
-        cdef Variable var = Variable(lower_bound, upper_bound, domain)
+        cdef Variable var = Variable()
         self._insert_vertex(var)
         self._variables_by_name[name] = var
         self.num_variables += 1
         assert self.num_variables == len(self._variables_by_name)
+        # new variables are always added after existing variables, so it is
+        # safe to append their bounds and domains
+        self.domains.append(domain)
+        self.lower_bounds.append(lower_bound)
+        self.upper_bounds.append(upper_bound)
+        self.starting_points.append(0.0)
+        self.starting_points_mask.append(0)
+        self.values.append(0.0)
+        self.values_mask.append(0)
+        self.fixed.append(0.0)
+        self.fixed_mask.append(0)
         return var
 
-    cpdef Variable variable(self, str name):
-        return self._variables_by_name[name]
+    cpdef VariableView variable(self, str name):
+        cdef Variable var = self._variables_by_name[name]
+        return VariableView(self, var)
+
+    cpdef VariableView variable_at_index(self, index i):
+        cdef Variable var = self.vertices[i]
+        return VariableView(self, var)
 
     @property
     def variables(self):
         return self._variables_by_name
+
+    def variables_view(self):
+        for var in self._variables_by_name.values():
+            yield VariableView(self, var)
 
     cpdef Constraint add_constraint(self, str name, Expression root_expr, object lower_bound, object upper_bound):
         if name in self._constraints_by_name:
@@ -143,6 +271,39 @@ cdef class Problem:
         for i in range(self.size):
             yield self.vertices[i]
 
+    cpdef void set_starting_point(self, Variable v, float_t point):
+        self.starting_points[v.idx] = point
+        self.starting_points_mask[v.idx] = 1
+
+    cpdef bint has_starting_point(self, Variable v):
+        return self.starting_points_mask[v.idx]
+
+    cpdef float_t starting_point(self, Variable v):
+        return self.starting_points[v.idx]
+
+    cpdef void set_value(self, Variable v, float_t value):
+        self.values[v.idx] = value
+        self.values_mask[v.idx] = 1
+
+    cpdef void unset_value(self, Variable v):
+        self.values_mask[v.idx] = 0
+
+    cpdef void fix_variable(self, Variable v, float_t point):
+        self.fixed[v.idx] = point
+        self.fixed_mask[v.idx] = 1
+
+    cpdef void unfix_variable(self, Variable v):
+        self.fixed_mask[v.idx] = 0
+
+    cpdef object variable_lower_bound(self, Variable v):
+        return self.lower_bounds[v.idx]
+
+    cpdef object variable_upper_bound(self, Variable v):
+        return self.upper_bounds[v.idx]
+
+    cpdef Domain variable_domain(self, Variable v):
+        return self.domains[v.idx]
+
     cpdef insert_vertex(self, Expression expr):
         if isinstance(expr, (Variable, Constraint, Objective)):
             raise RuntimeError('insert variable, constraint, objective')
@@ -199,3 +360,12 @@ cdef class Problem:
             raise MemoryError()
         self.depth = new_depth
         self.depth_size = new_size
+
+
+cdef class ChildProblem(Problem):
+    def __init__(self, Problem parent):
+        self.parent = parent
+
+    def variables_view(self):
+        for var in self.parent._variables_by_name.values():
+            yield VariableView(self, var)

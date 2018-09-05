@@ -44,7 +44,7 @@ def dag_from_pyomo_model(model):
         name = model.name
     else:
         name = 'unknown'
-    dag = core.Problem(name=name)
+    dag = core.RootProblem(name=name)
     factory = _ComponentFactory(dag)
     for omo_var in model_variables(model):
         factory.add_variable(omo_var)
@@ -71,7 +71,7 @@ class _ComponentFactory(object):
         domain = _convert_domain(omo_var.domain)
         new_var = self.dag.add_variable(omo_var.name, omo_var.lb, omo_var.ub, domain)
         if omo_var.value:
-            new_var.set_starting_point(omo_var.value)
+            self.dag.set_starting_point(new_var, omo_var.value)
         self._components[omo_var] = new_var
         return new_var
 

@@ -21,7 +21,7 @@ __all__ = [
     'SqrtExpression', 'ExpExpression', 'LogExpression', 'SinExpression', 'CosExpression',
     'TanExpression', 'AsinExpression', 'AcosExpression', 'AtanExpression',
     'JacobianEvaluator', 'ForwardJacobianEvaluator', 'ReverseJacobianEvaluator',
-    'HessianEvaluator',
+    'HessianEvaluator', 'RootProblem', 'ChildProblem',
 ]
 
 
@@ -60,6 +60,8 @@ from galini.core.expression import (
 # pylint: disable=no-name-in-module
 from galini.core.problem import (
     Problem,
+    RootProblem,
+    ChildProblem,
 )
 
 from galini.core.ad import (

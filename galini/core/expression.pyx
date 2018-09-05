@@ -738,44 +738,9 @@ cdef class Constraint:
 
 
 cdef class Variable(Expression):
-    def __init__(self, object lower_bound, object upper_bound, Domain domain):
+    def __init__(self):
         super().__init__(ExpressionType.Variable)
-        self.lower_bound = lower_bound
-        self.upper_bound = upper_bound
-        self.domain = domain
         self.default_depth = 0
-        self.has_starting_point = 0
-        self.starting_point = 0.0
-        self.value = 0
-        self.has_value = 0
-        self.is_fixed = 0
-
-    cpdef void set_starting_point(self, float_t point):
-        self.starting_point = point
-        self.has_starting_point = 1
-
-    cpdef void set_value(self, float_t value):
-        self.value = value
-        self.has_value = 1
-
-    cpdef void unset_value(self):
-        self.has_value = 0
-
-    cpdef void fix(self, float_t point):
-        self.value = point
-        self.is_fixed = 1
-
-    cpdef void unfix(self):
-        self.is_fixed = 0
-
-    cpdef bint is_binary(self):
-        return self.domain == Domain.BINARY
-
-    cpdef bint is_integer(self):
-        return self.domain == Domain.INTEGERS
-
-    cpdef bint is_real(self):
-        return self.domain == Domain.REALS
 
     cdef float_t _eval(self, float_t[:] v):
         return v[self.idx]

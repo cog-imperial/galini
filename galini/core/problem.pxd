@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+cimport numpy as np
 from galini.core.expression cimport (
+    float_t,
     index,
     Sense,
     Domain,
@@ -22,7 +24,66 @@ from galini.core.expression cimport (
 )
 
 
+cdef class VariableView:
+    cdef readonly Problem problem
+    cdef readonly Variable variable
+
+    cpdef bint is_binary(self)
+    cpdef bint is_integer(self)
+    cpdef bint is_real(self)
+    cpdef void set_starting_point(self, float_t point)
+    cpdef bint has_starting_point(self)
+    cpdef float_t starting_point(self)
+    cpdef void set_value(self, float_t value)
+    cpdef void unset_value(self)
+    cpdef void fix(self, float_t point)
+    cpdef void unfix(self)
+    cpdef object lower_bound(self)
+    cpdef object upper_bound(self)
+
+    cpdef Domain _domain(self)
+
+
 cdef class Problem:
+    cpdef index max_depth(self)
+    cpdef index vertex_depth(self, index i)
+
+    cpdef VariableView variable(self, str name)
+    cpdef VariableView variable_at_index(self, index i)
+    cpdef Constraint constraint(self, str name)
+    cpdef Objective objective(self, str name)
+
+    cpdef void set_starting_point(self, Variable v, float_t point)
+    cpdef bint has_starting_point(self, Variable v)
+    cpdef float_t starting_point(self, Variable v)
+    cpdef void set_value(self, Variable v, float_t value)
+    cpdef void unset_value(self, Variable v)
+    cpdef void fix_variable(self, Variable v, float_t point)
+    cpdef void unfix_variable(self, Variable v)
+    cpdef object variable_lower_bound(self, Variable v)
+    cpdef object variable_upper_bound(self, Variable v)
+    cpdef Domain variable_domain(self, Variable v)
+
+
+cdef class RootProblem(Problem):
+    # Use Python lists since they are not used frequently enough to be
+    # worth managing the memory ourselves
+
+    # Variables domain
+    cdef readonly object domains
+    # Variables lower and upper bounds
+    cdef readonly object lower_bounds
+    cdef readonly object upper_bounds
+    # Variables starting points and mask
+    cdef readonly object starting_points
+    cdef readonly object starting_points_mask
+    # Variables values from solution and mask
+    cdef readonly object values
+    cdef readonly object values_mask
+    # Variable mask for fixed variables
+    cdef readonly object fixed
+    cdef readonly object fixed_mask
+
     cdef readonly str name
     cdef readonly object vertices
     cdef readonly index size
@@ -39,18 +100,14 @@ cdef class Problem:
     cdef object _constraints_by_name
     cdef object _objectives_by_name
 
-    cpdef index max_depth(self)
-    cpdef index vertex_depth(self, index i)
-
     cpdef Variable add_variable(self, str name, object lower_bound, object upper_bound, Domain domain)
-    cpdef Variable variable(self, str name)
-
     cpdef Constraint add_constraint(self, str name, Expression root_expr, object lower_bound, object upper_bound)
-    cpdef Constraint constraint(self, str name)
-
     cpdef Objective add_objective(self, str name, Expression root_expr, Sense sense)
-    cpdef Objective objective(self, str name)
 
     cpdef insert_vertex(self, Expression expr)
     cdef index _insert_vertex(self, Expression expr)
     cdef void _realloc_depth(self)
+
+
+cdef class ChildProblem(Problem):
+    cdef readonly Problem parent

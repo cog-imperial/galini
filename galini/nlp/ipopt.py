@@ -54,9 +54,9 @@ class GaliniTNLP(TNLP):
     def get_bounds_info(self, x_l, x_u, g_l, g_u):
         # TODO: use correct infinity value
         if x_l is not None and x_u is not None:
-            for i, v in enumerate(self._problem.variables.values()):
-                x_l[i] = v.lower_bound if v.lower_bound is not None else -2e19
-                x_u[i] = v.upper_bound if v.upper_bound is not None else 2e19
+            for i, v in enumerate(self._problem.variables_view()):
+                x_l[i] = v.lower_bound() if v.lower_bound() is not None else -2e19
+                x_u[i] = v.upper_bound() if v.upper_bound() is not None else 2e19
 
         log.matrix('ipopt/bounds/x_l', np.array(x_l))
         log.matrix('ipopt/bounds/x_u', np.array(x_u))
@@ -72,12 +72,12 @@ class GaliniTNLP(TNLP):
         return True
 
     def get_starting_point(self, init_x, x, init_z, z_l, z_u, init_lambda, lambda_):
-        for i, v in enumerate(self._problem.variables.values()):
-            if v.has_starting_point:
-                x[i] = v.starting_point
+        for i, v in enumerate(self._problem.variables_view()):
+            if v.has_starting_point():
+                x[i] = v.starting_point()
             else:
-                l = v.lower_bound if v.lower_bound is not None else -2e19
-                u = v.upper_bound if v.upper_bound is not None else 2e19
+                l = v.lower_bound() if v.lower_bound() is not None else -2e19
+                u = v.upper_bound() if v.upper_bound() is not None else 2e19
                 x[i] = max(l, min(u, 0))
         log.matrix('ipopt/starting_point', np.array(x))
         return True

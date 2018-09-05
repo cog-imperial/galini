@@ -4,9 +4,10 @@ import numpy as np
 from galini.core import *
 from suspect.expression import ExpressionType, UnaryFunctionType
 
+
 @pytest.fixture
 def problem():
-    return Problem('test')
+    return RootProblem('test')
 
 
 def test_problem_creation(problem):
@@ -59,7 +60,7 @@ def test_children_are_updated(problem):
     (PowExpression([0, 1]), ExpressionType.Power),
     (LinearExpression([0], np.array([1.0]), 0.0), ExpressionType.Linear),
     (NegationExpression([0]), ExpressionType.Negation),
-    (Variable(None, None, Domain.REALS), ExpressionType.Variable),
+    # (Variable(None, None, Domain.REALS), ExpressionType.Variable),
     (Constant(0.0), ExpressionType.Constant),
 ])
 def test_suspect_expression_types(expr, expected):
