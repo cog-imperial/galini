@@ -53,17 +53,29 @@ cdef class VariableView:
     cpdef void unset_value(self):
         self.problem.unset_value(self.variable)
 
+    cpdef bint has_value(self):
+        return self.problem.has_value(self.variable)
+
     cpdef void fix(self, float_t point):
         self.problem.fix_variable(self.variable, point)
 
     cpdef void unfix(self):
         self.problem.unfix_variable(self.variable)
 
+    cpdef bint is_fixed(self):
+        return self.problem.is_fixed(self.variable)
+
     cpdef object lower_bound(self):
         return self.problem.variable_lower_bound(self.variable)
 
+    cpdef void set_lower_bound(self, object value):
+        self.problem.set_variable_lower_bound(self.variable, value)
+
     cpdef object upper_bound(self):
         return self.problem.variable_upper_bound(self.variable)
+
+    cpdef void set_upper_bound(self, object value):
+        self.problem.set_variable_upper_bound(self.variable, value)
 
     cpdef Domain _domain(self):
         return self.problem.variable_domain(self.variable)
@@ -81,6 +93,16 @@ cdef class VariableView:
 cdef class Problem:
     # We have to explicitly implement all methods in the base class
     # RootProblem and ChildProblem will override them.
+    def __init__(self):
+        self.domains = []
+        self.lower_bounds = []
+        self.upper_bounds = []
+        self.starting_points = []
+        self.starting_points_mask = []
+        self.values = []
+        self.values_mask = []
+        self.fixed = []
+        self.fixed_mask = []
 
     cpdef index max_depth(self):
         pass
@@ -94,6 +116,9 @@ cdef class Problem:
     cpdef VariableView variable_at_index(self, index i):
         pass
 
+    def variables(self):
+        pass
+
     cpdef Constraint constraint(self, str name):
         pass
 
@@ -101,51 +126,60 @@ cdef class Problem:
         pass
 
     cpdef void set_starting_point(self, Variable v, float_t point):
-        pass
+        self.starting_points[v.idx] = point
+        self.starting_points_mask[v.idx] = 1
 
     cpdef bint has_starting_point(self, Variable v):
-        pass
+        return self.starting_points_mask[v.idx]
 
     cpdef float_t starting_point(self, Variable v):
-        pass
+        return self.starting_points[v.idx]
 
     cpdef void set_value(self, Variable v, float_t value):
-        pass
+        self.values[v.idx] = value
+        self.values_mask[v.idx] = 1
 
     cpdef void unset_value(self, Variable v):
-        pass
+        self.values_mask[v.idx] = 0
+
+    cpdef bint has_value(self, Variable v):
+        return self.values_mask[v.idx]
 
     cpdef void fix_variable(self, Variable v, float_t point):
-        pass
+        self.fixed[v.idx] = point
+        self.fixed_mask[v.idx] = 1
 
     cpdef void unfix_variable(self, Variable v):
-        pass
+        self.fixed_mask[v.idx] = 0
+
+    cpdef bint is_fixed(self, Variable v):
+        return self.fixed_mask[v.idx]
 
     cpdef object variable_lower_bound(self, Variable v):
-        pass
+        return self.lower_bounds[v.idx]
+
+    cpdef void set_variable_lower_bound(self, Variable v, object value):
+        self.lower_bounds[v.idx] = value
 
     cpdef object variable_upper_bound(self, Variable v):
-        pass
+        return self.upper_bounds[v.idx]
+
+    cpdef void set_variable_upper_bound(self, Variable v, object value):
+        self.upper_bounds[v.idx] = value
 
     cpdef Domain variable_domain(self, Variable v):
+        return self.domains[v.idx]
+
+    cpdef ChildProblem make_child(self):
         pass
 
 
 cdef class RootProblem(Problem):
     def __init__(self, str name):
+        super().__init__()
         self.name = name
         self.vertices = []
         self.size = 0
-
-        self.domains = []
-        self.lower_bounds = []
-        self.upper_bounds = []
-        self.starting_points = []
-        self.starting_points_mask = []
-        self.values = []
-        self.values_mask = []
-        self.fixed = []
-        self.fixed_mask = []
 
         starting_nodes = 512
         self.depth = <index *>PyMem_Malloc(starting_nodes * sizeof(index))
@@ -205,12 +239,11 @@ cdef class RootProblem(Problem):
         cdef Variable var = self.vertices[i]
         return VariableView(self, var)
 
-    @property
     def variables(self):
         return self._variables_by_name
 
     def variables_view(self):
-        for var in self._variables_by_name.values():
+        for var in self.variables().values():
             yield VariableView(self, var)
 
     cpdef Constraint add_constraint(self, str name, Expression root_expr, object lower_bound, object upper_bound):
@@ -271,38 +304,8 @@ cdef class RootProblem(Problem):
         for i in range(self.size):
             yield self.vertices[i]
 
-    cpdef void set_starting_point(self, Variable v, float_t point):
-        self.starting_points[v.idx] = point
-        self.starting_points_mask[v.idx] = 1
-
-    cpdef bint has_starting_point(self, Variable v):
-        return self.starting_points_mask[v.idx]
-
-    cpdef float_t starting_point(self, Variable v):
-        return self.starting_points[v.idx]
-
-    cpdef void set_value(self, Variable v, float_t value):
-        self.values[v.idx] = value
-        self.values_mask[v.idx] = 1
-
-    cpdef void unset_value(self, Variable v):
-        self.values_mask[v.idx] = 0
-
-    cpdef void fix_variable(self, Variable v, float_t point):
-        self.fixed[v.idx] = point
-        self.fixed_mask[v.idx] = 1
-
-    cpdef void unfix_variable(self, Variable v):
-        self.fixed_mask[v.idx] = 0
-
-    cpdef object variable_lower_bound(self, Variable v):
-        return self.lower_bounds[v.idx]
-
-    cpdef object variable_upper_bound(self, Variable v):
-        return self.upper_bounds[v.idx]
-
-    cpdef Domain variable_domain(self, Variable v):
-        return self.domains[v.idx]
+    cpdef ChildProblem make_child(self):
+        return ChildProblem(self)
 
     cpdef insert_vertex(self, Expression expr):
         if isinstance(expr, (Variable, Constraint, Objective)):
@@ -366,6 +369,34 @@ cdef class ChildProblem(Problem):
     def __init__(self, Problem parent):
         self.parent = parent
 
+        self._init_variables_storage()
+
+    def _init_variables_storage(self):
+        self.domains = self.parent.domains.copy()
+        self.lower_bounds = self.parent.lower_bounds.copy()
+        self.upper_bounds = self.parent.upper_bounds.copy()
+        self.starting_points = self.parent.starting_points.copy()
+        self.starting_points_mask = self.parent.starting_points_mask.copy()
+        self.values = self.parent.values.copy()
+        self.values_mask = self.parent.values_mask.copy()
+        self.fixed = self.parent.fixed.copy()
+        self.fixed_mask = self.parent.fixed_mask.copy()
+
+
+    cpdef VariableView variable(self, str name):
+        cdef Variable var = self.parent._variables_by_name[name]
+        return VariableView(self, var)
+
+    cpdef VariableView variable_at_index(self, index i):
+        cdef Variable var = self.parent.vertices[i]
+        return VariableView(self, var)
+
+    def variables(self):
+        return self.parent.variables()
+
     def variables_view(self):
-        for var in self.parent._variables_by_name.values():
+        for var in self.variables().values():
             yield VariableView(self, var)
+
+    cpdef ChildProblem make_child(self):
+        return ChildProblem(self)

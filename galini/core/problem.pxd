@@ -36,36 +36,19 @@ cdef class VariableView:
     cpdef float_t starting_point(self)
     cpdef void set_value(self, float_t value)
     cpdef void unset_value(self)
+    cpdef bint has_value(self)
     cpdef void fix(self, float_t point)
     cpdef void unfix(self)
+    cpdef bint is_fixed(self)
     cpdef object lower_bound(self)
+    cpdef void set_lower_bound(self, object value)
     cpdef object upper_bound(self)
+    cpdef void set_upper_bound(self, object value)
 
     cpdef Domain _domain(self)
 
 
 cdef class Problem:
-    cpdef index max_depth(self)
-    cpdef index vertex_depth(self, index i)
-
-    cpdef VariableView variable(self, str name)
-    cpdef VariableView variable_at_index(self, index i)
-    cpdef Constraint constraint(self, str name)
-    cpdef Objective objective(self, str name)
-
-    cpdef void set_starting_point(self, Variable v, float_t point)
-    cpdef bint has_starting_point(self, Variable v)
-    cpdef float_t starting_point(self, Variable v)
-    cpdef void set_value(self, Variable v, float_t value)
-    cpdef void unset_value(self, Variable v)
-    cpdef void fix_variable(self, Variable v, float_t point)
-    cpdef void unfix_variable(self, Variable v)
-    cpdef object variable_lower_bound(self, Variable v)
-    cpdef object variable_upper_bound(self, Variable v)
-    cpdef Domain variable_domain(self, Variable v)
-
-
-cdef class RootProblem(Problem):
     # Use Python lists since they are not used frequently enough to be
     # worth managing the memory ourselves
 
@@ -84,6 +67,33 @@ cdef class RootProblem(Problem):
     cdef readonly object fixed
     cdef readonly object fixed_mask
 
+    cpdef index max_depth(self)
+    cpdef index vertex_depth(self, index i)
+
+    cpdef VariableView variable(self, str name)
+    cpdef VariableView variable_at_index(self, index i)
+    cpdef Constraint constraint(self, str name)
+    cpdef Objective objective(self, str name)
+
+    cpdef void set_starting_point(self, Variable v, float_t point)
+    cpdef bint has_starting_point(self, Variable v)
+    cpdef float_t starting_point(self, Variable v)
+    cpdef void set_value(self, Variable v, float_t value)
+    cpdef void unset_value(self, Variable v)
+    cpdef bint has_value(self, Variable v)
+    cpdef void fix_variable(self, Variable v, float_t point)
+    cpdef void unfix_variable(self, Variable v)
+    cpdef bint is_fixed(self, Variable v)
+    cpdef object variable_lower_bound(self, Variable v)
+    cpdef void set_variable_lower_bound(self, Variable v, object value)
+    cpdef object variable_upper_bound(self, Variable v)
+    cpdef void set_variable_upper_bound(self, Variable v, object value)
+    cpdef Domain variable_domain(self, Variable v)
+
+    cpdef ChildProblem make_child(self)
+
+
+cdef class RootProblem(Problem):
     cdef readonly str name
     cdef readonly object vertices
     cdef readonly index size
