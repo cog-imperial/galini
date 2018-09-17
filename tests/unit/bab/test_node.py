@@ -19,14 +19,19 @@ class MockBranching:
     def __init__(self, points):
         self.points = points
 
-    def branch(self, problem):
-        var = problem.variable_at_index(2)
+    def branch(self, node, _tree):
+        var = node.problem.variable_at_index(2)
         return BranchingPoint(var, self.points)
+
+
+class MockTree:
+    pass
 
 
 class TestBranching:
     def test_branch_on_single_point(self, problem):
-        node = Node(problem)
+        tree = MockTree()
+        node = Node(problem, tree, [0])
         new_nodes = node.branch(MockBranching(1.5))
 
         assert len(new_nodes) == 2
@@ -35,7 +40,8 @@ class TestBranching:
         self._assert_bounds_are_correct(new_nodes, expected_bounds)
 
     def test_branch_on_list_of_points(self, problem):
-        node = Node(problem)
+        tree = MockTree()
+        node = Node(problem, tree, [0])
         new_nodes = node.branch(MockBranching([-0.5, 0.0, 0.5, 1.0, 1.5]))
         assert len(new_nodes) == 6
 
@@ -49,3 +55,6 @@ class TestBranching:
             var = node.problem.variable_at_index(2)
             assert np.isclose(lower, var.lower_bound())
             assert np.isclose(upper, var.upper_bound())
+
+        for i, node in enumerate(new_nodes):
+            assert node.coordinate == [0, i]

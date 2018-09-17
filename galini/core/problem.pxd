@@ -49,6 +49,10 @@ cdef class VariableView:
 
 
 cdef class Problem:
+    cdef readonly index num_variables
+    cdef readonly index num_constraints
+    cdef readonly index num_objectives
+
     # Use Python lists since they are not used frequently enough to be
     # worth managing the memory ourselves
 
@@ -95,14 +99,10 @@ cdef class Problem:
 
 cdef class RootProblem(Problem):
     cdef readonly str name
-    cdef readonly object vertices
+    cdef readonly object _vertices
     cdef readonly index size
     cdef index *depth
     cdef index depth_size
-
-    cdef readonly index num_variables
-    cdef readonly index num_constraints
-    cdef readonly index num_objectives
 
     cdef readonly object _constraints
     cdef readonly object _objectives

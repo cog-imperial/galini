@@ -173,12 +173,16 @@ cdef class Problem:
     cpdef ChildProblem make_child(self):
         pass
 
+    @property
+    def vertices(self):
+        return None
+
 
 cdef class RootProblem(Problem):
     def __init__(self, str name):
         super().__init__()
         self.name = name
-        self.vertices = []
+        self._vertices = []
         self.size = 0
 
         starting_nodes = 512
@@ -236,7 +240,7 @@ cdef class RootProblem(Problem):
         return VariableView(self, var)
 
     cpdef VariableView variable_at_index(self, index i):
-        cdef Variable var = self.vertices[i]
+        cdef Variable var = self._vertices[i]
         return VariableView(self, var)
 
     def variables(self):
@@ -282,27 +286,31 @@ cdef class RootProblem(Problem):
 
     def first_child(self, Expression expr):
         cdef index idx = expr._nth_children(0)
-        return self.vertices[idx]
+        return self._vertices[idx]
 
     def second_child(self, Expression expr):
         cdef index idx = expr._nth_children(1)
-        return self.vertices[idx]
+        return self._vertices[idx]
 
     def nth_child(self, Expression expr, index i):
         cdef index idx = expr._nth_children(i)
-        return self.vertices[idx]
+        return self._vertices[idx]
 
     def children(self, Expression expr):
         cdef index i, idx
         cdef index n = expr.num_children
         for i in range(n):
             idx = expr._nth_children(i)
-            yield self.vertices[idx]
+            yield self._vertices[idx]
+
+    @property
+    def vertices(self):
+        return self._vertices
 
     def sorted_vertices(self):
         cdef index i
         for i in range(self.size):
-            yield self.vertices[i]
+            yield self._vertices[i]
 
     cpdef ChildProblem make_child(self):
         return ChildProblem(self)
@@ -321,7 +329,7 @@ cdef class RootProblem(Problem):
 
         # special case for first element
         if self.size == 0:
-            self.vertices.append(expr)
+            self._vertices.append(expr)
             expr.idx = 0
             self.depth[0] = expr.default_depth
             self.size = 1
@@ -342,7 +350,7 @@ cdef class RootProblem(Problem):
         ins_idx = _bisect_left(depth_arr, self.size, depth)
         assert ins_idx <= self.size
 
-        self.vertices.insert(ins_idx, expr)
+        self._vertices.insert(ins_idx, expr)
         self.size += 1
 
         # shift depths right by 1
@@ -351,7 +359,7 @@ cdef class RootProblem(Problem):
         depth_arr[ins_idx] = depth
 
         for i in range(self.size):
-            cur_expr = self.vertices[i]
+            cur_expr = self._vertices[i]
             cur_expr.reindex(ins_idx)
         expr.idx = ins_idx
         return ins_idx
@@ -367,7 +375,12 @@ cdef class RootProblem(Problem):
 
 cdef class ChildProblem(Problem):
     def __init__(self, Problem parent):
+        super().__init__()
         self.parent = parent
+
+        self.num_variables = parent.num_variables
+        self.num_constraints = parent.num_constraints
+        self.num_objectives = parent.num_objectives
 
         self._init_variables_storage()
 
@@ -400,3 +413,7 @@ cdef class ChildProblem(Problem):
 
     cpdef ChildProblem make_child(self):
         return ChildProblem(self)
+
+    @property
+    def vertices(self):
+        return self.parent.vertices

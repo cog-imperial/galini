@@ -25,13 +25,16 @@ class BranchingPoint(object):
 
 
 class Node(object):
-    def __init__(self, problem):
+    def __init__(self, problem, tree=None, coordinate=None, variable=None):
         self.children = None
         self.problem = problem
+        self.tree = tree
+        self.coordinate = coordinate
+        self.variable = variable
 
     def branch(self, strategy):
         """Branch at the current node using strategy."""
-        branching_point = strategy.branch(self.problem)
+        branching_point = strategy.branch(self, self.tree)
         if branching_point is None:
             raise RuntimeError('Could not branch')
         self.branch_at_point(branching_point)
@@ -50,14 +53,22 @@ class Node(object):
         self._add_children_branched_at(branching_var, new_upper_bound, var.upper_bound())
 
     def _add_children_branched_at(self, branching_var, new_lower_bound, new_upper_bound):
-        child_problem = self.add_children()
+        child_problem = self.add_children(branching_var)
         var = child_problem.variable_at_index(branching_var.idx)
         var.set_lower_bound(new_lower_bound)
         var.set_upper_bound(new_upper_bound)
 
-    def add_children(self):
+    def add_children(self, branching_var=None):
         child = self.problem.make_child()
-        child_node = Node(child)
+        if self.coordinate is not None:
+            num_children = 0 if self.children is None else len(self.children)
+            coordinate = self.coordinate.copy()
+            coordinate.append(num_children)
+        else:
+            coordinate = None
+
+        child_node = Node(child, self.tree, coordinate, branching_var)
+
         if self.children is None:
             self.children = [child_node]
         else:
