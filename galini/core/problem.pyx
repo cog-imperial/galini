@@ -217,7 +217,7 @@ cdef class RootProblem(Problem):
     cpdef Variable add_variable(self, str name, object lower_bound, object upper_bound, Domain domain):
         if name in self._variables_by_name:
             raise RuntimeError('variable {} already exists'.format(name))
-        cdef Variable var = Variable()
+        cdef Variable var = Variable(problem=self)
         self._insert_vertex(var)
         self._variables_by_name[name] = var
         self.num_variables += 1

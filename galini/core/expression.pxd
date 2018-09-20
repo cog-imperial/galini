@@ -29,10 +29,13 @@ cpdef enum Sense:
 
 
 cdef class Expression:
+    cdef readonly object problem
     cdef readonly index num_children
     cdef readonly index idx
     cdef index default_depth
     cdef readonly int expression_type
+
+    cpdef bint is_constant(self)
 
     cdef void reindex(self, index cutoff) nogil
     cdef float_t _eval(self, float_t[:] v)
@@ -43,15 +46,15 @@ cdef class Expression:
 
 
 cdef class UnaryExpression(Expression):
-    cdef index children[1]
+    cdef index _children[1]
 
 
 cdef class BinaryExpression(Expression):
-    cdef index children[2]
+    cdef index _children[2]
 
 
 cdef class NaryExpression(Expression):
-    cdef index *children
+    cdef index *_children
 
 
 cdef class ProductExpression(BinaryExpression):

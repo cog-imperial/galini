@@ -160,7 +160,7 @@ class _ExpressionConverterHandler(ExpressionHandler):
     def visit_numeric_constant(self, expr):
         if self.memo[expr] is not None:
             return self.memo[expr]
-        const = core.Constant(expr.value)
+        const = core.Constant(expr.value, problem=self.dag)
         self.set(expr, const)
         return None
 
@@ -180,7 +180,7 @@ class _ExpressionConverterHandler(ExpressionHandler):
             return self.memo[expr]
         self._check_children(expr)
         children = [self.get_idx(a) for a in expr._args]
-        new_expr = core.ProductExpression(children)
+        new_expr = core.ProductExpression(children, problem=self.dag)
         self.set(expr, new_expr)
         return None
 
@@ -190,7 +190,7 @@ class _ExpressionConverterHandler(ExpressionHandler):
 
         self._check_children(expr)
         children = [self.get_idx(a) for a in expr._args]
-        new_expr = core.DivisionExpression(children)
+        new_expr = core.DivisionExpression(children, problem=self.dag)
         self.set(expr, new_expr)
         return None
 
@@ -200,7 +200,7 @@ class _ExpressionConverterHandler(ExpressionHandler):
 
         self._check_children(expr)
         children = [self.get_idx(a) for a in expr._args]
-        new_expr = core.SumExpression(children)
+        new_expr = core.SumExpression(children, problem=self.dag)
         self.set(expr, new_expr)
         return None
 
@@ -212,7 +212,7 @@ class _ExpressionConverterHandler(ExpressionHandler):
         coeffs = np.array([expr._coef[id(a)] for a in expr._args], dtype=core.float_)
         const = expr._const
         new_expr = core.LinearExpression(
-            children, coeffs, const
+            children, coeffs, const, problem=self.dag
         )
         self.set(expr, new_expr)
         return None
@@ -223,7 +223,7 @@ class _ExpressionConverterHandler(ExpressionHandler):
 
         self._check_children(expr)
         children = [self.get_idx(a) for a in expr._args]
-        new_expr = core.NegationExpression(children)
+        new_expr = core.NegationExpression(children, problem=self.dag)
         self.set(expr, new_expr)
         return None
 
@@ -249,7 +249,7 @@ class _ExpressionConverterHandler(ExpressionHandler):
         }.get(fun)
         if ExprClass is None:
             raise AssertionError('Unknwon function', fun)
-        new_expr = ExprClass(children)
+        new_expr = ExprClass(children, problem=self.dag)
         self.set(expr, new_expr)
         return None
 
@@ -259,7 +259,7 @@ class _ExpressionConverterHandler(ExpressionHandler):
 
         self._check_children(expr)
         children = [self.get_idx(a) for a in expr._args]
-        new_expr = core.AbsExpression(children)
+        new_expr = core.AbsExpression(children, problem=self.dag)
         self.set(expr, new_expr)
         return None
 
@@ -269,6 +269,6 @@ class _ExpressionConverterHandler(ExpressionHandler):
 
         self._check_children(expr)
         children = [self.get_idx(a) for a in expr._args]
-        new_expr = core.PowExpression(children)
+        new_expr = core.PowExpression(children, problem=self.dag)
         self.set(expr, new_expr)
         return None
