@@ -77,6 +77,10 @@ cdef class VariableView:
     cpdef void set_upper_bound(self, object value):
         self.problem.set_variable_upper_bound(self.variable, value)
 
+    @property
+    def domain(self):
+        return self._domain()
+
     cpdef Domain _domain(self):
         return self.problem.variable_domain(self.variable)
 

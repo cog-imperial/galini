@@ -42,7 +42,22 @@ cdef class ExpressionChildren(object):
     def __bool__(self):
         return len(self._children) != 0
 
-    def __getitem__(self, index item):
+    def __getitem__(self, object item):
+        cdef index start, stop, i, len_
+        cdef index[:] idxs
+        if isinstance(item, slice):
+            # We want to support slicing over children (used e.g. in SUSPECT) but
+            # it's not straightforward since we are mixing memoryviews with lists
+            if item.step is not None:
+                raise RuntimeError('Slice step not supported')
+            start = item.start if item.start is not None else 0
+            stop = item.stop if item.stop is not None else len(self._children)
+            idxs = self._children[start:stop:]
+            len_ = stop - start
+            result = [None] * len_
+            for i in range(len_):
+                result[i] = self._problem.vertices[idxs[i]]
+            return result
         return self._nth_children(item)
 
     def __len__(self):
@@ -483,6 +498,10 @@ cdef class LinearExpression(NaryExpression):
     cdef float_t _dd_vv(self, index j, index k, float_t[:] v):
         return 0.0
 
+    @property
+    def constant_term(self):
+        return self.constant
+
 
 cdef class NegationExpression(UnaryExpression):
     def __init__(self, object children):
@@ -807,6 +826,14 @@ cdef class Variable(Expression):
 
     cdef float_t _eval(self, float_t[:] v):
         return v[self.idx]
+
+    @property
+    def lower_bound(self):
+        return self.problem.variable_lower_bound(self)
+
+    @property
+    def upper_bound(self):
+        return self.problem.variable_upper_bound(self)
 
 
 cdef class Constant(Expression):

@@ -11,19 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """GALINI dot subcommand."""
-from galini.commands import CliCommand
+from galini.commands import CliCommandWithProblem
 from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
 from galini.dot import dag_to_pydot_graph
 
 
-class DotCommand(CliCommand):
+class DotCommand(CliCommandWithProblem):
     """Command to output Graphiviz dot file of the problem."""
-    def execute(self, args):
-        assert args.problem
-        pyomo_model = read_pyomo_model(args.problem)
-        dag = dag_from_pyomo_model(pyomo_model)
-        graph = dag_to_pydot_graph(dag)
+    def execute_with_problem(self, problem, args):
+        graph = dag_to_pydot_graph(problem)
 
         if args.out:
             graph.write(args.out)
@@ -33,6 +31,5 @@ class DotCommand(CliCommand):
     def help_message(self):
         return "Save GALINI DAG of the problem as Graphviz Dot file"
 
-    def add_parser_arguments(self, parser):
-        parser.add_argument('problem')
+    def add_extra_parser_arguments(self, parser):
         parser.add_argument('out', nargs='?')

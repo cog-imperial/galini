@@ -2,7 +2,7 @@
 import pytest
 import pyomo.environ as aml
 from galini.pyomo import dag_from_pyomo_model
-from galini.special_structure.poly import detect_polynomial_degree
+from galini.special_structure import detect_polynomial_degree
 
 
 @pytest.fixture()

@@ -104,6 +104,7 @@ setup(
         'galini.commands': [
             'solve=galini.commands.solve:SolveCommand',
             'dot=galini.commands.dot:DotCommand',
+            'special_structure=galini.commands.special_structure:SpecialStructureCommand',
         ],
         'galini.solvers': [
             'oa=galini.solvers.outer_approximation:OuterApproximationSolver',
@@ -122,6 +123,7 @@ setup(
         'numpy',
         'toml',
         'pydot',
+        'texttable>=1.4.0',
     ],
     setup_requires=['pytest-runner', 'cython'],
     tests_require=['pytest', 'pytest-cov', 'hypothesis'],

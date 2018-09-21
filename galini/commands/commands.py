@@ -13,6 +13,7 @@
 # limitations under the License.
 """CLI commands base class."""
 import abc
+from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
 
 
 class CliCommand(metaclass=abc.ABCMeta): # pragma: no cover
@@ -30,4 +31,27 @@ class CliCommand(metaclass=abc.ABCMeta): # pragma: no cover
     @abc.abstractmethod
     def add_parser_arguments(self, parser):
         """Add arguments specific to this command to the argument parser."""
+        pass
+
+
+class CliCommandWithProblem(CliCommand):
+    """A CLI Command that receives a problem as first argument"""
+    def execute(self, args):
+        assert args.problem
+        pyomo_model = read_pyomo_model(args.problem)
+        problem = dag_from_pyomo_model(pyomo_model)
+        return self.execute_with_problem(problem, args)
+
+    @abc.abstractmethod
+    def execute_with_problem(self, problem, args):
+        """Run the command."""
+        pass
+
+    def add_parser_arguments(self, parser):
+        parser.add_argument('problem')
+        self.add_extra_parser_arguments(parser)
+
+    @abc.abstractmethod
+    def add_extra_parser_arguments(self, parser):
+        """Add extra arguments to this command parser."""
         pass

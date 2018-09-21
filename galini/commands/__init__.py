@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__all__ = ['CliCommand']
+__all__ = ['CliCommand', 'CliCommandWithProblem']
 
-from .commands import CliCommand
+from .commands import CliCommand, CliCommandWithProblem
