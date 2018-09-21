@@ -36,7 +36,7 @@
     
     
       
-        <title>dot - GALINI</title>
+        <title>special_structure - GALINI</title>
       
     
     
@@ -98,7 +98,7 @@
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" data-md-component="overlay" for="__drawer"></label>
     
-      <a href="../../#dot-command" tabindex="1" class="md-skip">
+      <a href="../../#special_structure-command" tabindex="1" class="md-skip">
         Skip to content
       </a>
     
@@ -124,7 +124,7 @@
                 GALINI
               </span>
               <span class="md-header-nav__topic">
-                dot
+                special_structure
               </span>
             
           
@@ -272,6 +272,18 @@
           
           
 
+
+  <li class="md-nav__item">
+    <a href="../dot/" title="dot" class="md-nav__link">
+      dot
+    </a>
+  </li>
+
+        
+          
+          
+          
+
   
 
 
@@ -283,11 +295,11 @@
     
     
       <label class="md-nav__link md-nav__link--active" for="__toc">
-        dot
+        special_structure
       </label>
     
-    <a href="./" title="dot" class="md-nav__link md-nav__link--active">
-      dot
+    <a href="./" title="special_structure" class="md-nav__link md-nav__link--active">
+      special_structure
     </a>
     
       
@@ -322,18 +334,6 @@
   
 </nav>
     
-  </li>
-
-        
-          
-          
-          
-
-
-  <li class="md-nav__item">
-    <a href="../special_structure/" title="special_structure" class="md-nav__link">
-      special_structure
-    </a>
   </li>
 
         
@@ -464,14 +464,14 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/cog-imperial/galini/edit/master/docs/commands/dot.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
+                  <a href="https://github.com/cog-imperial/galini/edit/master/docs/commands/special_structure.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
                 
                 
-                <h1 id="dot-command"><code>dot</code> command</h1>
-<p>GALINI provides a command to output a problem DAG to <a href="https://www.graphviz.org/">Graphviz</a> DOT files.
-This is useful when debugging code that needs to traverse the DAG.</p>
+                <h1 id="special_structure-command"><code>special_structure</code> command</h1>
+<p>This command can be used to run the special structure detection rules implemented by
+<a href="https://cog-imperial.github.io/suspect/">SUSPECT</a>.</p>
 <h2 id="usage">Usage</h2>
-<pre><code>galini dot [-h] problem [out]
+<pre><code>galini special_structure [-h] problem
 </code></pre>
 
 <h2 id="example">Example</h2>
@@ -493,15 +493,28 @@ def get_pyomo_model():
     m.c6 = aml.Constraint(expr=m.y[0] + m.y[1] &gt;= 1)
 </code></pre>
 
-<p>we run <code>galini dot</code> to obtain a <code>.dot</code> file</p>
-<pre><code>galini dot problem.py problem.dot
-</code></pre>
+<p>we run <code>galini special_structure</code> and obtain the following output:</p>
+<pre><code>Var.   Dom.    LB      UB  
+===========================
+x[0]   R      0.000   4.000
+x[1]   R      0.000   4.000
+y[0]   I      0.000   1.000
+y[1]   I      0.000   1.000
 
-<p>and we compile it to visualize the DAG</p>
-<pre><code>dot -T png -o problem.png problem.dot
-</code></pre>
+Obj.    LB     UB     Cvx       Mono  
+======================================
+obj    0.000   inf   Convex   Nondecr.
 
-<p><img alt="The Problem DAG" src="../../images/problem_dag.png" /></p>
+Cons.     LB      UB      Cvx       Mono  
+==========================================
+c0      -4.000   inf     Convex           
+c1      -2.000   4.000   Linear           
+c2      -7.000   4.000   Linear           
+c3      -1.000   4.000   Linear   Nondecr.
+c4      -1.000   4.000   Linear           
+c5      -8.000   3.000   Linear           
+c6      0.000    2.000   Linear   Nondecr.
+</code></pre>
                 
                   
                 
@@ -522,7 +535,7 @@ def get_pyomo_model():
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
         
-          <a href="../.." title="Home" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../dot/" title="dot" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-flex__cell md-flex__cell--shrink">
               <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
             </div>
@@ -531,19 +544,19 @@ def get_pyomo_model():
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Home
+                dot
               </span>
             </div>
           </a>
         
         
-          <a href="../special_structure/" title="special_structure" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../../configuration/" title="Configuration" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
               <span class="md-flex__ellipsis">
                 <span class="md-footer-nav__direction">
                   Next
                 </span>
-                special_structure
+                Configuration
               </span>
             </div>
             <div class="md-flex__cell md-flex__cell--shrink">
