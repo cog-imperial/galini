@@ -45,4 +45,17 @@ class TestPolynomialDegree:
         obj = dag.objective('obj')
         obj_expr = obj.root_expr
         obj_poly = poly_degree[obj_expr]
-        assert func(obj_poly)
+        try:
+            assert func(obj_poly)
+        except AssertionError:
+            from galini.dot import dag_to_pydot_graph
+            import uuid
+            ctx = [None] * dag.size
+            for i in range(dag.size):
+                v = dag.vertices[i]
+                ctx[v.idx] = poly_degree[v]
+            dot = dag_to_pydot_graph(dag, ctx)
+            name = str(uuid.uuid4()) + '.dot'
+            print('Writing to %s' % name)
+            dot.write(name)
+            raise

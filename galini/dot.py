@@ -44,7 +44,7 @@ def dag_to_pydot_graph(dag, ctx=None):
     dot.add_subgraph(subrank)
     subrank = pydot.Subgraph(rank='same')
     old_depth = 0
-    for vertex in dag.sorted_vertices():
+    for vertex in dag.vertices:
         if isinstance(vertex, core.Variable):
             continue
         label = '\n'.join([
@@ -65,8 +65,8 @@ def dag_to_pydot_graph(dag, ctx=None):
     dot.add_subgraph(subrank)
 
     # ... then edges ...
-    for vertex in dag.sorted_vertices():
-        for child in dag.children(vertex):
+    for vertex in dag.vertices:
+        for child in vertex.children:
             edge = pydot.Edge(child.idx, vertex.idx)
             dot.add_edge(edge)
     dot.add_subgraph(subrank)

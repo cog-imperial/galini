@@ -36,7 +36,7 @@ def least_reduced_variable(problem, root_problem):
     assert problem.num_variables == root_problem.num_variables
     r = range_ratio(problem, root_problem)
     var_idx = np.argmax(r)
-    return problem.variable_at_index(var_idx)
+    return problem.variable_view(var_idx)
 
 
 class KSectionBranchingStrategy(BranchingStrategy):

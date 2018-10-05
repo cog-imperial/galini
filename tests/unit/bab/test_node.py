@@ -20,7 +20,7 @@ class MockBranching:
         self.points = points
 
     def branch(self, node, _tree):
-        var = node.problem.variable_at_index(2)
+        var = node.problem.variable_view(2)
         return BranchingPoint(var, self.points)
 
 
@@ -52,7 +52,7 @@ class TestBranching:
 
     def _assert_bounds_are_correct(self, new_nodes, expected_bounds):
         for node, (lower, upper) in zip(new_nodes, expected_bounds):
-            var = node.problem.variable_at_index(2)
+            var = node.problem.variable_view(2)
             assert np.isclose(lower, var.lower_bound())
             assert np.isclose(upper, var.upper_bound())
 

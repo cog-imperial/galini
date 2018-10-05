@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """Branch & Bound node."""
-from galini.core.problem import VariableView
+from galini.core import VariableView
 
 
 class BranchingPoint(object):
@@ -44,7 +44,7 @@ class Node(object):
         branching_var = branching_point.variable
         if isinstance(branching_var, VariableView):
             branching_var = branching_var.variable
-        var = self.problem.variable_at_index(branching_var.idx)
+        var = self.problem.variable_view(branching_var.idx)
         new_upper_bound = var.lower_bound()
         for point in branching_point.points:
             new_lower_bound = new_upper_bound
@@ -54,7 +54,7 @@ class Node(object):
 
     def _add_children_branched_at(self, branching_var, new_lower_bound, new_upper_bound):
         child_problem = self.add_children(branching_var)
-        var = child_problem.variable_at_index(branching_var.idx)
+        var = child_problem.variable_view(branching_var.idx)
         var.set_lower_bound(new_lower_bound)
         var.set_upper_bound(new_upper_bound)
 

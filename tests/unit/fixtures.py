@@ -1,7 +1,7 @@
 import pytest
 import pyomo.environ as aml
 import hypothesis.strategies as st
-from galini.core.expression import *
+from galini.core import Variable
 
 
 @pytest.fixture

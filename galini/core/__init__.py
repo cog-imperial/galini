@@ -11,25 +11,36 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """Galini Core module."""
+from enum import Enum
+
 
 __all__ = [
-    'float_', 'Domain', 'Sense', 'Problem', 'Variable', 'Constant', 'Constraint', 'Objective',
+    'Domain', 'Sense', 'Problem', 'Variable', 'Constant', 'Constraint', 'Objective',
     'Expression', 'UnaryExpression', 'BinaryExpression', 'NaryExpression',
     'ProductExpression', 'DivisionExpression', 'SumExpression', 'PowExpression',
     'LinearExpression', 'UnaryFunctionExpression', 'NegationExpression', 'AbsExpression',
     'SqrtExpression', 'ExpExpression', 'LogExpression', 'SinExpression', 'CosExpression',
     'TanExpression', 'AsinExpression', 'AcosExpression', 'AtanExpression',
     'JacobianEvaluator', 'ForwardJacobianEvaluator', 'ReverseJacobianEvaluator',
-    'HessianEvaluator', 'RootProblem', 'ChildProblem',
+    'HessianEvaluator', 'RootProblem', 'ChildProblem', 'VariableView',
 ]
 
 
+class Domain(Enum):
+    REAL = 0
+    INTEGER = 1
+    BINARY = 2
+
+
+class Sense(Enum):
+    MINIMIZE = 0
+    MAXIMIZE = 1
+
+
 # pylint: disable=no-name-in-module
-from galini.core.expression import (
-    float_,
-    Domain,
-    Sense,
+from galini_core import (
     Variable,
     Constant,
     Constraint,
@@ -55,10 +66,11 @@ from galini.core.expression import (
     AsinExpression,
     AcosExpression,
     AtanExpression,
+    VariableView,
 )
 
 # pylint: disable=no-name-in-module
-from galini.core.problem import (
+from galini_core import (
     Problem,
     RootProblem,
     ChildProblem,

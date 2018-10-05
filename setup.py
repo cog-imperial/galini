@@ -15,9 +15,11 @@
 # pylint: skip-file
 import sys
 from pathlib import Path
+import glob
 from setuptools import setup, find_packages
 from setuptools.extension import Extension
 from setuptools.command.test import test as TestCommand
+from setuptools.command.build_ext import build_ext
 from Cython.Build import cythonize
 
 import numpy as np
@@ -70,23 +72,45 @@ class PyTestCommand(TestCommand):
         return sys.exit(errno)
 
 
+class get_pybind11_include(object):
+    def __init__(self, user=False):
+        self.user = user
+
+    def __str__(self):
+        import pybind11
+        return pybind11.get_include(self.user)
+
+
 extensions = [
     Extension(
-        'galini.core.expression',
-        sources=['galini/core/expression.pyx'],
-        include_dirs=[np.get_include()],
-    ),
-    Extension(
-        'galini.core.problem',
-        sources=['galini/core/problem.pyx'],
-        include_dirs=[np.get_include()],
-    ),
-    Extension(
-        'galini.core.ad',
-        sources=['galini/core/ad.pyx'],
-        include_dirs=[np.get_include()],
-    ),
+        'galini_core',
+        sources=[
+            'src/problem_module.cpp',
+            'src/expression_module.cpp',
+            'src/core.cpp'
+        ],
+        include_dirs=[
+            get_pybind11_include(),
+            get_pybind11_include(user=True),
+        ],
+        language='c++',
+        depends=glob.glob('src/*.hpp'),
+    )
 ]
+
+
+class BuildExt(build_ext):
+    def build_extensions(self):
+        ct = self.compiler.compiler_type
+        opts = ['-std=c++14']
+        if ct == 'unix':
+            opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
+            opts.append('-fvisibility=hidden')
+
+        for ext in self.extensions:
+            ext.extra_compile_args = opts
+        build_ext.build_extensions(self)
+
 
 setup(
     name='galini',
@@ -115,7 +139,10 @@ setup(
         ],
     },
     ext_modules=cythonize(extensions, annotate=True),
-    cmdclass={'test': PyTestCommand},
+    cmdclass={
+        'test': PyTestCommand,
+        'build_ext': BuildExt,
+    },
     install_requires=[
         'pyomo>=5.2',
         'cog-suspect>=1.0.6',
@@ -125,6 +152,6 @@ setup(
         'pydot',
         'texttable>=1.4.0',
     ],
-    setup_requires=['pytest-runner', 'cython'],
+    setup_requires=['pytest-runner', 'cython', 'pybind11'],
     tests_require=['pytest', 'pytest-cov', 'hypothesis'],
 )
