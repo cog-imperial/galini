@@ -17,6 +17,7 @@ public:
     if (children.size() != 2) {
       throw std::runtime_error("children must have size 2");
     }
+    this->num_children_ = 2;
     first_ = children[0];
     second_ = children[1];
   }

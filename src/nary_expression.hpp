@@ -15,6 +15,7 @@ public:
   NaryExpression(const std::shared_ptr<Problem<T>>& problem,
 		  const std::vector<typename Expression<T>::ptr>& children)
     : Expression<T>(problem), children_(children) {
+    this->num_children_ = children_.size();
   }
 
   NaryExpression(const std::vector<typename Expression<T>::ptr>& children)

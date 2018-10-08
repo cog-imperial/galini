@@ -51,6 +51,7 @@ void init_problem(py::module& m) {
     .def("add_constraint", &RootProblem<T>::add_constraint)
     .def("objective", &RootProblem<T>::objective)
     .def("add_objective", &RootProblem<T>::add_objective)
+    .def("insert_tree", &RootProblem<T>::insert_tree)
     .def("insert_vertex", &RootProblem<T>::insert_vertex)
     .def("make_child", &RootProblem<T>::make_child);
 

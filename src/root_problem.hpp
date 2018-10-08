@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include <unordered_map>
+#include <queue>
 #include <pybind11/pybind11.h>
 
 
@@ -116,12 +117,34 @@ public:
     return objective;
   }
 
+  void insert_tree(const typename Expression<T>::ptr& root_expr) {
+    std::queue<typename Expression<T>::ptr> stack;
+    stack.push(root_expr);
+    while (stack.size() > 0) {
+      auto current_expr = stack.front();
+      stack.pop();
+      // avoid double insertion of vertices
+      auto expr_problem = current_expr->problem();
+      if ((expr_problem != nullptr) && (expr_problem.get() != this)) {
+	throw std::runtime_error("Cannot insert vertex in multiple problems");
+      }
+      if (expr_problem == nullptr) {
+	this->insert_vertex(current_expr);
+
+	for (index_t i = 0; i < current_expr->num_children(); ++i) {
+	    stack.push(current_expr->nth_children(i));
+	}
+      }
+    }
+  }
+
   void insert_vertex(const typename Expression<T>::ptr& expr) {
     auto depth = expr->default_depth();
     auto insertion_it = detail::bisect_left(vertices_.begin(), vertices_.end(), depth);
     auto reindex_begin = vertices_.insert(insertion_it, expr);
     auto starting_idx = reindex_begin - vertices_.begin();
     detail::reindex_vertices(reindex_begin, vertices_.end(), starting_idx);
+    expr->set_problem(this->self());
   }
 
   VariableView<T> variable_view(const std::string& name) override {

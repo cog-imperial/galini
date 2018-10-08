@@ -27,6 +27,7 @@ void init_expression(py::module& m) {
     .def_property_readonly("idx", &Expression<T>::idx)
     .def_property("depth", &Expression<T>::depth, &Expression<T>::set_depth)
     .def_property_readonly("default_depth", &Expression<T>::default_depth)
+    .def_property_readonly("num_children", &Expression<T>::num_children)
     .def_property_readonly("children", &Expression<T>::children)
     .def("nth_children", &Expression<T>::nth_children)
     .def("is_constant", &Expression<T>::is_constant);

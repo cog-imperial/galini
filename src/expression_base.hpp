@@ -44,8 +44,16 @@ public:
     return depth_;
   }
 
+  index_t num_children() const {
+    return num_children_;
+  }
+
   problem_ptr problem() const {
     return problem_.lock();
+  }
+
+  void set_problem(typename std::weak_ptr<Problem<T>> problem) {
+    problem_ = problem;
   }
 
   index_t idx() const {
@@ -65,7 +73,7 @@ public:
 
   virtual ~Expression<T>() = default;
 
-private:
+protected:
   problem_weak_ptr problem_;
   index_t depth_;
   index_t num_children_;
