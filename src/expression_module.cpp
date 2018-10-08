@@ -17,7 +17,11 @@ void init_expression(py::module& m) {
   auto UnaryFunctionType = suspect_expression.attr("UnaryFunctionType");
 
   py::class_<Constraint<T>, Constraint<T>::ptr>(m, "Constraint")
-    .def_property_readonly("root_expr", &Constraint<T>::root_expr);
+    .def(py::init<const Expression<T>::problem_ptr&, const Expression<T>::ptr&, py::object, py::object>())
+    .def(py::init<const Expression<T>::ptr&, py::object, py::object>())
+    .def_property_readonly("root_expr", &Constraint<T>::root_expr)
+    .def_property_readonly("lower_bound", &Constraint<T>::lower_bound)
+    .def_property_readonly("upper_bound", &Constraint<T>::upper_bound);
 
   py::class_<Objective<T>, Objective<T>::ptr>(m, "Objective")
     .def_property_readonly("root_expr", &Objective<T>::root_expr);
@@ -45,8 +49,11 @@ void init_expression(py::module& m) {
     .def(py::init<const Expression<T>::problem_ptr&, const std::vector<typename Expression<T>::ptr>&>());
 
   py::class_<Variable<T>, Expression<T>, Variable<T>::ptr>(m, "Variable")
-    .def(py::init())
-    .def(py::init<const Expression<T>::problem_ptr&>())
+    .def(py::init<const std::string&, py::object, py::object, py::object>())
+    .def(py::init<const Expression<T>::problem_ptr&, const std::string&, py::object, py::object, py::object>())
+    .def_property_readonly("name", &Variable<T>::name)
+    .def_property_readonly("lower_bound", &Variable<T>::lower_bound)
+    .def_property_readonly("upper_bound", &Variable<T>::upper_bound)
     .def_property_readonly("expression_type",
 			   [ExpressionType](const Variable<T>&) { return ExpressionType.attr("Variable"); });
 
@@ -160,6 +167,7 @@ void init_expression(py::module& m) {
     .def(py::init<const Expression<T>::problem_ptr&, const std::vector<typename Expression<T>::ptr>&,
 	 const typename LinearExpression<T>::coefficients_t&, T>())
     .def_property_readonly("coefficients", &LinearExpression<T>::coefficients)
+    .def_property_readonly("constant_term", &LinearExpression<T>::constant)
     .def_property_readonly("expression_type",
 			   [ExpressionType](const LinearExpression<T>&) { return ExpressionType.attr("Linear"); });
 }

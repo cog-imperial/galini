@@ -70,7 +70,7 @@ public:
     if (variables_.find(name) != variables_.end()) {
       throw std::runtime_error("Duplicate variable name: " + name);
     }
-    auto var = std::make_shared<Variable<T>>(this->self());
+    auto var = std::make_shared<Variable<T>>(this->self(), name, lower_bound, upper_bound, domain);
     this->insert_vertex(var);
     this->variables_[name] = var;
     this->num_variables_ += 1;
@@ -147,14 +147,18 @@ public:
     expr->set_problem(this->self());
   }
 
+  VariableView<T> variable_view(const typename Variable<T>::ptr &var) override {
+    return VariableView<T>(this->self(), var);
+  }
+
   VariableView<T> variable_view(const std::string& name) override {
     auto var = variable(name);
-    return VariableView<T>(this->self(), var);
+    return variable_view(var);
   }
 
   VariableView<T> variable_view(index_t idx) override {
     auto var = variable(idx);
-    return VariableView<T>(this->self(), var);
+    return variable_view(var);
   }
 
   std::shared_ptr<ChildProblem<T>> make_child() {

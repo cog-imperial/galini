@@ -32,6 +32,7 @@ void init_problem(py::module& m) {
     .def("unfix", &Problem<T>::unfix)
     .def("variable", py::overload_cast<const std::string&>(&Problem<T>::variable))
     .def("variable", py::overload_cast<index_t>(&Problem<T>::variable))
+    .def("variable_view", py::overload_cast<const typename Variable<T>::ptr&>(&Problem<T>::variable_view))
     .def("variable_view", py::overload_cast<const std::string&>(&Problem<T>::variable_view))
     .def("variable_view", py::overload_cast<index_t>(&Problem<T>::variable_view))
     .def_property_readonly("lower_bounds", &Problem<T>::lower_bounds)

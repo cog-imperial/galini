@@ -30,6 +30,10 @@ public:
   py::array coefficients() const {
     return py::array(coefficients_.size(), coefficients_.data());
   }
+
+  T constant() const {
+    return constant_;
+  }
 private:
   coefficients_t coefficients_;
   T constant_;

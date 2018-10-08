@@ -43,6 +43,9 @@ class ProblemContext(object):
     def set_bounds(self, expr ,value):
         self.bounds[expr] = value
 
+    def set_polynomiality(self, expr, value):
+        self.polynomial[expr] = value
+
     def set_monotonicity(self, expr, value):
         self.monotonicity[expr] = value
 

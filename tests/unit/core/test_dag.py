@@ -73,30 +73,32 @@ def test_children_are_updated(problem):
     assert problem.size == 4
 
 
+VARIABLE = Variable('x', None, None, None)
+
 @pytest.mark.parametrize('expr,expected', [
-    (ProductExpression([Variable(), Variable()]), ExpressionType.Product),
-    (DivisionExpression([Variable(), Variable()]), ExpressionType.Division),
-    (SumExpression([Variable(), Variable(), Variable()]), ExpressionType.Sum),
-    (PowExpression([Variable(), Variable()]), ExpressionType.Power),
-    (LinearExpression([Variable()], np.array([1.0]), 0.0), ExpressionType.Linear),
-    (NegationExpression([Variable()]), ExpressionType.Negation),
-    (Variable(), ExpressionType.Variable),
+    (ProductExpression([VARIABLE, VARIABLE]), ExpressionType.Product),
+    (DivisionExpression([VARIABLE, VARIABLE]), ExpressionType.Division),
+    (SumExpression([VARIABLE, VARIABLE, VARIABLE]), ExpressionType.Sum),
+    (PowExpression([VARIABLE, VARIABLE]), ExpressionType.Power),
+    (LinearExpression([VARIABLE], np.array([1.0]), 0.0), ExpressionType.Linear),
+    (NegationExpression([VARIABLE]), ExpressionType.Negation),
+    (VARIABLE, ExpressionType.Variable),
     (Constant(0.0), ExpressionType.Constant),
 ])
 def test_suspect_expression_types(expr, expected):
     assert expr.expression_type == expected
 
 @pytest.mark.parametrize('expr,expected', [
-    (AbsExpression([Variable()]), UnaryFunctionType.Abs),
-    (SqrtExpression([Variable()]), UnaryFunctionType.Sqrt),
-    (ExpExpression([Variable()]), UnaryFunctionType.Exp),
-    (LogExpression([Variable()]), UnaryFunctionType.Log),
-    (SinExpression([Variable()]), UnaryFunctionType.Sin),
-    (CosExpression([Variable()]), UnaryFunctionType.Cos),
-    (TanExpression([Variable()]), UnaryFunctionType.Tan),
-    (AsinExpression([Variable()]), UnaryFunctionType.Asin),
-    (AcosExpression([Variable()]), UnaryFunctionType.Acos),
-    (AtanExpression([Variable()]), UnaryFunctionType.Atan),
+    (AbsExpression([VARIABLE]), UnaryFunctionType.Abs),
+    (SqrtExpression([VARIABLE]), UnaryFunctionType.Sqrt),
+    (ExpExpression([VARIABLE]), UnaryFunctionType.Exp),
+    (LogExpression([VARIABLE]), UnaryFunctionType.Log),
+    (SinExpression([VARIABLE]), UnaryFunctionType.Sin),
+    (CosExpression([VARIABLE]), UnaryFunctionType.Cos),
+    (TanExpression([VARIABLE]), UnaryFunctionType.Tan),
+    (AsinExpression([VARIABLE]), UnaryFunctionType.Asin),
+    (AcosExpression([VARIABLE]), UnaryFunctionType.Acos),
+    (AtanExpression([VARIABLE]), UnaryFunctionType.Atan),
 ])
 def test_suspect_unary_function_type(expr, expected):
     assert expr.func_type == expected

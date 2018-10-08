@@ -139,6 +139,7 @@ public:
 
   virtual typename Variable<T>::ptr variable(const std::string& name) = 0;
   virtual typename Variable<T>::ptr variable(index_t idx) = 0;
+  virtual VariableView<T> variable_view(const typename Variable<T>::ptr& variable) = 0;
   virtual VariableView<T> variable_view(const std::string& name) = 0;
   virtual VariableView<T> variable_view(index_t idx) = 0;
 

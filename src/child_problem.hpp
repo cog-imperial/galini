@@ -45,14 +45,18 @@ public:
     return parent_->variable(idx);
   }
 
+  VariableView<T> variable_view(const typename Variable<T>::ptr& var) override {
+    return VariableView<T>(this->self(), var);
+  }
+
   VariableView<T> variable_view(const std::string& name) override {
     auto var = this->variable(name);
-    return VariableView<T>(this->self(), var);
+    return variable_view(var);
   }
 
   VariableView<T> variable_view(index_t idx) override {
     auto var = this->variable(idx);
-    return VariableView<T>(this->self(), var);
+    return variable_view(var);
   }
 
   std::shared_ptr<ChildProblem<T>> make_child() {

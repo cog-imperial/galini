@@ -13,14 +13,17 @@
 # limitations under the License.
 
 """Relaxation interface."""
+from galini.core import Expression, Constraint
 
 
 class Relaxation(object):
-    def can_relax(self, expr, ctx):
+    def can_relax(self, problem, expr, ctx):
         """Check if the current relaxation can relax the given expression.
 
         Parameters
         ----------
+        problem : Problem
+            the problem
         expr : Expression
             the expression
         ctx : ProblemContext
@@ -32,11 +35,13 @@ class Relaxation(object):
         """
         pass
 
-    def relax(self, expr, ctx):
+    def relax(self, problem, expr, ctx):
         """Relax the given expression.
 
         Parameters
         ----------
+        problem : Problem
+            the problem
         expr : Expression
             the expression
         ctx : ProblemContext
@@ -55,16 +60,16 @@ class RelaxationResult(object):
     The result contains a relaxed expression and a set of additional
     constraints to be added to the problem.
     """
-    def __init__(self, expression, constraints):
+    def __init__(self, expression, constraints=None):
+        if not isinstance(expression, Expression):
+            raise ValueError('expression must be instance of Expression')
+
+        if constraints is None:
+            constraints = []
+
+        for constraint in constraints:
+            if not isinstance(constraint, Constraint):
+                raise ValueError('constraints must contain values of type Constraint')
+
         self.expression = expression
         self.constraints = constraints
-
-
-class NewVariable(object):
-    """Represent a new variable that will be added to the problem.
-
-    Relaxations can reference existing variable but, if they neeed to do so,
-    can introduce new variables in the problem by instantiating an object of
-    this class.
-    """
-    pass
