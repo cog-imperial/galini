@@ -74,6 +74,7 @@ public:
     this->insert_vertex(var);
     this->variables_[name] = var;
     this->num_variables_ += 1;
+    this->domains_.push_back(domain);
     this->lower_bounds_.push_back(lower_bound);
     this->upper_bounds_.push_back(upper_bound);
     this->starting_points_.push_back(T());

@@ -52,11 +52,10 @@ class SpecialStructureCommand(CliCommandWithProblem):
         table.set_cols_dtype(['t', 't', 'f', 'f'])
         table.set_deco(Texttable.HEADER)
         table.header(['Var.', 'Dom.', 'LB', 'UB'])
-        domain_to_str = ['R', 'I', 'B']
-        for var_name in problem.variables():
-            var = problem.variable(var_name)
+        for var_name in problem.variables.keys():
+            var = problem.variable_view(var_name)
             var_bounds = bounds(var.variable)
-            var_domain = domain_to_str[var.domain]
+            var_domain = var.domain.name[0]
             table.add_row([var_name, var_domain, var_bounds.lower_bound, var_bounds.upper_bound])
         print(table.draw())
 
