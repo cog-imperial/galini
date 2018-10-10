@@ -14,7 +14,6 @@
 
 """GALINI dot subcommand."""
 from galini.commands import CliCommandWithProblem
-from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
 from galini.dot import dag_to_pydot_graph
 
 

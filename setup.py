@@ -129,6 +129,7 @@ setup(
             'solve=galini.commands.solve:SolveCommand',
             'dot=galini.commands.dot:DotCommand',
             'special_structure=galini.commands.special_structure:SpecialStructureCommand',
+            'info=galini.commands.info:InfoCommand',
         ],
         'galini.solvers': [
             'oa=galini.solvers.outer_approximation:OuterApproximationSolver',

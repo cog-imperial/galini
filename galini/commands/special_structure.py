@@ -16,7 +16,12 @@
 from texttable import Texttable
 from suspect.convexity import Convexity
 from suspect.monotonicity import Monotonicity
-from galini.commands import CliCommandWithProblem
+from galini.commands import (
+    CliCommandWithProblem,
+    OutputTable,
+    add_output_format_parser_arguments,
+    print_output_table,
+)
 from galini.special_structure import detect_special_structure
 
 
@@ -25,7 +30,7 @@ def _cvx_to_str(cvx):
         Convexity.Linear: 'Linear',
         Convexity.Convex: 'Convex',
         Convexity.Concave: 'Concave',
-    }.get(cvx, '')
+    }.get(cvx, 'Unknown')
 
 
 def _mono_to_str(mono):
@@ -33,53 +38,81 @@ def _mono_to_str(mono):
         Monotonicity.Constant: 'Constant',
         Monotonicity.Nondecreasing: 'Nondecr.',
         Monotonicity.Nonincreasing: 'Nonincr.',
-    }.get(mono, '')
+    }.get(mono, 'Unknown')
 
 
 class SpecialStructureCommand(CliCommandWithProblem):
     def execute_with_problem(self, problem, args):
         ctx = detect_special_structure(problem)
 
-        self._print_variables(problem, ctx)
-        print()
-        self._print_objectives(problem, ctx)
-        print()
-        self._print_constraints(problem, ctx)
+        tables = []
+        tables.append(self._output_variables(problem, ctx))
+        tables.append(self._output_objectives(problem, ctx))
+        tables.append(self._output_constraints(problem, ctx))
+        print_output_table(tables, args)
 
-    def _print_variables(self, problem, ctx):
+    def _output_variables(self, problem, ctx):
         bounds = ctx.bounds
-        table = Texttable()
-        table.set_cols_dtype(['t', 't', 'f', 'f'])
-        table.set_deco(Texttable.HEADER)
-        table.header(['Var.', 'Dom.', 'LB', 'UB'])
+        table = OutputTable('Variables', [
+            {'id': 'name', 'name': 'Var.', 'type': 't'},
+            {'id': 'domain', 'name': 'Dom.', 'type': 't'},
+            {'id': 'lower_bound', 'name': 'LB', 'type': 'f'},
+            {'id': 'upper_bound', 'name': 'UB', 'type': 'f'},
+        ])
         for var_name in problem.variables.keys():
             var = problem.variable_view(var_name)
             var_bounds = bounds(var.variable)
             var_domain = var.domain.name[0]
-            table.add_row([var_name, var_domain, var_bounds.lower_bound, var_bounds.upper_bound])
-        print(table.draw())
+            table.add_row({
+                'name': var_name,
+                'domain': var_domain,
+                'lower_bound': var_bounds.lower_bound,
+                'upper_bound': var_bounds.upper_bound,
+            })
+        return table
 
-    def _print_objectives(self, problem, ctx):
-        self._print_expressions(problem, ctx, problem.objectives.items(), 'Obj.')
+    def _output_objectives(self, problem, ctx):
+        return self._output_expressions(
+            problem,
+            ctx,
+            problem.objectives.items(),
+            'Obj.',
+            'Objectives',
+        )
 
-    def _print_constraints(self, problem, ctx):
-        self._print_expressions(problem, ctx, problem.constraints.items(), 'Cons.')
+    def _output_constraints(self, problem, ctx):
+        return self._output_expressions(
+            problem,
+            ctx,
+            problem.constraints.items(),
+            'Cons.',
+            'Constraints',
+        )
 
-    def _print_expressions(self, problem, ctx, expressions, type_):
-        table = Texttable()
-        table.header([type_, 'LB', 'UB', 'Cvx', 'Mono'])
-        table.set_deco(Texttable.HEADER)
-        table.set_cols_dtype(['t', 'f', 'f', 't', 't'])
+    def _output_expressions(self, problem, ctx, expressions, type_, table_name):
+        table = OutputTable(table_name, [
+            {'id': 'name', 'name': type_, 'type': 't'},
+            {'id': 'lower_bound', 'name': 'LB', 'type': 'f'},
+            {'id': 'upper_bound', 'name': 'UB', 'type': 'f'},
+            {'id': 'convexity', 'name': 'Cvx', 'type': 't'},
+            {'id': 'monotonicity', 'name': 'Mono', 'type': 't'},
+        ])
         for expr_name, expr in expressions:
             root_expr = expr.root_expr
             cvx = _cvx_to_str(ctx.convexity(root_expr))
             mono = _mono_to_str(ctx.monotonicity(root_expr))
             bounds = ctx.bounds(root_expr)
-            table.add_row([expr_name, bounds.lower_bound, bounds.upper_bound, cvx, mono])
-        print(table.draw())
+            table.add_row({
+                'name': expr_name,
+                'lower_bound': bounds.lower_bound,
+                'upper_bound': bounds.upper_bound,
+                'convexity': cvx,
+                'monotonicity': mono,
+            })
+        return table
 
     def help_message(self):
         return 'Print special structure information'
 
     def add_extra_parser_arguments(self, parser):
-        pass
+        add_output_format_parser_arguments(parser)

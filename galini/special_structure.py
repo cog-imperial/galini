@@ -16,6 +16,7 @@
 from suspect.propagation import SpecialStructurePropagationVisitor
 from suspect.polynomial import PolynomialDegreeVisitor
 from suspect.fbbt import BoundsTightener, FBBTStopCriterion
+from suspect.interval import Interval
 from galini.suspect import ProblemContext, ExpressionDict, ProblemForwardIterator, ProblemBackwardIterator
 
 
@@ -35,6 +36,14 @@ def detect_special_structure(problem):
         ProblemBackwardIterator(),
         FBBTStopCriterion(),
     )
+
+    # set bounds of root_expr to constraints bounds
+    # since GALINI doesn't consider constraints as expression we have
+    # to do this manually.
+    for constraint in problem.constraints.values():
+        expr_bounds = Interval(constraint.lower_bound, constraint.upper_bound)
+        ctx.set_bounds(constraint.root_expr, expr_bounds)
+
     bounds_tightener.tighten(problem, ctx)
     detect_polynomial_degree(problem, ctx.polynomial)
     propagate_special_structure(problem, ctx)
