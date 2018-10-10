@@ -152,6 +152,7 @@ setup(
         'toml',
         'pydot',
         'texttable>=1.4.0',
+        'pybind11>=2.2.3',
     ],
     setup_requires=['pytest-runner', 'cython', 'pybind11'],
     tests_require=['pytest', 'pytest-cov', 'hypothesis'],
