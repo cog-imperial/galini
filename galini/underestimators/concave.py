@@ -12,21 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Relaxation of Univariate Concave functions."""
+"""Underestimator for Univariate Concave functions."""
 import math
 import numpy as np
 from suspect.expression import ExpressionType, UnaryFunctionType
 from galini.core import LinearExpression, Variable, Constraint, Domain
-from galini.relaxations.relaxation import Relaxation, RelaxationResult
+from galini.underestimators.underestimator import Underestimator, UnderestimatorResult
 
 
-class UnivariateConcaveRelaxation(Relaxation):
-    """Relaxation of univariate concave functions."""
-    def can_relax(self, problem, expr, ctx):
+class UnivariateConcaveUnderestimator(Underestimator):
+    """Underestimator of univariate concave functions."""
+    def can_underestimate(self, problem, expr, ctx):
         cvx = ctx.convexity(expr)
         return cvx.is_concave() and self.is_univariate(expr)
 
-    def relax(self, problem, expr, ctx):
+    def underestimate(self, problem, expr, ctx):
         var = self._collect_variable(expr)
         if var is None:
             raise RuntimeError('Not an unary expression')
@@ -51,7 +51,7 @@ class UnivariateConcaveRelaxation(Relaxation):
         const = -c * ut_xl * lower_bound
 
         new_expr = LinearExpression([var], [c], const)
-        return RelaxationResult(new_expr)
+        return UnderestimatorResult(new_expr)
 
     def is_univariate(self, expr):
         try:

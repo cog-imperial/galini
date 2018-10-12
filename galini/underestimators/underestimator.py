@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Relaxation interface."""
+"""Underestimator interface."""
+from abc import ABCMeta, abstractmethod
 from galini.core import Expression, Constraint
 
 
-class Relaxation(object):
-    def can_relax(self, problem, expr, ctx):
-        """Check if the current relaxation can relax the given expression.
+class Underestimator(object, metaclass=ABCMeta):
+    @abstractmethod
+    def can_underestimate(self, problem, expr, ctx): # pragma: no cover
+        """Check if the current underestimator can underestimate the given expression.
 
         Parameters
         ----------
@@ -35,8 +37,9 @@ class Relaxation(object):
         """
         pass
 
-    def relax(self, problem, expr, ctx):
-        """Relax the given expression.
+    @abstractmethod
+    def underestimate(self, problem, expr, ctx): # pragma: no cover
+        """Return expression underestimating expr.
 
         Parameters
         ----------
@@ -49,16 +52,16 @@ class Relaxation(object):
 
         Returns
         -------
-        RelaxationResult
+        UnderestimatorResult
         """
         pass
 
 
-class RelaxationResult(object):
-    """Represent the result of a relaxation.
+class UnderestimatorResult(object):
+    """Represent the result of an underestimator.
 
-    The result contains a relaxed expression and a set of additional
-    constraints to be added to the problem.
+    The result contains a expression that underestimates the original expression
+    and a set of additional constraints to be added to the problem.
     """
     def __init__(self, expression, constraints=None):
         if not isinstance(expression, Expression):
