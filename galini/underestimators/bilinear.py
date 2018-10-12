@@ -12,20 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Bilinear relaxation using McCormick."""
+"""Bilinear underestimator using McCormick."""
 import numpy as np
 from suspect.expression import ExpressionType
 from galini.core import LinearExpression, Variable, Constraint, Domain
-from galini.relaxations.relaxation import Relaxation, RelaxationResult
+from galini.underestimators.underestimator import Underestimator, UnderestimatorResult
 
 
-class McCormickRelaxation(Relaxation):
-    """Relax bilinear terms using McCormick envelope."""
-    def can_relax(self, problem, expr, ctx):
+class McCormickUnderestimator(Underestimator):
+    """Underestimate bilinear terms using McCormick envelope."""
+    def can_underestimate(self, problem, expr, ctx):
         poly = ctx.polynomial(expr)
         return poly.is_quadratic() and expr.expression_type == ExpressionType.Product
 
-    def relax(self, problem, expr, ctx):
+    def underestimate(self, problem, expr, ctx):
         assert expr.expression_type == ExpressionType.Product
         x_expr, y_expr, c = self._get_variables(expr)
 
@@ -74,7 +74,10 @@ class McCormickRelaxation(Relaxation):
             new_expr = LinearExpression([w], [c], 0.0)
         else:
             new_expr = w
-        return RelaxationResult(new_expr, [upper_bound_0, upper_bound_1, lower_bound_0, lower_bound_1])
+        return UnderestimatorResult(
+            new_expr,
+            [upper_bound_0, upper_bound_1, lower_bound_0, lower_bound_1]
+        )
 
     def _get_variables(self, expr):
         x = expr.children[0]
