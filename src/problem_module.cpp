@@ -45,6 +45,7 @@ void init_problem(py::module& m) {
     .def_property_readonly("constraints", &RootProblem<T>::constraints)
     .def_property_readonly("objectives", &RootProblem<T>::objectives)
     .def_property_readonly("vertices", &RootProblem<T>::vertices)
+    .def_property_readonly("name", &RootProblem<T>::name)
     .def("max_depth", &RootProblem<T>::max_depth)
     .def("vertex_depth", &RootProblem<T>::vertex_depth)
     .def("add_variable", &RootProblem<T>::add_variable)
@@ -60,6 +61,10 @@ void init_problem(py::module& m) {
     .def(py::init<const typename Problem<T>::ptr&>())
     .def_property_readonly("parent", &ChildProblem<T>::parent)
     .def("make_child", &ChildProblem<T>::make_child);
+
+  py::class_<RelaxedProblem<T>, RootProblem<T>, RelaxedProblem<T>::ptr>(m, "RelaxedProblem")
+    .def(py::init<const std::string&, const typename Problem<T>::ptr&>())
+    .def_property_readonly("parent", &RelaxedProblem<T>::parent);
 
   py::class_<VariableView<T>>(m, "VariableView")
     .def_property_readonly("domain", &VariableView<T>::domain)

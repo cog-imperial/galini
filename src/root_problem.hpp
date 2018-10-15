@@ -96,7 +96,7 @@ public:
     if (constraints_.find(name) != constraints_.end()) {
       throw std::runtime_error("Duplicate constraint: " + name);
     }
-    auto constraint = std::make_shared<Constraint<T>>(this->self(), expr, lower_bound, upper_bound);
+    auto constraint = std::make_shared<Constraint<T>>(this->self(), name, expr, lower_bound, upper_bound);
     this->constraints_[name] = constraint;
     this->num_constraints_ += 1;
     return constraint;
@@ -112,7 +112,7 @@ public:
     if (objectives_.find(name) != objectives_.end()) {
       throw std::runtime_error("Duplicate objective: " + name);
     }
-    auto objective = std::make_shared<Objective<T>>(this->self(), expr, sense);
+    auto objective = std::make_shared<Objective<T>>(this->self(), name, expr, sense);
     this->objectives_[name] = objective;
     this->num_objectives_ += 1;
     return objective;
@@ -180,6 +180,10 @@ public:
 
   objectives_map& objectives() {
     return objectives_;
+  }
+
+  std::string name() const {
+    return name_;
   }
 private:
 
