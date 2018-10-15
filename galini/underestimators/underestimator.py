@@ -17,7 +17,7 @@ from abc import ABCMeta, abstractmethod
 from galini.core import Expression, Constraint
 
 
-class Underestimator(object, metaclass=ABCMeta):
+class Underestimator(metaclass=ABCMeta):
     @abstractmethod
     def can_underestimate(self, problem, expr, ctx): # pragma: no cover
         """Check if the current underestimator can underestimate the given expression.

@@ -24,7 +24,7 @@ __all__ = [
     'SqrtExpression', 'ExpExpression', 'LogExpression', 'SinExpression', 'CosExpression',
     'TanExpression', 'AsinExpression', 'AcosExpression', 'AtanExpression',
     'JacobianEvaluator', 'ForwardJacobianEvaluator', 'ReverseJacobianEvaluator',
-    'HessianEvaluator', 'RootProblem', 'ChildProblem', 'VariableView',
+    'HessianEvaluator', 'RootProblem', 'ChildProblem', 'RelaxedProblem', 'VariableView',
 ]
 
 
@@ -74,6 +74,7 @@ from galini_core import (
     Problem,
     RootProblem,
     ChildProblem,
+    RelaxedProblem,
 )
 
 from galini.core.ad import (

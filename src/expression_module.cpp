@@ -17,14 +17,23 @@ void init_expression(py::module& m) {
   auto UnaryFunctionType = suspect_expression.attr("UnaryFunctionType");
 
   py::class_<Constraint<T>, Constraint<T>::ptr>(m, "Constraint")
-    .def(py::init<const Expression<T>::problem_ptr&, const Expression<T>::ptr&, py::object, py::object>())
-    .def(py::init<const Expression<T>::ptr&, py::object, py::object>())
+    .def(py::init<const Expression<T>::problem_ptr&, const std::string&,
+	 const Expression<T>::ptr&, py::object, py::object>())
+    .def(py::init<const std::string&, const Expression<T>::ptr&, py::object, py::object>())
+    .def_property_readonly("problem", &Constraint<T>::problem)
+    .def_property_readonly("name", &Constraint<T>::name)
     .def_property_readonly("root_expr", &Constraint<T>::root_expr)
     .def_property_readonly("lower_bound", &Constraint<T>::lower_bound)
     .def_property_readonly("upper_bound", &Constraint<T>::upper_bound);
 
   py::class_<Objective<T>, Objective<T>::ptr>(m, "Objective")
-    .def_property_readonly("root_expr", &Objective<T>::root_expr);
+    .def(py::init<const Expression<T>::problem_ptr&, const std::string&,
+	 const Expression<T>::ptr&, py::object>())
+    .def(py::init<const std::string&, const Expression<T>::ptr&, py::object>())
+    .def_property_readonly("problem", &Objective<T>::problem)
+    .def_property_readonly("name", &Objective<T>::name)
+    .def_property_readonly("root_expr", &Objective<T>::root_expr)
+    .def_property_readonly("sense", &Objective<T>::sense);
 
   py::class_<Expression<T>, Expression<T>::ptr>(m, "Expression")
     .def_property_readonly("problem", &Expression<T>::problem)

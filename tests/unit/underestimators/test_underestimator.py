@@ -16,6 +16,6 @@ class TestUnderestimatorResult:
 
     def test_constraints_must_be_constraints(self):
         v = Variable('v', None, None, None)
-        c = Constraint(v, None, None)
+        c = Constraint('foo', v, None, None)
         with pytest.raises(ValueError):
             UnderestimatorResult(v, [c, Foo()])
