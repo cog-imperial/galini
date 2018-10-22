@@ -49,6 +49,8 @@ public:
     return parent_->max_depth();
   }
 
+  ad::ExpressionTreeData expression_tree_data() const override;
+
   typename Expression::ptr vertex(index_t idx) override {
     return parent_->vertex(idx);
   }

@@ -16,6 +16,7 @@ limitations under the License.
 
 #include <pybind11/stl.h>
 
+#include "ad/ad_data.h"
 #include "expression/variable.h"
 
 namespace py = pybind11;
@@ -48,6 +49,7 @@ void init_module(py::module& m) {
     .def("fix", &Problem::fix)
     .def("is_fixed", &Problem::is_fixed)
     .def("unfix", &Problem::unfix)
+    .def("expression_tree_data", &Problem::expression_tree_data)
     .def("vertex", &Problem::vertex)
     .def("variable", py::overload_cast<const std::string&>(&Problem::variable))
     .def("variable", py::overload_cast<index_t>(&Problem::variable))

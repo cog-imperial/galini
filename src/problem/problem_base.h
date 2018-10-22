@@ -25,6 +25,10 @@ namespace py = pybind11;
 
 namespace galini {
 
+namespace ad {
+class ExpressionTreeData;
+} // namespace ad
+
 namespace expression {
 class Expression;
 class Variable;
@@ -103,6 +107,8 @@ public:
   ptr self() {
     return this->shared_from_this();
   }
+
+  virtual ad::ExpressionTreeData expression_tree_data() const = 0;
 
   virtual std::shared_ptr<Expression> vertex(index_t idx) = 0;
   virtual std::shared_ptr<Variable> variable(const std::string& name) = 0;
