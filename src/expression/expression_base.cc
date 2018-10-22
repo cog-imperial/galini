@@ -26,19 +26,19 @@ namespace expression {
 
 ad::ExpressionTreeData Expression::expression_tree_data() const {
   std::vector<Expression::const_ptr> nodes;
-  std::set<index_t> visited;
+  std::set<index_t> seen = {idx()};
   std::deque<Expression::const_ptr> to_visit = {self()};
 
   while (!to_visit.empty()) {
     auto current = to_visit.front();
     to_visit.pop_front();
-    visited.insert(current->idx());
     nodes.push_back(current);
 
     for (index_t i = 0; i < current->num_children(); ++i) {
       auto child = current->nth_children(i);
-      if (visited.find(child->idx()) == visited.end()) {
+      if (seen.find(child->idx()) == seen.end()) {
 	to_visit.push_front(child);
+	seen.insert(child->idx());
       }
     }
   }

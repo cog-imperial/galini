@@ -15,6 +15,27 @@ from galini.core import (
 )
 
 
+class TestExpressionTreeData(object):
+    def _problem(self):
+        model = aml.ConcreteModel()
+        model.I = range(2)
+        model.x = aml.Var(model.I)
+        model.obj = aml.Objective(expr=sum(3.0 * model.x[i] for i in model.I))
+        model.c0 = aml.Constraint(expr=sum(model.x[i] * model.x[i] for i in model.I) >= 0)
+        return dag_from_pyomo_model(model)
+
+    def test_expression_tree_data_of_problem(self):
+        dag = self._problem()
+        tree_data = dag.expression_tree_data()
+        assert len(dag.vertices) == len(tree_data.vertices())
+
+    def test_expression_tree_of_expresssion(self):
+        dag = self._problem()
+        cons = dag.constraints['c0']
+        tree_data = cons.root_expr.expression_tree_data()
+        assert len(tree_data.vertices()) == 2 + 2 + 1
+
+
 @pytest.mark.skip('Not updated to work with new DAG')
 class TestJacobian(object):
     def test_raises_error_on_wrong_input_size(self):
