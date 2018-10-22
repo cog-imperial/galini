@@ -51,11 +51,16 @@ ad::ExpressionTreeData RootProblem::expression_tree_data() const {
 
 void RootProblem::insert_vertex(const std::shared_ptr<Expression>& expr) {
   auto depth = expr->default_depth();
+  for (index_t i = 0; i < expr->num_children(); ++i) {
+    auto child = expr->nth_children(i);
+    depth = std::max(depth, child->depth() + 1);
+  }
   auto insertion_it = detail::bisect_left(vertices_.begin(), vertices_.end(), depth);
   auto reindex_begin = vertices_.insert(insertion_it, expr);
   auto starting_idx = reindex_begin - vertices_.begin();
   detail::reindex_vertices(reindex_begin, vertices_.end(), starting_idx);
   expr->set_problem(this->self());
+  expr->set_depth(depth);
 }
 
 VariableView RootProblem::variable_view(const Variable::ptr &var) {

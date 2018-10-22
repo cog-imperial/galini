@@ -78,6 +78,7 @@ class TestConvertExpression(object):
             assert root.constant_term == 2.0
             v = root.nth_children(0)
             assert isinstance(v, core.Variable)
+            self._check_depth(root)
 
     def test_nested_expressions(self):
         m = aml.ConcreteModel()
@@ -103,6 +104,7 @@ class TestConvertExpression(object):
             assert np.array_equal(np.array(num_inner.coefficients), np.array([2.0, -1.0]))
             assert isinstance(den, core.LinearExpression)
             assert den.constant_term == 1.0
+            self._check_depth(root)
 
     def test_product(self):
         m = aml.ConcreteModel()
@@ -122,6 +124,7 @@ class TestConvertExpression(object):
             assert isinstance(var, core.Variable)
             assert isinstance(linear, core.LinearExpression)
             assert np.array_equal(linear.coefficients, [6.0])
+            self._check_depth(root)
 
     def test_sum(self):
         m = aml.ConcreteModel()
@@ -138,6 +141,7 @@ class TestConvertExpression(object):
             assert isinstance(root, core.SumExpression)
             for c in root.children:
                 assert isinstance(c, core.ProductExpression)
+            self._check_depth(root)
 
     def test_negation(self):
         m = aml.ConcreteModel()
@@ -151,6 +155,7 @@ class TestConvertExpression(object):
         constraint = dag.constraints['c']
         root = constraint.root_expr
         assert isinstance(root, core.NegationExpression)
+        self._check_depth(root)
 
     def test_abs(self):
         m = aml.ConcreteModel()
@@ -164,6 +169,7 @@ class TestConvertExpression(object):
         constraint = dag.constraints['c']
         root = constraint.root_expr
         assert isinstance(root, core.AbsExpression)
+        self._check_depth(root)
 
     def test_pow(self):
         m = aml.ConcreteModel()
@@ -189,7 +195,16 @@ class TestConvertExpression(object):
         assert root_c1.num_children == 2
         assert isinstance(root_c1.children[0], core.Constant)
         assert isinstance(root_c1.children[1], core.SinExpression)
+        self._check_depth(root_c0)
+        self._check_depth(root_c1)
 
+    def _check_depth(self, expr):
+        nodes = [expr]
+        while len(nodes) > 0:
+            current = nodes.pop()
+            for child in current.children:
+                nodes.append(child)
+                assert child.depth < current.depth
 
 class TestConvertObjective(object):
     def test_min(self):
