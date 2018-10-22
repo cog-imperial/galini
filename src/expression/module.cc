@@ -60,6 +60,7 @@ void init_module(py::module& m) {
     .def_property_readonly("name", &Variable::name)
     .def_property_readonly("lower_bound", &Variable::lower_bound)
     .def_property_readonly("upper_bound", &Variable::upper_bound)
+    .def_property_readonly("domain", &Variable::domain)
     .def_property_readonly("expression_type",
 			   [ExpressionType](const Variable&) { return ExpressionType.attr("Variable"); });
 
