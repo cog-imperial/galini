@@ -62,6 +62,8 @@ public:
     return vertex->depth();
   }
 
+  ad::ExpressionTreeData expression_tree_data() const override;
+
   std::shared_ptr<Expression> vertex(index_t idx) override {
     return vertices_.at(idx);
   }

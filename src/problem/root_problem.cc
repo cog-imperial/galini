@@ -14,6 +14,7 @@ limitations under the License.
 ======================================================================== */
 #include "root_problem.h"
 
+#include "ad/ad_data.h"
 #include "problem/child_problem.h"
 #include "problem/constraint.h"
 #include "problem/objective.h"
@@ -42,14 +43,20 @@ namespace detail {
 
 } // namespace detail
 
-  void RootProblem::insert_vertex(const std::shared_ptr<Expression>& expr) {
-    auto depth = expr->default_depth();
-    auto insertion_it = detail::bisect_left(vertices_.begin(), vertices_.end(), depth);
-    auto reindex_begin = vertices_.insert(insertion_it, expr);
-    auto starting_idx = reindex_begin - vertices_.begin();
-    detail::reindex_vertices(reindex_begin, vertices_.end(), starting_idx);
-    expr->set_problem(this->self());
-  }
+ad::ExpressionTreeData RootProblem::expression_tree_data() const {
+  std::vector<Expression::const_ptr> nodes(vertices_.size());
+  std::copy(vertices_.begin(), vertices_.end(), nodes.begin());
+  return ad::ExpressionTreeData(nodes);
+}
+
+void RootProblem::insert_vertex(const std::shared_ptr<Expression>& expr) {
+  auto depth = expr->default_depth();
+  auto insertion_it = detail::bisect_left(vertices_.begin(), vertices_.end(), depth);
+  auto reindex_begin = vertices_.insert(insertion_it, expr);
+  auto starting_idx = reindex_begin - vertices_.begin();
+  detail::reindex_vertices(reindex_begin, vertices_.end(), starting_idx);
+  expr->set_problem(this->self());
+}
 
 VariableView RootProblem::variable_view(const Variable::ptr &var) {
   return VariableView(this->self(), var);

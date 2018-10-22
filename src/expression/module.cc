@@ -16,6 +16,7 @@ limitations under the License.
 
 #include <pybind11/stl.h>
 
+#include "ad/ad_data.h"
 #include "problem/problem_base.h"
 
 namespace py = pybind11;
@@ -37,6 +38,7 @@ void init_module(py::module& m) {
     .def_property_readonly("default_depth", &Expression::default_depth)
     .def_property_readonly("num_children", &Expression::num_children)
     .def_property_readonly("children", &Expression::children)
+    .def("expression_tree_data", &Expression::expression_tree_data)
     .def("nth_children", &Expression::nth_children)
     .def("is_constant", &Expression::is_constant);
 

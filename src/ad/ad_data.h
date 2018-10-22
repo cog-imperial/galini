@@ -14,16 +14,37 @@ limitations under the License.
 ======================================================================== */
 #pragma once
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <vector>
 
-#include "ad_adapter.h"
-#include "ad.h"
+#include "expression/expression_base.h"
 
 namespace galini {
+
 namespace ad {
 
-void init_module(pybind11::module& m);
+using Expression = expression::Expression;
 
-} // namespace ad
+class ExpressionTreeData {
+public:
+  explicit ExpressionTreeData(const std::vector<Expression::const_ptr>& vertices)
+    : vertices_(vertices) {}
+
+  explicit ExpressionTreeData(std::vector<Expression::const_ptr>&& vertices)
+    : vertices_(vertices) {}
+
+  ExpressionTreeData(ExpressionTreeData&& other)
+    : vertices_(std::move(other.vertices_)) {}
+
+  ExpressionTreeData(const ExpressionTreeData&) = delete;
+  ~ExpressionTreeData() = default;
+
+  std::vector<Expression::const_ptr> vertices() const {
+    return vertices_;
+  }
+private:
+  std::vector<Expression::const_ptr> vertices_;
+};
+
+}  // namespace ad
+
 } // namespace galini

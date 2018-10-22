@@ -14,6 +14,8 @@ limitations under the License.
 ======================================================================== */
 #include "module.h"
 
+#include "ad_data.h"
+
 namespace galini {
 
 namespace ad {
@@ -21,6 +23,9 @@ namespace ad {
 void init_module(py::module& m) {
   py::class_<AD<double>>(m, "AD[float]");
   py::class_<AD<ADPyobjectAdapter>>(m, "AD[object]");
+
+  py::class_<ExpressionTreeData>(m, "ExpressionTreeData")
+    .def("vertices", &ExpressionTreeData::vertices);
 }
 
 } // namespace ad

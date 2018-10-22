@@ -21,6 +21,10 @@ limitations under the License.
 
 namespace galini {
 
+namespace ad {
+class ExpressionTreeData;
+} // namespace ad
+
 namespace problem {
 class Problem;
 } // namespace problem
@@ -36,6 +40,7 @@ public:
   static const index_t DEFAULT_DEPTH = 2;
 
   using ptr = std::shared_ptr<Expression>;
+  using const_ptr = std::shared_ptr<const Expression>;
   using problem_ptr = std::shared_ptr<Problem>;
   using problem_weak_ptr = std::weak_ptr<Problem>;
 
@@ -86,6 +91,12 @@ public:
   ptr self() {
     return this->shared_from_this();
   }
+
+  std::shared_ptr<const Expression> self() const {
+    return this->shared_from_this();
+  }
+
+  ad::ExpressionTreeData expression_tree_data() const;
 
   virtual ptr nth_children(index_t n) const = 0;
   virtual std::vector<typename Expression::ptr> children() const = 0;

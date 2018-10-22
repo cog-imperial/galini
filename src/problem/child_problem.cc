@@ -13,11 +13,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ======================================================================== */
 #include "child_problem.h"
-#include "variable_view.h"
+
+#include "ad/ad_data.h"
+#include "problem/variable_view.h"
 
 namespace galini {
 
 namespace problem {
+
+ad::ExpressionTreeData ChildProblem::expression_tree_data() const {
+  return parent_->expression_tree_data();
+}
 
 VariableView ChildProblem::variable_view(const Variable::ptr& var) {
   return VariableView(this->self(), var);

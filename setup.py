@@ -86,6 +86,7 @@ extensions = [
         'galini_core',
         sources=[
             'src/ad/ad_adapter.cc',
+            'src/expression/expression_base.cc',
             'src/problem/problem_base.cc',
             'src/problem/root_problem.cc',
             'src/problem/child_problem.cc',
