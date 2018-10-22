@@ -85,16 +85,22 @@ extensions = [
     Extension(
         'galini_core',
         sources=[
-            'src/problem_module.cpp',
-            'src/expression_module.cpp',
-            'src/core.cpp'
+            'src/ad/ad_adapter.cc',
+            'src/problem/problem_base.cc',
+            'src/problem/root_problem.cc',
+            'src/problem/child_problem.cc',
+            'src/ad/module.cc',
+            'src/expression/module.cc',
+            'src/problem/module.cc',
+            'src/core.cc',
         ],
         include_dirs=[
+            'src',
             get_pybind11_include(),
             get_pybind11_include(user=True),
         ],
         language='c++',
-        depends=glob.glob('src/*.hpp'),
+        depends=glob.glob('src/**/*.h'),
     )
 ]
 
