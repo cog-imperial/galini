@@ -32,13 +32,6 @@ class RootProblem : public Problem {
 public:
   using ptr = std::shared_ptr<RootProblem>;
 
-private:
-  using variables_map = std::unordered_map<std::string, std::shared_ptr<Variable>>;
-  using constraints_map = std::unordered_map<std::string, std::shared_ptr<Constraint>>;
-  using objectives_map = std::unordered_map<std::string, std::shared_ptr<Objective>>;
-
-public:
-
   RootProblem(const std::string &name) : Problem(), name_(name) {
   }
 
@@ -64,31 +57,28 @@ public:
 
   ad::ExpressionTreeData expression_tree_data() const override;
 
-  std::shared_ptr<Expression> vertex(index_t idx) override {
+  std::shared_ptr<Expression> vertex(index_t idx) const override {
     return vertices_.at(idx);
   }
 
-  std::shared_ptr<Variable> variable(const std::string& name) override {
-    return this->variables_.at(name);
+  std::shared_ptr<Variable> variable(const std::string& name) const override {
+    return variable(variables_map_.at(name));
   }
 
-  std::shared_ptr<Variable> variable(index_t idx) override {
-    if (idx >= this->num_variables()) {
-      throw std::out_of_range("variables");
-    }
-    auto var_expr = vertices_[idx];
-    return std::dynamic_pointer_cast<Variable>(var_expr);
+  std::shared_ptr<Variable> variable(index_t idx) const override {
+    return variables_.at(idx);
   }
 
   std::shared_ptr<Variable> add_variable(const std::string& name,
 					 py::object lower_bound, py::object upper_bound,
 					 py::object domain) {
-    if (variables_.find(name) != variables_.end()) {
+    if (variables_map_.find(name) != variables_map_.end()) {
       throw std::runtime_error("Duplicate variable name: " + name);
     }
     auto var = std::make_shared<Variable>(this->self(), name, lower_bound, upper_bound, domain);
     this->insert_vertex(var);
-    this->variables_[name] = var;
+    this->variables_map_[name] = this->num_variables_;
+    this->variables_.push_back(var);
     this->num_variables_ += 1;
     this->domains_.push_back(domain);
     this->lower_bounds_.push_back(lower_bound);
@@ -101,35 +91,46 @@ public:
     return var;
   }
 
-  std::shared_ptr<Constraint> constraint(const std::string& name) {
-    return this->constraints_.at(name);
+  std::shared_ptr<Constraint> constraint(const std::string& name) const override {
+    return constraint(this->constraints_map_.at(name));
+  }
+
+  std::shared_ptr<Constraint> constraint(index_t idx) const override {
+    return this->constraints_.at(idx);
   }
 
   std::shared_ptr<Constraint> add_constraint(const std::string& name,
 					     const std::shared_ptr<Expression>& expr,
 					     py::object lower_bound,
 					     py::object upper_bound) {
-    if (constraints_.find(name) != constraints_.end()) {
+    if (constraints_map_.find(name) != constraints_map_.end()) {
       throw std::runtime_error("Duplicate constraint: " + name);
     }
-    auto constraint = std::make_shared<Constraint>(this->self(), name, expr, lower_bound, upper_bound);
-    this->constraints_[name] = constraint;
+    auto constraint = std::make_shared<Constraint>(this->self(), name, expr,
+						   lower_bound, upper_bound);
+    this->constraints_map_[name] = this->num_constraints_;
+    this->constraints_.push_back(constraint);
     this->num_constraints_ += 1;
     return constraint;
   }
 
-  std::shared_ptr<Objective> objective(const std::string& name) {
-    return this->objectives_.at(name);
+  std::shared_ptr<Objective> objective(const std::string& name) const override {
+    return objective(this->objectives_map_.at(name));
+  }
+
+  std::shared_ptr<Objective> objective(index_t idx) const override {
+    return this->objectives_.at(idx);
   }
 
   std::shared_ptr<Objective> add_objective(const std::string& name,
 					   const std::shared_ptr<Expression>& expr,
 					   py::object sense) {
-    if (objectives_.find(name) != objectives_.end()) {
+    if (objectives_map_.find(name) != objectives_map_.end()) {
       throw std::runtime_error("Duplicate objective: " + name);
     }
     auto objective = std::make_shared<Objective>(this->self(), name, expr, sense);
-    this->objectives_[name] = objective;
+    this->objectives_map_[name] = this->num_objectives_;
+    this->objectives_.push_back(objective);
     this->num_objectives_ += 1;
     return objective;
   }
@@ -167,15 +168,15 @@ public:
     return vertices_;
   }
 
-  variables_map& variables() {
+  std::vector<std::shared_ptr<Variable>>& variables() {
     return variables_;
   }
 
-  constraints_map& constraints() {
+  std::vector<std::shared_ptr<Constraint>>& constraints() {
     return constraints_;
   }
 
-  objectives_map& objectives() {
+  std::vector<std::shared_ptr<Objective>>& objectives() {
     return objectives_;
   }
 
@@ -187,9 +188,13 @@ private:
   std::string name_;
   std::vector<std::shared_ptr<Expression>> vertices_;
 
-  variables_map variables_;
-  constraints_map constraints_;
-  objectives_map objectives_;
+  std::vector<std::shared_ptr<Variable>> variables_;
+  std::vector<std::shared_ptr<Constraint>> constraints_;
+  std::vector<std::shared_ptr<Objective>> objectives_;
+
+  std::unordered_map<std::string, std::size_t> variables_map_;
+  std::unordered_map<std::string, std::size_t> constraints_map_;
+  std::unordered_map<std::string, std::size_t> objectives_map_;
 };
 
 } // namespace problem

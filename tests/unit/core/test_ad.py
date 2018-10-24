@@ -31,7 +31,7 @@ class TestExpressionTreeData(object):
 
     def test_expression_tree_of_expresssion(self):
         dag = self._problem()
-        cons = dag.constraints['c0']
+        cons = dag.constraint('c0')
         tree_data = cons.root_expr.expression_tree_data()
         assert len(tree_data.vertices()) == 2 + 2 + 1
 

@@ -16,7 +16,6 @@
 import numpy as np
 from pypopt import IpoptApplication, TNLP, NLPInfo
 import  galini.logging as log
-from galini.core import HessianEvaluator
 from galini.solvers import Solver
 
 
@@ -25,137 +24,33 @@ class GaliniTNLP(TNLP):
 
     # pylint: disable=invalid-name
     def __init__(self, problem):
-        self.n = problem.num_variables
-        self.m = problem.num_constraints
-        self._problem = problem
-        self._ad = HessianEvaluator(problem)
-
-        objectives = list(problem.objectives.values())
-        assert len(objectives) == 1
-        objective = objectives[0]
-        self.objective_idx = objective.root_expr.idx
-
-        self.constraints_idx = np.zeros(self.m, dtype=np.int32)
-        for i, constraint in enumerate(problem.constraints.values()):
-            self.constraints_idx[i] = constraint.root_expr.idx
+        pass
 
     def get_nlp_info(self):
-        n = self.n
-        m = self.m
-        nnz_jac = n*m
-        nnz_hess = (n*n + n)/2
-        return NLPInfo(
-            n=n,
-            m=m,
-            nnz_jac=nnz_jac,
-            nnz_hess=nnz_hess,
-        )
+        pass
 
     def get_bounds_info(self, x_l, x_u, g_l, g_u):
-        # TODO: use correct infinity value
-        if x_l is not None and x_u is not None:
-            for i, v in enumerate(self._problem.variables_view()):
-                x_l[i] = v.lower_bound() if v.lower_bound() is not None else -2e19
-                x_u[i] = v.upper_bound() if v.upper_bound() is not None else 2e19
-
-        log.matrix('ipopt/bounds/x_l', np.array(x_l))
-        log.matrix('ipopt/bounds/x_u', np.array(x_u))
-
-        if g_l is not None and g_u is not None:
-            for i, c in enumerate(self._problem.constraints.values()):
-                g_l[i] = c.lower_bound if c.lower_bound is not None else -2e19
-                g_u[i] = c.upper_bound if c.upper_bound is not None else 2e19
-
-        log.matrix('ipopt/bounds/g_l', np.array(g_l))
-        log.matrix('ipopt/bounds/g_u', np.array(g_u))
-
         return True
 
     def get_starting_point(self, init_x, x, init_z, z_l, z_u, init_lambda, lambda_):
-        for i, v in enumerate(self._problem.variables_view()):
-            if v.has_starting_point():
-                x[i] = v.starting_point()
-            else:
-                l = v.lower_bound() if v.lower_bound() is not None else -2e19
-                u = v.upper_bound() if v.upper_bound() is not None else 2e19
-                x[i] = max(l, min(u, 0))
-        log.matrix('ipopt/starting_point', np.array(x))
         return True
 
     def get_jac_g_structure(self, row, col):
-        # TODO: real (sparse) structure
-        for j in range(self.m):
-            for i in range(self.n):
-                row[j*self.n+i] = j
-                col[j*self.n+i] = i
-
-        log.matrix('ipopt/jacobian_g_structure/row', np.array(row))
-        log.matrix('ipopt/jacobian_g_structure/col', np.array(col))
         return True
 
     def get_h_structure(self, row, col):
-        # TODO: real (sparse) structure
-        idx = 0
-        for i in range(self.n):
-            for j in range(i+1):
-                row[idx] = i
-                col[idx] = j
-                idx += 1
-
-        log.matrix('ipopt/hessian_structure/row', np.array(row))
-        log.matrix('ipopt/hessian_structure/col', np.array(col))
         return True
 
     def eval_f(self, x, new_x):
-        self._ad.eval_at_x(x, new_x)
-        return self._ad.values[self.objective_idx]
+        pass
 
     def eval_grad_f(self, x, new_x, grad_f):
-        self._ad.eval_at_x(x, new_x)
-        grad = self._ad.jacobian[0, :]
-        for i in range(self.n):
-            grad_f[i] = grad[i]
-        log.matrix('ipopt/grad_f', np.array(grad_f))
         return True
 
     def eval_g(self, x, new_x, g):
-        self._ad.eval_at_x(x, new_x)
-        values = self._ad.values
-        for i in range(self.m):
-            g[i] = values[self.constraints_idx[i]]
-        log.matrix('ipopt/g', np.array(g))
         return True
 
     def eval_jac_g(self, x, new_x, jacobian):
-        self._ad.eval_at_x(x, new_x)
-        jac = self._ad.jacobian
-        i = 0
-        for r in range(self.m):
-            for c in range(self.n):
-                jacobian[i] = jac[r+1, c]
-                i += 1
-        log.matrix('ipopt/jacobian_x', np.array(x))
-        log.matrix('ipopt/jacobian', np.array(jacobian))
-        return True
-
-    def eval_h(self, x, new_x, obj_factor, lambda_, new_lambda, hess):
-        self._ad.eval_at_x(x, new_x)
-        hessian = self._ad.hessian
-
-        idx = 0
-        for i in range(self.n):
-            for j in range(i+1):
-                hess[idx] = obj_factor * hessian[0, i, j]
-                idx += 1
-
-        for c in range(self.m):
-            idx = 0
-            for i in range(self.n):
-                for j in range(i+1):
-                    hess[idx] += lambda_[c] * hessian[c+1, i, j]
-                    idx += 1
-        log.matrix('ipopt/hessian_x', np.array(x))
-        log.matrix('ipopt/hessian', np.array(hess))
         return True
 
     def finalize_solution(self, _status, x, z_l, z_u, g, lambda_, obj_value):

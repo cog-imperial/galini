@@ -18,6 +18,8 @@ limitations under the License.
 
 #include "expression/expression_base.h"
 #include "expression/variable.h"
+#include "problem/constraint.h"
+#include "problem/objective.h"
 #include "problem/problem_base.h"
 
 namespace galini {
@@ -51,16 +53,32 @@ public:
 
   ad::ExpressionTreeData expression_tree_data() const override;
 
-  typename Expression::ptr vertex(index_t idx) override {
+  Expression::ptr vertex(index_t idx) const override {
     return parent_->vertex(idx);
   }
 
-  typename Variable::ptr variable(const std::string& name) override {
+  Variable::ptr variable(const std::string& name) const override {
     return parent_->variable(name);
   }
 
-  typename Variable::ptr variable(index_t idx) override {
+  Variable::ptr variable(index_t idx) const override {
     return parent_->variable(idx);
+  }
+
+  std::shared_ptr<Constraint> constraint(const std::string& name) const override {
+    return parent_->constraint(name);
+  }
+
+  std::shared_ptr<Constraint> constraint(index_t idx) const override {
+    return parent_->constraint(idx);
+  }
+
+  std::shared_ptr<Objective> objective(const std::string& name) const override {
+    return parent_->objective(name);
+  }
+
+  std::shared_ptr<Objective> objective(index_t idx) const override {
+    return parent_->objective(idx);
   }
 
   VariableView variable_view(const Variable::ptr& var) override;
