@@ -39,6 +39,8 @@ namespace problem {
 using Expression = expression::Expression;
 using Variable = expression::Variable;
 
+class Constraint;
+class Objective;
 class VariableView;
 class ChildProblem;
 
@@ -108,11 +110,19 @@ public:
     return this->shared_from_this();
   }
 
+  std::shared_ptr<const Problem> self() const {
+    return this->shared_from_this();
+  }
+
   virtual ad::ExpressionTreeData expression_tree_data() const = 0;
 
-  virtual std::shared_ptr<Expression> vertex(index_t idx) = 0;
-  virtual std::shared_ptr<Variable> variable(const std::string& name) = 0;
-  virtual std::shared_ptr<Variable> variable(index_t idx) = 0;
+  virtual std::shared_ptr<Expression> vertex(index_t idx) const = 0;
+  virtual std::shared_ptr<Variable> variable(const std::string& name) const = 0;
+  virtual std::shared_ptr<Variable> variable(index_t idx) const = 0;
+  virtual std::shared_ptr<Constraint> constraint(const std::string& name) const = 0;
+  virtual std::shared_ptr<Constraint> constraint(index_t idx) const = 0;
+  virtual std::shared_ptr<Objective> objective(const std::string& name) const = 0;
+  virtual std::shared_ptr<Objective> objective(index_t idx) const = 0;
   virtual VariableView variable_view(const std::shared_ptr<Variable>& variable) = 0;
   virtual VariableView variable_view(const std::string& name) = 0;
   virtual VariableView variable_view(index_t idx) = 0;

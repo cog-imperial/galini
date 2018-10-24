@@ -39,11 +39,11 @@ class Relaxation(metaclass=ABCMeta):
             problem,
         )
 
-        for obj_name, obj in problem.objectives.items():
-            self._relax_objective(problem, relaxed_problem, obj_name, obj)
+        for obj in problem.objectives:
+            self._relax_objective(problem, relaxed_problem, obj)
 
-        for cons_name, cons in problem.constraints.items():
-            self._relax_constraint(problem, relaxed_problem, cons_name, cons)
+        for cons in problem.constraints:
+            self._relax_constraint(problem, relaxed_problem, cons)
 
         self.after_relax(problem, relaxed_problem)
         return relaxed_problem
@@ -97,7 +97,7 @@ class Relaxation(metaclass=ABCMeta):
     def after_relax(self, problem, relaxed_problem):
         """Callback executed after relaxing the problem."""
 
-    def _relax_objective(self, problem, relaxed_problem, obj_name, obj):
+    def _relax_objective(self, problem, relaxed_problem, obj):
         result = self.relax_objective(obj)
         if not isinstance(result, ObjectiveRelaxationResult):
             raise ValueError('relax_objective must return object of type ObjectiveRelaxationResult')
@@ -109,7 +109,7 @@ class Relaxation(metaclass=ABCMeta):
             new_obj.sense,
         )
 
-    def _relax_constraint(self, problem, relaxed_problem, cons_name, cons):
+    def _relax_constraint(self, problem, relaxed_problem, cons):
         result = self.relax_constraint(cons)
         if not isinstance(result, ConstraintRelaxationResult):
             raise ValueError('relax_constraint must return object of type ConstraintRelaxationResult')

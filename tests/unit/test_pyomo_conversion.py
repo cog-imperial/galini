@@ -69,7 +69,7 @@ class TestConvertExpression(object):
         dag = dag_from_pyomo_model(m)
 
         assert len(dag.constraints) == 10
-        for constraint in dag.constraints.values():
+        for constraint in dag.constraints:
             assert constraint.lower_bound == 0.0
             assert constraint.upper_bound == None
             root = constraint.root_expr
@@ -91,7 +91,7 @@ class TestConvertExpression(object):
         dag = dag_from_pyomo_model(m)
 
         assert len(dag.constraints) == 10
-        for constraint in dag.constraints.values():
+        for constraint in dag.constraints:
             assert constraint.lower_bound == None
             assert constraint.upper_bound == 100
             root = constraint.root_expr
@@ -116,7 +116,7 @@ class TestConvertExpression(object):
         dag = dag_from_pyomo_model(m)
 
         assert len(dag.constraints) == 9
-        for constraint in dag.constraints.values():
+        for constraint in dag.constraints:
             root = constraint.root_expr
             assert isinstance(root, core.ProductExpression)
             assert root.num_children == 2
@@ -136,7 +136,7 @@ class TestConvertExpression(object):
         dag = dag_from_pyomo_model(m)
 
         assert len(dag.constraints) == 8
-        for constraint in dag.constraints.values():
+        for constraint in dag.constraints:
             root = constraint.root_expr
             assert isinstance(root, core.SumExpression)
             for c in root.children:
@@ -152,7 +152,7 @@ class TestConvertExpression(object):
 
         dag = dag_from_pyomo_model(m)
 
-        constraint = dag.constraints['c']
+        constraint = dag.constraint('c')
         root = constraint.root_expr
         assert isinstance(root, core.NegationExpression)
         self._check_depth(root)
@@ -166,7 +166,7 @@ class TestConvertExpression(object):
 
         dag = dag_from_pyomo_model(m)
 
-        constraint = dag.constraints['c']
+        constraint = dag.constraint('c')
         root = constraint.root_expr
         assert isinstance(root, core.AbsExpression)
         self._check_depth(root)
@@ -181,7 +181,7 @@ class TestConvertExpression(object):
 
         dag = dag_from_pyomo_model(m)
 
-        c0 = dag.constraints['c0']
+        c0 = dag.constraint('c0')
         root_c0 = c0.root_expr
         assert isinstance(root_c0, core.PowExpression)
         assert root_c0.num_children == 2
@@ -189,7 +189,7 @@ class TestConvertExpression(object):
         assert isinstance(root_c0.children[1], core.Constant)
         assert root_c0.children[1].value == 2.0
 
-        c1 = dag.constraints['c1']
+        c1 = dag.constraint('c1')
         root_c1 = c1.root_expr
         assert isinstance(root_c1, core.PowExpression)
         assert root_c1.num_children == 2
@@ -215,7 +215,7 @@ class TestConvertObjective(object):
 
         dag = dag_from_pyomo_model(m)
         assert len(dag.objectives) == 1
-        obj = dag.objectives['obj']
+        obj = dag.objective('obj')
         assert isinstance(obj.root_expr, core.LinearExpression)
         assert obj.sense == core.Sense.MINIMIZE
 
@@ -227,6 +227,6 @@ class TestConvertObjective(object):
 
         dag = dag_from_pyomo_model(m)
         assert len(dag.objectives) == 1
-        obj = dag.objectives['obj']
+        obj = dag.objective('obj')
         assert isinstance(obj.root_expr, core.LinearExpression)
         assert obj.sense == core.Sense.MAXIMIZE
