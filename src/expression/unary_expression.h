@@ -49,7 +49,7 @@ public:
     }
     return child_;
   }
-private:
+protected:
   Expression::ptr child_;
 };
 
@@ -59,6 +59,14 @@ public:
   using ptr = std::shared_ptr<NegationExpression>;
 
   using UnaryExpression::UnaryExpression;
+
+  ADFloat eval(const std::vector<ADFloat>& values) const override {
+    return -values[child_->idx()];
+  }
+
+  ADObject eval(const std::vector<ADObject>& values) const override {
+    return -values[child_->idx()];
+  }
 };
 
 

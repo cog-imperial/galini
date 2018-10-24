@@ -46,7 +46,7 @@ public:
     return children_.at(n);
   }
 
-private:
+protected:
   std::vector<Expression::ptr> children_;
 };
 
@@ -55,6 +55,19 @@ public:
   using ptr = std::shared_ptr<SumExpression>;
 
   using NaryExpression::NaryExpression;
+
+  ADFloat eval(const std::vector<ADFloat>& values) const override;
+  ADObject eval(const std::vector<ADObject>& values) const override;
+
+private:
+  template<class T>
+  T eval_sum(const std::vector<T>& values) const {
+    T result(0.0);
+    for (auto child : children_) {
+      result += values[child->idx()];
+    }
+    return result;
+  }
 };
 
 class LinearExpression : public NaryExpression {
@@ -80,7 +93,21 @@ public:
   double constant() const {
     return constant_;
   }
+
+
+  ADFloat eval(const std::vector<ADFloat>& values) const override;
+  ADObject eval(const std::vector<ADObject>& values) const override;
+
 private:
+  template<class T>
+  T eval_linear(const std::vector<T>& values) const {
+    T result(constant_);
+    for (index_t i = 0; i < children_.size(); ++i) {
+      result += values[children_[i]->idx()] * coefficients_[i];
+    }
+    return result;
+  }
+
   coefficients_t coefficients_;
   double constant_;
 };

@@ -12,16 +12,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ======================================================================== */
-#pragma once
+#include "binary_expression.h"
 
-#include <pybind11/pybind11.h>
-
-#include "ad.h"
+#include "ad/ad.h"
 
 namespace galini {
-namespace ad {
 
-void init_module(pybind11::module& m);
+namespace expression {
 
-} // namespace ad
+ADFloat PowExpression::eval(const std::vector<ADFloat>& values) const {
+  return ad::pow(values[first_->idx()], values[second_->idx()]);
+}
+
+ADObject PowExpression::eval(const std::vector<ADObject>& values) const {
+  return ad::pow(values[first_->idx()], values[second_->idx()]);
+}
+
+} // namespace expression
+
 } // namespace galini

@@ -14,7 +14,7 @@ limitations under the License.
 ======================================================================== */
 #include "child_problem.h"
 
-#include "ad/ad_data.h"
+#include "ad/expression_tree_data.h"
 #include "problem/variable_view.h"
 
 namespace galini {

@@ -16,7 +16,7 @@ limitations under the License.
 
 #include <pybind11/stl.h>
 
-#include "ad/ad_data.h"
+#include "ad/expression_tree_data.h"
 #include "expression/variable.h"
 
 namespace py = pybind11;

@@ -54,6 +54,14 @@ public:
     return nullptr;
   }
 
+  ADFloat eval(const std::vector<ADFloat>& values) const override {
+    return ADFloat(value_);
+  }
+
+  ADObject eval(const std::vector<ADObject>& values) const override {
+    return ADObject(value_);
+  }
+
 private:
   double value_;
 };

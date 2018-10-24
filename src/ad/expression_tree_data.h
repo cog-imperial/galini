@@ -16,6 +16,8 @@ limitations under the License.
 
 #include <vector>
 
+#include "ad/ad.h"
+#include "ad/func.h"
 #include "expression/expression_base.h"
 
 namespace galini {
@@ -41,6 +43,38 @@ public:
   std::vector<Expression::const_ptr> vertices() const {
     return vertices_;
   }
+
+  template<class U, class B>
+  ADFunc<U> eval(const std::vector<B>& x) const {
+    std::vector<AD<B>> X(x.size());
+    std::vector<AD<B>> Y(1);
+
+    std::vector<AD<B>> values(vertices_.size());
+    for (index_t i = 0; i < x.size(); ++i) {
+      X[i] = AD<B>(x[i]);
+    }
+
+    CppAD::Independent(X);
+
+    for (index_t i = 0; i < x.size(); ++i) {
+      values[i] = X[i];
+    }
+
+    for (auto vertex : vertices_) {
+      auto result = vertex->eval(values);
+      values[vertex->idx()] = result;
+    }
+
+    Y[0] = values[vertices_.size() - 1];
+    return ADFunc<U>(std::move(X), std::move(Y));
+  }
+
+  ADFunc<py::object> eval(const std::vector<py::object>& x) const {
+    std::vector<ADPyobjectAdapter> pyx(x.size());
+    std::copy(x.begin(), x.end(), pyx.begin());
+    return eval<py::object, ADPyobjectAdapter>(pyx);
+  }
+
 private:
   std::vector<Expression::const_ptr> vertices_;
 };

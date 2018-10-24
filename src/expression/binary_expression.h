@@ -50,7 +50,8 @@ public:
     }
     return (n == 0) ? first_ : second_;
   }
-private:
+
+protected:
   Expression::ptr first_;
   Expression::ptr second_;
 };
@@ -60,6 +61,15 @@ public:
   using ptr = std::shared_ptr<ProductExpression>;
 
   using BinaryExpression::BinaryExpression;
+
+  ADFloat eval(const std::vector<ADFloat>& values) const override {
+    return values[first_->idx()] * values[second_->idx()];
+  }
+
+  ADObject eval(const std::vector<ADObject>& values) const override {
+    return values[first_->idx()] * values[second_->idx()];
+  }
+
 };
 
 class DivisionExpression : public BinaryExpression {
@@ -67,6 +77,15 @@ public:
   using ptr = std::shared_ptr<DivisionExpression>;
 
   using BinaryExpression::BinaryExpression;
+
+  ADFloat eval(const std::vector<ADFloat>& values) const override {
+    return values[first_->idx()] / values[second_->idx()];
+  }
+
+  ADObject eval(const std::vector<ADObject>& values) const override {
+    return values[first_->idx()] / values[second_->idx()];
+  }
+
 };
 
 class PowExpression : public BinaryExpression {
@@ -74,9 +93,11 @@ public:
   using ptr = std::shared_ptr<PowExpression>;
 
   using BinaryExpression::BinaryExpression;
+
+  ADFloat eval(const std::vector<ADFloat>& values) const override;
+  ADObject eval(const std::vector<ADObject>& values) const override;
+
 };
-
-
 
 } // namespace expression
 
