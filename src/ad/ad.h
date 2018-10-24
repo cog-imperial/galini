@@ -14,6 +14,8 @@ limitations under the License.
 ======================================================================== */
 #pragma once
 
+#include <pybind11/pybind11.h>
+#include "ad_adapter.h"
 #include <cppad/cppad.hpp>
 
 namespace galini {
@@ -22,6 +24,29 @@ namespace ad {
 
 template<class T>
 using AD = CppAD::AD<T>;
+
+using ADFloat = AD<double>;
+using ADObject = AD<ADPyobjectAdapter>;
+
+
+template<class U>
+AD<U> pow(const AD<U>& x, const AD<U>& y) { return CppAD::pow(x, y); }
+
+#define FORWARD_UNARY_FUNCTION(name) \
+  template<class U> AD<U> name(const AD<U>& x) { return CppAD::name(x); }
+
+FORWARD_UNARY_FUNCTION(abs)
+FORWARD_UNARY_FUNCTION(sqrt)
+FORWARD_UNARY_FUNCTION(exp)
+FORWARD_UNARY_FUNCTION(log)
+FORWARD_UNARY_FUNCTION(sin)
+FORWARD_UNARY_FUNCTION(cos)
+FORWARD_UNARY_FUNCTION(tan)
+FORWARD_UNARY_FUNCTION(asin)
+FORWARD_UNARY_FUNCTION(acos)
+FORWARD_UNARY_FUNCTION(atan)
+
+#undef FORWARD_UNARY_FUNCTION
 
 } // namespace ad
 

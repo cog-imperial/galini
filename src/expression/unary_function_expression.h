@@ -32,6 +32,10 @@ public:
   using ptr = std::shared_ptr<AbsExpression>;
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
+
+  ADFloat eval(const std::vector<ADFloat>& values) const override;
+  ADObject eval(const std::vector<ADObject>& values) const override;
+
 };
 
 class SqrtExpression : public UnaryFunctionExpression {
@@ -39,6 +43,10 @@ public:
   using ptr = std::shared_ptr<SqrtExpression>;
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
+
+  ADFloat eval(const std::vector<ADFloat>& values) const override;
+  ADObject eval(const std::vector<ADObject>& values) const override;
+
 };
 
 class ExpExpression : public UnaryFunctionExpression {
@@ -46,6 +54,10 @@ public:
   using ptr = std::shared_ptr<ExpExpression>;
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
+
+  ADFloat eval(const std::vector<ADFloat>& values) const override;
+  ADObject eval(const std::vector<ADObject>& values) const override;
+
 };
 
 class LogExpression : public UnaryFunctionExpression {
@@ -53,6 +65,10 @@ public:
   using ptr = std::shared_ptr<LogExpression>;
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
+
+  ADFloat eval(const std::vector<ADFloat>& values) const override;
+  ADObject eval(const std::vector<ADObject>& values) const override;
+
 };
 
 class SinExpression : public UnaryFunctionExpression {
@@ -60,6 +76,10 @@ public:
   using ptr = std::shared_ptr<SinExpression>;
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
+
+  ADFloat eval(const std::vector<ADFloat>& values) const override;
+  ADObject eval(const std::vector<ADObject>& values) const override;
+
 };
 
 class CosExpression : public UnaryFunctionExpression {
@@ -67,6 +87,10 @@ public:
   using ptr = std::shared_ptr<CosExpression>;
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
+
+  ADFloat eval(const std::vector<ADFloat>& values) const override;
+  ADObject eval(const std::vector<ADObject>& values) const override;
+
 };
 
 class TanExpression : public UnaryFunctionExpression {
@@ -74,6 +98,10 @@ public:
   using ptr = std::shared_ptr<TanExpression>;
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
+
+  ADFloat eval(const std::vector<ADFloat>& values) const override;
+  ADObject eval(const std::vector<ADObject>& values) const override;
+
 };
 
 class AsinExpression : public UnaryFunctionExpression {
@@ -81,6 +109,10 @@ public:
   using ptr = std::shared_ptr<AsinExpression>;
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
+
+  ADFloat eval(const std::vector<ADFloat>& values) const override;
+  ADObject eval(const std::vector<ADObject>& values) const override;
+
 };
 
 class AcosExpression : public UnaryFunctionExpression {
@@ -88,6 +120,10 @@ public:
   using ptr = std::shared_ptr<AcosExpression>;
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
+
+  ADFloat eval(const std::vector<ADFloat>& values) const override;
+  ADObject eval(const std::vector<ADObject>& values) const override;
+
 };
 
 class AtanExpression : public UnaryFunctionExpression {
@@ -95,6 +131,10 @@ public:
   using ptr = std::shared_ptr<AtanExpression>;
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
+
+  ADFloat eval(const std::vector<ADFloat>& values) const override;
+  ADObject eval(const std::vector<ADObject>& values) const override;
+
 };
 
 

@@ -73,6 +73,14 @@ public:
     return nullptr;
   }
 
+  ADFloat eval(const std::vector<ADFloat>& values) const override {
+    return values[this->idx()];
+  }
+
+  ADObject eval(const std::vector<ADObject>& values) const override {
+    return values[this->idx()];
+  }
+
 private:
   std::string name_;
   py::object lower_bound_;

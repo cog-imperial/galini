@@ -17,6 +17,7 @@ limitations under the License.
 #include <memory>
 #include <vector>
 
+#include "ad/ad.h"
 #include "types.h"
 
 namespace galini {
@@ -33,6 +34,8 @@ class Problem;
 namespace expression {
 
 
+using ADFloat = ad::ADFloat;
+using ADObject = ad::ADObject;
 using Problem = problem::Problem;
 
 class Expression : public std::enable_shared_from_this<Expression> {
@@ -97,6 +100,9 @@ public:
   }
 
   ad::ExpressionTreeData expression_tree_data() const;
+
+  virtual ADFloat eval(const std::vector<ADFloat>& values) const = 0;
+  virtual ADObject eval(const std::vector<ADObject>& values) const = 0;
 
   virtual ptr nth_children(index_t n) const = 0;
   virtual std::vector<typename Expression::ptr> children() const = 0;

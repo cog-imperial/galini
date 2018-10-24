@@ -12,16 +12,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ======================================================================== */
-#pragma once
+#include "nary_expression.h"
 
-#include <pybind11/pybind11.h>
-
-#include "ad.h"
+#include "ad/ad.h"
 
 namespace galini {
-namespace ad {
 
-void init_module(pybind11::module& m);
+namespace expression {
 
-} // namespace ad
+ADFloat SumExpression::eval(const std::vector<ADFloat>& values) const {
+  return eval_sum(values);
+}
+
+ADObject SumExpression::eval(const std::vector<ADObject>& values) const {
+  return eval_sum(values);
+}
+
+
+ADFloat LinearExpression::eval(const std::vector<ADFloat>& values) const {
+  return eval_linear(values);
+}
+
+ADObject LinearExpression::eval(const std::vector<ADObject>& values) const {
+  return eval_linear(values);
+}
+
+
+} // namespace expression
+
 } // namespace galini

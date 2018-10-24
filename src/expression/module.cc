@@ -16,7 +16,7 @@ limitations under the License.
 
 #include <pybind11/stl.h>
 
-#include "ad/ad_data.h"
+#include "ad/expression_tree_data.h"
 #include "problem/problem_base.h"
 
 namespace py = pybind11;
@@ -42,17 +42,9 @@ void init_module(py::module& m) {
     .def("nth_children", &Expression::nth_children)
     .def("is_constant", &Expression::is_constant);
 
-  py::class_<UnaryExpression, Expression, UnaryExpression::ptr>(m, "UnaryExpression")
-    .def(py::init<const std::vector<typename Expression::ptr>&>())
-    .def(py::init<const Expression::problem_ptr&, const std::vector<typename Expression::ptr>&>());
-
-  py::class_<BinaryExpression, Expression, BinaryExpression::ptr>(m, "BinaryExpression")
-    .def(py::init<const std::vector<typename Expression::ptr>&>())
-    .def(py::init<const Expression::problem_ptr&, const std::vector<typename Expression::ptr>&>());
-
-  py::class_<NaryExpression, Expression, NaryExpression::ptr>(m, "NaryExpression")
-    .def(py::init<const std::vector<typename Expression::ptr>&>())
-    .def(py::init<const Expression::problem_ptr&, const std::vector<typename Expression::ptr>&>());
+  py::class_<UnaryExpression, Expression, UnaryExpression::ptr>(m, "UnaryExpression");
+  py::class_<BinaryExpression, Expression, BinaryExpression::ptr>(m, "BinaryExpression");
+  py::class_<NaryExpression, Expression, NaryExpression::ptr>(m, "NaryExpression");
 
   py::class_<Variable, Expression, Variable::ptr>(m, "Variable")
     .def(py::init<const std::string&, py::object, py::object, py::object>())

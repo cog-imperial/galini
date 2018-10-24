@@ -87,6 +87,9 @@ extensions = [
         sources=[
             'src/ad/ad_adapter.cc',
             'src/expression/expression_base.cc',
+            'src/expression/unary_function_expression.cc',
+            'src/expression/binary_expression.cc',
+            'src/expression/nary_expression.cc',
             'src/problem/problem_base.cc',
             'src/problem/root_problem.cc',
             'src/problem/child_problem.cc',

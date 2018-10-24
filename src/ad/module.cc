@@ -12,20 +12,36 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ======================================================================== */
-#include "module.h"
+#include <pybind11/stl.h>
 
-#include "ad_data.h"
+#include "module.h"
+#include "expression_tree_data.h"
+#include "func.h"
 
 namespace galini {
 
 namespace ad {
 
+template<class U>
+void init_adfunc(py::module& m, const char *name) {
+  py::class_<ADFunc<U>>(m, name)
+    .def("forward", &ADFunc<U>::forward)
+    .def("hessian", py::overload_cast<const std::vector<U>&, std::size_t>(&ADFunc<U>::hessian))
+    .def("hessian",
+	 py::overload_cast<const std::vector<U>&, const std::vector<U>&>(&ADFunc<U>::hessian));
+}
+
 void init_module(py::module& m) {
   py::class_<AD<double>>(m, "AD[float]");
-  py::class_<AD<ADPyobjectAdapter>>(m, "AD[object]");
+  py::class_<AD<py::object>>(m, "AD[object]");
 
   py::class_<ExpressionTreeData>(m, "ExpressionTreeData")
-    .def("vertices", &ExpressionTreeData::vertices);
+    .def("vertices", &ExpressionTreeData::vertices)
+    .def("eval", &ExpressionTreeData::eval<double, double>)
+    .def("eval", (ADFunc<py::object> (ExpressionTreeData::*)(const std::vector<py::object>&) const) &ExpressionTreeData::eval);;
+
+  init_adfunc<double>(m, "ADFunc[float]");
+  init_adfunc<py::object>(m, "ADFunc[object]");
 }
 
 } // namespace ad

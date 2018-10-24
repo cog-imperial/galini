@@ -17,7 +17,7 @@ limitations under the License.
 #include <deque>
 #include <vector>
 
-#include "ad/ad_data.h"
+#include "ad/expression_tree_data.h"
 #include "expression/expression_base.h"
 
 namespace galini {

@@ -14,7 +14,7 @@ limitations under the License.
 ======================================================================== */
 #include "root_problem.h"
 
-#include "ad/ad_data.h"
+#include "ad/expression_tree_data.h"
 #include "problem/child_problem.h"
 #include "problem/constraint.h"
 #include "problem/objective.h"

@@ -37,6 +37,8 @@ namespace ad {
 #define AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR(op) \
   bool operator op(const ADPyobjectAdapter& other) const;
 
+#define AD_PYOBJECT_ADAPTER_UNARY_FUNC(func) \
+  ADPyobjectAdapter func() const;
 
 /* Adapter to use Python objects as Base type for CppAD AD<Base>.
  *
@@ -48,13 +50,18 @@ public:
     : ADPyobjectAdapter(0) {}
   explicit ADPyobjectAdapter(int i)
     : ADPyobjectAdapter(py::int_(i)) {}
-  explicit ADPyobjectAdapter(py::object inner)
+  ADPyobjectAdapter(py::object inner)
     : inner_(inner) {}
 
   ADPyobjectAdapter(const ADPyobjectAdapter& other)
     : ADPyobjectAdapter(other.inner_) {}
 
   ~ADPyobjectAdapter() = default;
+
+  operator py::object() const { return inner_; }
+  operator int() const {
+    return py::int_(inner_.attr("to_int")());
+  }
 
   void operator=(const ADPyobjectAdapter& other) {
     inner_ = other.inner_;
@@ -90,9 +97,30 @@ public:
   AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR(>)
   AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR(>=)
 
+  AD_PYOBJECT_ADAPTER_UNARY_FUNC(acos)
+  AD_PYOBJECT_ADAPTER_UNARY_FUNC(asin)
+  AD_PYOBJECT_ADAPTER_UNARY_FUNC(atan)
+  AD_PYOBJECT_ADAPTER_UNARY_FUNC(cos)
+  AD_PYOBJECT_ADAPTER_UNARY_FUNC(cosh)
+  AD_PYOBJECT_ADAPTER_UNARY_FUNC(exp)
+  AD_PYOBJECT_ADAPTER_UNARY_FUNC(fabs)
+  AD_PYOBJECT_ADAPTER_UNARY_FUNC(log)
+  AD_PYOBJECT_ADAPTER_UNARY_FUNC(log10)
+  AD_PYOBJECT_ADAPTER_UNARY_FUNC(sin)
+  AD_PYOBJECT_ADAPTER_UNARY_FUNC(sinh)
+  AD_PYOBJECT_ADAPTER_UNARY_FUNC(sqrt)
+  AD_PYOBJECT_ADAPTER_UNARY_FUNC(tan)
+  AD_PYOBJECT_ADAPTER_UNARY_FUNC(tanh)
+  AD_PYOBJECT_ADAPTER_UNARY_FUNC(abs)
+  AD_PYOBJECT_ADAPTER_UNARY_FUNC(sign)
+
   py::object inner() const {
     return inner_;
   }
+
+  bool is_zero() const;
+  bool is_one() const;
+  ADPyobjectAdapter pow(const ADPyobjectAdapter&) const;
 private:
   py::object inner_;
 };
@@ -100,7 +128,67 @@ private:
 #undef AD_PYOBJECT_ADAPTER_ASSIGN_OPERATOR
 #undef AD_PYOBJECT_ADAPTER_BINARY_OPERATOR
 #undef AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR
+#undef AD_PYOBJECT_ADAPTER_UNARY_FUNC
 
 } // namespace ad
 
 } // namespace galini
+
+namespace CppAD {
+
+bool IdenticalCon(const galini::ad::ADPyobjectAdapter& x);
+bool IdenticalPar(const galini::ad::ADPyobjectAdapter& x);
+bool IdenticalZero(const galini::ad::ADPyobjectAdapter& x);
+bool IdenticalOne(const galini::ad::ADPyobjectAdapter& x);
+bool IdenticalEqualCon(const galini::ad::ADPyobjectAdapter& x,
+		       const galini::ad::ADPyobjectAdapter& y);
+bool IdenticalEqualPar(const galini::ad::ADPyobjectAdapter& x,
+		       const galini::ad::ADPyobjectAdapter& y);
+galini::ad::ADPyobjectAdapter pow(const galini::ad::ADPyobjectAdapter& x,
+				  const galini::ad::ADPyobjectAdapter& y);
+
+#define AD_PYOBJECT_ADAPTER_UNARY_FUNC(func) \
+  galini::ad::ADPyobjectAdapter func(const galini::ad::ADPyobjectAdapter& x);
+
+AD_PYOBJECT_ADAPTER_UNARY_FUNC(acos)
+AD_PYOBJECT_ADAPTER_UNARY_FUNC(asin)
+AD_PYOBJECT_ADAPTER_UNARY_FUNC(atan)
+AD_PYOBJECT_ADAPTER_UNARY_FUNC(cos)
+AD_PYOBJECT_ADAPTER_UNARY_FUNC(cosh)
+AD_PYOBJECT_ADAPTER_UNARY_FUNC(exp)
+AD_PYOBJECT_ADAPTER_UNARY_FUNC(fabs)
+AD_PYOBJECT_ADAPTER_UNARY_FUNC(log)
+AD_PYOBJECT_ADAPTER_UNARY_FUNC(log10)
+AD_PYOBJECT_ADAPTER_UNARY_FUNC(sin)
+AD_PYOBJECT_ADAPTER_UNARY_FUNC(sinh)
+AD_PYOBJECT_ADAPTER_UNARY_FUNC(sqrt)
+AD_PYOBJECT_ADAPTER_UNARY_FUNC(tan)
+AD_PYOBJECT_ADAPTER_UNARY_FUNC(tanh)
+AD_PYOBJECT_ADAPTER_UNARY_FUNC(abs)
+AD_PYOBJECT_ADAPTER_UNARY_FUNC(sign)
+
+#undef AD_PYOBJECT_ADAPTER_UNARY_FUNC
+
+std::ostream& operator<< (std::ostream &os, const galini::ad::ADPyobjectAdapter& x);
+
+CPPAD_AZMUL(galini::ad::ADPyobjectAdapter)
+
+int Integer(const galini::ad::ADPyobjectAdapter& x);
+
+#define AD_PYOBJECT_ADAPTER_COMPARE(name, op) \
+  bool name(const galini::ad::ADPyobjectAdapter& x);
+
+AD_PYOBJECT_ADAPTER_COMPARE(GreaterThanZero, >)
+AD_PYOBJECT_ADAPTER_COMPARE(GreaterThanOrZero, >=)
+AD_PYOBJECT_ADAPTER_COMPARE(LessThanZero, <)
+AD_PYOBJECT_ADAPTER_COMPARE(LessThanOrZero, <=)
+
+#undef AD_PYOBJECT_ADAPTER_COMPARE
+
+galini::ad::ADPyobjectAdapter CondExpOp(enum CompareOp,
+					galini::ad::ADPyobjectAdapter&,
+					galini::ad::ADPyobjectAdapter&,
+					galini::ad::ADPyobjectAdapter&,
+					galini::ad::ADPyobjectAdapter&);
+
+} // namespace cppad
