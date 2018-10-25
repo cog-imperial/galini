@@ -13,7 +13,9 @@
 # limitations under the License.
 """Module containing MIP and NLP solvers."""
 
-__all__ = ['Solver', 'MINLPSolver', 'SolversRegistry']
+__all__ = ['Solver', 'MINLPSolver', 'SolversRegistry', 'Status', 'Solution',
+           'OptimalObjective', 'OptimalVariable']
 
 from .base import Solver, MINLPSolver
 from .registry import SolversRegistry
+from .solution import Status, Solution, OptimalObjective, OptimalVariable

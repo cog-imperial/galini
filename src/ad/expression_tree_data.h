@@ -45,9 +45,9 @@ public:
   }
 
   template<class U, class B>
-  ADFunc<U> eval(const std::vector<B>& x) const {
+  ADFunc<U> eval(const std::vector<B>& x, const std::vector<index_t>& out_indexes) const {
     std::vector<AD<B>> X(x.size());
-    std::vector<AD<B>> Y(1);
+    std::vector<AD<B>> Y(out_indexes.size());
 
     std::vector<AD<B>> values(vertices_.size());
     for (index_t i = 0; i < x.size(); ++i) {
@@ -65,9 +65,19 @@ public:
       values[vertex->idx()] = result;
     }
 
-    Y[0] = values[vertices_.size() - 1];
+    for (index_t i = 0; i < out_indexes.size(); ++i) {
+      Y[i] = values[out_indexes[i]];
+    }
     return ADFunc<U>(std::move(X), std::move(Y));
   }
+
+  template<class U, class B>
+  ADFunc<U> eval(const std::vector<B>& x) const {
+    std::vector<index_t> out_indexes(1);
+    out_indexes[0] = vertices_.size() - 1;
+    return eval<U, B>(x, out_indexes);
+  }
+
 
   ADFunc<py::object> eval(const std::vector<py::object>& x) const {
     std::vector<ADPyobjectAdapter> pyx(x.size());

@@ -13,7 +13,6 @@
 # limitations under the License.
 
 """GALINI special_structure command."""
-from texttable import Texttable
 from suspect.convexity import Convexity
 from suspect.monotonicity import Monotonicity
 from galini.commands import (

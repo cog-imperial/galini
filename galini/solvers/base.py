@@ -43,6 +43,10 @@ class Solver(object):
             the optimization problem
         kwargs: dict
             additional (possibly solver specific) keyword arguments
+
+        Returns
+        -------
+        Solution
         """
         pass
 

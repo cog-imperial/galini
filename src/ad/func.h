@@ -40,6 +40,10 @@ public:
     return f_->Forward(q, x);
   }
 
+  std::vector<U> reverse(std::size_t q, const std::vector<U>& w) {
+    return f_->Reverse(q, w);
+  }
+
   std::vector<U> hessian(const std::vector<U>& x, std::size_t l) {
     return f_->Hessian(x, l);
   }
@@ -66,6 +70,13 @@ public:
     std::vector<ADPyobjectAdapter> pyx(x.size());
     std::copy(x.begin(), x.end(), pyx.begin());
     auto result = f_->Forward(q, pyx);
+    return std::vector<py::object>(result.begin(), result.end());
+  }
+
+  std::vector<py::object> reverse(std::size_t q, const std::vector<py::object>& w) {
+    std::vector<ADPyobjectAdapter> pyw(w.size());
+    std::copy(w.begin(), w.end(), pyw.begin());
+    auto result = f_->Reverse(q, pyw);
     return std::vector<py::object>(result.begin(), result.end());
   }
 

@@ -40,4 +40,4 @@ class OuterApproximationSolver(MINLPSolver):
 
     def solve(self, problem, **kwargs):
         nlp_solver = self._nlp_solver_cls(self._config, None, None)
-        nlp_solver.solve(problem)
+        return nlp_solver.solve(problem)

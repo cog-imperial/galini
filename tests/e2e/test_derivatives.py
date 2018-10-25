@@ -9,12 +9,16 @@ from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
 from galini.nlp import IpoptNLPSolver
 
 
-def derivative_check(model, order):
+def derivative_check(model, order, sparse):
     config = GaliniConfig()
+    config.update({
+        'ipopt': {
+            'sparse': sparse,
+            'derivative_test': order,
+        }
+    })
+
     solver = IpoptNLPSolver(config, None, None)
-    # activate derivative checker
-    options = solver.app.options()
-    options.set_string_value('derivative_test', order)
     # setup Ipopt journalist
     output_str = io.StringIO()
     journalist = solver.app.journalist()
@@ -31,8 +35,9 @@ def derivative_check(model, order):
         assert check_ok
 
 
-@pytest.mark.skip('Not updated to work with new DAG')
+@pytest.mark.skip('Second order derivatives failing.')
 @pytest.mark.parametrize('order', ['first-order', 'only-second-order'])
+@pytest.mark.parametrize('sparse', [False])
 @pytest.mark.parametrize('model_name', [
     # simple derivative tests
     'dev_product.py', 'dev_division.py', 'dev_sum.py', 'dev_power.py',
@@ -43,7 +48,7 @@ def derivative_check(model, order):
     'hs071.py', 'hs078.py', 'cresc4.py', 'eg1.py', 'hatfldf.py', 'hong.py',
     'polak1.py',
 ])
-def test_osil_model(order, model_name):
+def test_osil_model(sparse, order, model_name):
     if model_name in ['hatfldf.py']:
         pytest.skip('Known derivative fail.')
     current_dir = pathlib.Path(__file__).parent
@@ -51,4 +56,4 @@ def test_osil_model(order, model_name):
 
     pyomo_model = read_pyomo_model(osil_file)
     dag = dag_from_pyomo_model(pyomo_model)
-    derivative_check(dag, order)
+    derivative_check(dag, order, sparse)
