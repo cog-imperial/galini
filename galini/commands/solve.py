@@ -17,7 +17,12 @@ import sys
 from argparse import ArgumentParser, Namespace
 import galini.logging as log
 from galini.config import GaliniConfig
-from galini.commands import CliCommand
+from galini.commands import (
+    CliCommand,
+    OutputTable,
+    print_output_table,
+    add_output_format_parser_arguments,
+)
 from galini.solvers import SolversRegistry
 from galini.mip import MIPSolverRegistry
 from galini.nlp import NLPSolverRegistry
@@ -51,7 +56,33 @@ class SolveCommand(CliCommand):
 
         pyomo_model = read_pyomo_model(args.problem)
         dag = dag_from_pyomo_model(pyomo_model)
-        solver.solve(dag)
+        solution = solver.solve(dag)
+
+        if solution is None:
+            raise RuntimeError('Solver did not return a solution')
+
+        obj_table = OutputTable('Objectives', [
+            {'id': 'name', 'name': 'Objective', 'type': 't'},
+            {'id': 'value', 'name': 'Value', 'type': 'f'},
+        ])
+        for obj in solution.objectives:
+            obj_table.add_row({
+                'name': obj.name,
+                'value': obj.value,
+            })
+
+        var_table = OutputTable('Variables', [
+            {'id': 'name', 'name': 'Variable', 'type': 't'},
+            {'id': 'value', 'name': 'Value', 'type': 'f'},
+        ])
+        for var in solution.variables:
+            var_table.add_row({
+                'name': var.name,
+                'value': var.value,
+            })
+
+        print_output_table([obj_table, var_table], args)
+
 
     def help_message(self):
         return "Solve a MINLP"
@@ -60,3 +91,4 @@ class SolveCommand(CliCommand):
         parser.add_argument('problem')
         parser.add_argument('--solver', help='Specify the solver to use', default=DEFAULT_SOLVER)
         parser.add_argument('--config', help='Specify the configuration file')
+        add_output_format_parser_arguments(parser)

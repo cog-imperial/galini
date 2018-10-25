@@ -11,56 +11,215 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Solve NLP using Ipopt."""
 import numpy as np
 from pypopt import IpoptApplication, TNLP, NLPInfo
 import  galini.logging as log
-from galini.solvers import Solver
+from galini.solvers import Solver, Solution, Status, OptimalObjective, OptimalVariable
 
 
-class GaliniTNLP(TNLP):
-    """Implementation of the TNLP interface from pypopt for a Galini Problem."""
+class IpoptStatus(Status):
+    DESCRIPTIONS = [
+        'Optimal Solution Found',
+    ]
+
+    def __init__(self, status):
+        self._status = status
+
+    def is_success(self):
+        return self._status == 0
+
+    def description(self):
+        return self.DESCRIPTIONS[self._status]
+
+
+class DenseGaliniTNLP(TNLP):
+    """Implementation of the TNLP interface from pypopt for a Galini Problem.
+
+    Computes Jacobian and Hessian as dense matrices.
+    """
 
     # pylint: disable=invalid-name
-    def __init__(self, problem):
-        pass
+    def __init__(self, problem, retape=True):
+        self.retape = retape
+
+        self._solution = None
+        self._problem = problem
+        self._nf = problem.num_objectives
+        self._ng = problem.num_constraints
+        self._nfg = self._nf + self._ng
+        self._nx = problem.num_variables
+        self._expr_data = problem.expression_tree_data()
+
+        self._nnz_jac = self._nx * self._ng
+        self._nnz_hess = (self._nx * (self._nx + 1)) / 2
+
+        self._f_idx = [f.root_expr.idx for f in problem.objectives]
+        self._g_idx = [g.root_expr.idx for g in problem.constraints]
+        self._fg_idx = self._f_idx + self._g_idx
+
+        self._fg = None
+        self._x0 = np.zeros(self._nx)
+        self._fg0 = np.zeros(self._nfg)
 
     def get_nlp_info(self):
-        pass
+        return NLPInfo(
+            n = self._nx,
+            m = self._ng,
+            nnz_jac=self._nnz_jac,
+            nnz_hess=self._nnz_hess,
+        )
 
     def get_bounds_info(self, x_l, x_u, g_l, g_u):
+        if x_l is not None and x_u is not None:
+            for i in range(self._nx):
+                v = self._problem.variable_view(i)
+                lb = v.lower_bound()
+                ub = v.upper_bound()
+                x_l[i] = lb if lb is not None else -2e19
+                x_u[i] = ub if ub is not None else 2e19
+
+        log.matrix('ipopt/bounds/x_l', np.matrix(x_l))
+        log.matrix('ipopt/bounds/x_u', np.matrix(x_u))
+
+        if g_l is not None and g_u is not None:
+            for i in range(self._ng):
+                c = self._problem.constraint(i)
+                g_l[i] = c.lower_bound if c.lower_bound is not None else -2e19
+                g_u[i] = c.upper_bound if c.upper_bound is not None else 2e19
+
+        log.matrix('ipopt/bounds/g_l', np.matrix(g_l))
+        log.matrix('ipopt/bounds/g_u', np.matrix(g_u))
         return True
 
     def get_starting_point(self, init_x, x, init_z, z_l, z_u, init_lambda, lambda_):
+        for i in range(self._nx):
+            v = self._problem.variable_view(i)
+            if v.has_starting_point():
+                x[i] = v.starting_point()
+            else:
+                lb = v.lower_bound()
+                lb = lb if lb is not None else -2e19
+
+                ub = v.upper_bound()
+                ub = ub if ub is not None else 2e19
+
+                x[i] = max(lb, min(ub, 0))
+
+        self._cache_new_x(x, initial=True)
+
+        log.matrix('ipopt/starting_point', np.matrix(x))
         return True
 
     def get_jac_g_structure(self, row, col):
+        for i in range(self._ng):
+            for j in range(self._nx):
+                idx = i * self._nx + j
+                row[idx] = i
+                col[idx] = j
+
+        log.matrix('ipopt/jac_g_structure/row', np.array(row))
+        log.matrix('ipopt/jac_g_structure/col', np.array(col))
         return True
 
     def get_h_structure(self, row, col):
+        idx = 0
+        for i in range(self._nx):
+            for j in range(i+1):
+                row[idx] = i
+                col[idx] = j
+                idx += 1
+
+        log.matrix('ipopt/hess_structure/row', np.array(row))
+        log.matrix('ipopt/hess_structure/col', np.array(col))
         return True
 
     def eval_f(self, x, new_x):
-        pass
+        if new_x:
+            self._cache_new_x(x)
+
+        # ipopt expects a scalar
+        sum_ = np.sum(self._fg0[:self._nf])
+        log.matrix('ipopt/f', sum_)
+        return sum_
 
     def eval_grad_f(self, x, new_x, grad_f):
+        if new_x:
+            self._cache_new_x(x)
+
+        w = np.zeros(self._nfg)
+        w[:self._nf] = 1.0
+        grad = self._fg.reverse(1, w)
+        for i in range(self._nx):
+            grad_f[i] = grad[i]
+        log.matrix('ipopt/grad_f', np.matrix(grad_f))
         return True
 
     def eval_g(self, x, new_x, g):
+        if new_x:
+            self._cache_new_x(x)
+
+        for i in range(self._ng):
+            g[i] = self._fg0[self._nf + i]
+
+        log.matrix('ipopt/g', np.array(g))
         return True
 
     def eval_jac_g(self, x, new_x, jacobian):
+        if new_x:
+            self._cache_new_x(x)
+
+        if False and self._nx < self._ng: # TODO(fra) implement fwd mode
+            # use forward mode
+            pass
+        else:
+            # use reverse mode
+            w = np.zeros(self._nfg)
+            for i in range(self._ng):
+                w[self._nf + i] = 1.0
+                jacobian_ = self._fg.reverse(1, w)
+                for j in range(self._nx):
+                    idx = i * self._nx + j
+                    jacobian[idx] = jacobian_[j]
+                w[self._nf + i] = 0.0
+        log.matrix('ipopt/jacobian', np.matrix(jacobian))
         return True
 
-    def finalize_solution(self, _status, x, z_l, z_u, g, lambda_, obj_value):
-        # print(np.array(x, dtype=np.float64))
+    def eval_h(self, x, new_x, obj_factor, lambda_, new_lambda, hess):
+        if new_x:
+            self._cache_new_x(x)
+
+        w = np.zeros(self._nfg)
+        for i in range(self._nf):
+            w[i] = obj_factor
+        for i in range(self._ng):
+            w[i+self._nf] = lambda_[i]
+
+        hess_ = self._fg.hessian(x, w)
+        for i in range(len(hess)):
+            hess[i] = hess_[i]
+        return True
+
+    def finalize_solution(self, status, x, z_l, z_u, g, lambda_, obj_value):
+        status = IpoptStatus(status)
+        if status.is_success():
+            opt_objs = [OptimalObjective(obj.name, obj_value)
+                        for obj in self._problem.objectives]
+            opt_vars = [OptimalVariable(var.name, x[i])
+                        for i, var in enumerate(self._problem.variables)]
+            self._solution = Solution(status, opt_objs, opt_vars)
         log.matrix('ipopt/solution/x', np.array(x))
         log.matrix('ipopt/solution/z_l', np.array(z_l))
         log.matrix('ipopt/solution/z_u', np.array(z_u))
         log.matrix('ipopt/solution/g', np.array(g))
         log.matrix('ipopt/solution/lambda', np.array(lambda_))
         log.matrix('ipopt/solution/obj_value', obj_value)
+
+    def _cache_new_x(self, x, initial=False):
+        self._x0[:] = x
+        if self.retape or initial:
+            self._fg = self._expr_data.eval(self._x0, self._fg_idx)
+        self._fg0[:] = self._fg.forward(0, self._x0)
 
 
 class IpoptNLPSolver(Solver):
@@ -75,10 +234,17 @@ class IpoptNLPSolver(Solver):
     def solve(self, problem, **kwargs):
         if problem.num_objectives != 1:
             raise RuntimeError('IpoptNLPSolver expects problems with 1 objective function.')
-        tnlp = GaliniTNLP(problem)
+        if self.sparse:
+            raise RuntimeError('Sparse IpoptTNLP not yet implemented.')
+        else:
+            tnlp = DenseGaliniTNLP(problem)
         self.app.optimize_tnlp(tnlp)
+        return tnlp._solution
 
     def _apply_config(self):
+        # pop nonipopt options
+        self.sparse = self.config.pop('sparse', False)
+
         options = self.app.options()
         for key, value in self.config.items():
             if isinstance(value, str):

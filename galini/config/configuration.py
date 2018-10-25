@@ -39,9 +39,17 @@ class _ConfigGroup(object):
         """Return group items."""
         return self._items.items()
 
-    def get(self, key):
+    def get(self, key, default=None):
         """Get value for key."""
-        return self._items.get(key)
+        return self._items.get(key, default)
+
+    def set(self, key, value):
+        """Set value for key."""
+        self._items.update({key: value})
+
+    def pop(self, key, default=None):
+        """Pop value for key."""
+        return self._items.pop(key, default)
 
     def __getitem__(self, key):
         """Get value for key."""
@@ -62,8 +70,9 @@ class _ConfigGroup(object):
             else:
                 current_value = self._items.get(key)
                 if current_value and isinstance(current_value, _ConfigGroup):
-                    raise RuntimeError('Trying to set configuration group to value.')
-                self._items[key] = value
+                    current_value.update(value)
+                else:
+                    self._items[key] = value
 
 
 class _Config(object):
@@ -91,7 +100,10 @@ class _Config(object):
     def update(self, other):
         """Update config with other."""
         # pylint: disable=protected-access
-        self._root.update(other._root)
+        if isinstance(other, dict):
+            self._root.update(other)
+        else:
+            self._root.update(other._root)
 
 
 class GaliniConfig(object):
@@ -117,3 +129,7 @@ class GaliniConfig(object):
     def __getattr__(self, attr):
         """Get configuration value or group for key. Raise KeyError if not present."""
         return getattr(self._config, attr)
+
+    def update(self, other):
+        """Update config with other."""
+        self._config.update(other)

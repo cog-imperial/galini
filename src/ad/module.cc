@@ -26,6 +26,7 @@ template<class U>
 void init_adfunc(py::module& m, const char *name) {
   py::class_<ADFunc<U>>(m, name)
     .def("forward", &ADFunc<U>::forward)
+    .def("reverse", &ADFunc<U>::reverse)
     .def("hessian", py::overload_cast<const std::vector<U>&, std::size_t>(&ADFunc<U>::hessian))
     .def("hessian",
 	 py::overload_cast<const std::vector<U>&, const std::vector<U>&>(&ADFunc<U>::hessian));
@@ -37,7 +38,8 @@ void init_module(py::module& m) {
 
   py::class_<ExpressionTreeData>(m, "ExpressionTreeData")
     .def("vertices", &ExpressionTreeData::vertices)
-    .def("eval", &ExpressionTreeData::eval<double, double>)
+    .def("eval", py::overload_cast<const std::vector<double>&>(&ExpressionTreeData::eval<double, double>, py::const_))
+    .def("eval", py::overload_cast<const std::vector<double>&, const std::vector<index_t>&>(&ExpressionTreeData::eval<double, double>, py::const_))
     .def("eval", (ADFunc<py::object> (ExpressionTreeData::*)(const std::vector<py::object>&) const) &ExpressionTreeData::eval);;
 
   init_adfunc<double>(m, "ADFunc[float]");
