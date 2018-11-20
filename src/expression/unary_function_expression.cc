@@ -20,11 +20,12 @@ namespace galini {
 
 namespace expression {
 
+
 #define EVAL_UNARY_FUNCTION_IMPL(class, func) \
-  ADFloat class::eval(const std::vector<ADFloat>& values) const\
-  { return func(values[child_->idx()]); }		       \
-  ADObject class::eval(const std::vector<ADObject>& values) const\
-  { return func(values[child_->idx()]); }
+  ADFloat class::eval(values_ptr<ADFloat>& values) const\
+  { return func((*values)[child_]); }				\
+  ADObject class::eval(values_ptr<ADObject>& values) const\
+  { return func((*values)[child_]); }
 
 EVAL_UNARY_FUNCTION_IMPL(AbsExpression, ad::abs)
 EVAL_UNARY_FUNCTION_IMPL(SqrtExpression, ad::sqrt)

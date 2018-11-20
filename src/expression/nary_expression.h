@@ -56,15 +56,15 @@ public:
 
   using NaryExpression::NaryExpression;
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override;
-  ADObject eval(const std::vector<ADObject>& values) const override;
+  ADFloat eval(values_ptr<ADFloat>& values) const override;
+  ADObject eval(values_ptr<ADObject>& values) const override;
 
 private:
   template<class T>
-  T eval_sum(const std::vector<T>& values) const {
+  T eval_sum(values_ptr<T>& values) const {
     T result(0.0);
     for (auto child : children_) {
-      result += values[child->idx()];
+      result += (*values)[child];
     }
     return result;
   }
@@ -95,15 +95,15 @@ public:
   }
 
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override;
-  ADObject eval(const std::vector<ADObject>& values) const override;
+  ADFloat eval(values_ptr<ADFloat>& values) const override;
+  ADObject eval(values_ptr<ADObject>& values) const override;
 
 private:
   template<class T>
-  T eval_linear(const std::vector<T>& values) const {
+  T eval_linear(values_ptr<T>& values) const {
     T result(constant_);
     for (index_t i = 0; i < children_.size(); ++i) {
-      result += values[children_[i]->idx()] * coefficients_[i];
+      result += (*values)[children_[i]] * T(coefficients_[i]);
     }
     return result;
   }

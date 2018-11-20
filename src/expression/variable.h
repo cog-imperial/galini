@@ -73,12 +73,14 @@ public:
     return nullptr;
   }
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override {
-    return values[this->idx()];
+  bool is_variable() const override { return true; }
+
+  ADFloat eval(values_ptr<ADFloat>& values) const override {
+    return (*values)[self()];
   }
 
-  ADObject eval(const std::vector<ADObject>& values) const override {
-    return values[this->idx()];
+  ADObject eval(values_ptr<ADObject>& values) const override {
+    return (*values)[self()];
   }
 
 private:

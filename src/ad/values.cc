@@ -12,32 +12,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ======================================================================== */
-#include "nary_expression.h"
+#include "values.h"
 
-#include "ad/ad.h"
+#include "expression/expression_base.h"
 
 namespace galini {
 
-namespace expression {
+namespace ad {
 
-ADFloat SumExpression::eval(values_ptr<ADFloat>& values) const {
-  return eval_sum(values);
-}
-
-ADObject SumExpression::eval(values_ptr<ADObject>& values) const {
-  return eval_sum(values);
-}
-
-
-ADFloat LinearExpression::eval(values_ptr<ADFloat>& values) const {
-  return eval_linear(values);
-}
-
-ADObject LinearExpression::eval(values_ptr<ADObject>& values) const {
-  return eval_linear(values);
+namespace detail {
+  std::size_t expression_idx(std::shared_ptr<const expression::Expression> expr) {
+    return expr->idx();
+  }
 }
 
 
-} // namespace expression
+} // namespace ad
 
 } // namespace galini

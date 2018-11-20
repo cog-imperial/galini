@@ -60,12 +60,12 @@ public:
 
   using UnaryExpression::UnaryExpression;
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override {
-    return -values[child_->idx()];
+  ADFloat eval(values_ptr<ADFloat>& values) const override {
+    return -(*values)[child_];
   }
 
-  ADObject eval(const std::vector<ADObject>& values) const override {
-    return -values[child_->idx()];
+  ADObject eval(values_ptr<ADObject>& values) const override {
+    return -(*values)[child_];
   }
 };
 

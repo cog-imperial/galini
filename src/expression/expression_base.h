@@ -18,6 +18,7 @@ limitations under the License.
 #include <vector>
 
 #include "ad/ad.h"
+#include "ad/values.h"
 #include "types.h"
 
 namespace galini {
@@ -37,6 +38,9 @@ namespace expression {
 using ADFloat = ad::ADFloat;
 using ADObject = ad::ADObject;
 using Problem = problem::Problem;
+
+template<class AD>
+using values_ptr = std::shared_ptr<ad::Values<AD>>;
 
 class Expression : public std::enable_shared_from_this<Expression> {
 public:
@@ -62,6 +66,11 @@ public:
   virtual bool is_constant() const {
     return false;
   }
+
+  virtual bool is_variable() const {
+    return false;
+  }
+
 
   void set_depth(index_t depth) {
     depth_ = depth;
@@ -101,8 +110,8 @@ public:
 
   ad::ExpressionTreeData expression_tree_data() const;
 
-  virtual ADFloat eval(const std::vector<ADFloat>& values) const = 0;
-  virtual ADObject eval(const std::vector<ADObject>& values) const = 0;
+  virtual ADFloat eval(values_ptr<ADFloat>& values) const = 0;
+  virtual ADObject eval(values_ptr<ADObject>& values) const = 0;
 
   virtual ptr nth_children(index_t n) const = 0;
   virtual std::vector<typename Expression::ptr> children() const = 0;

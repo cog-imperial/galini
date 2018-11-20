@@ -46,7 +46,7 @@ namespace detail {
 ad::ExpressionTreeData RootProblem::expression_tree_data() const {
   std::vector<Expression::const_ptr> nodes(vertices_.size());
   std::copy(vertices_.begin(), vertices_.end(), nodes.begin());
-  return ad::ExpressionTreeData(nodes);
+  return ad::ExpressionTreeData(nodes, ad::ExpressionTreeData::Storage::vector);
 }
 
 void RootProblem::insert_vertex(const std::shared_ptr<Expression>& expr) {

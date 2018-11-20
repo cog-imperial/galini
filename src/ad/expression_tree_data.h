@@ -18,24 +18,38 @@ limitations under the License.
 
 #include "ad/ad.h"
 #include "ad/func.h"
+#include "ad/values.h"
 #include "expression/expression_base.h"
 
 namespace galini {
 
 namespace ad {
 
+enum class ExpressionTreeDataStorage {
+  vector = 1,
+  map = 2,
+};
+
 using Expression = expression::Expression;
 
 class ExpressionTreeData {
 public:
-  explicit ExpressionTreeData(const std::vector<Expression::const_ptr>& vertices)
-    : vertices_(vertices) {}
+  using Storage = ExpressionTreeDataStorage;
 
-  explicit ExpressionTreeData(std::vector<Expression::const_ptr>&& vertices)
-    : vertices_(vertices) {}
+  explicit ExpressionTreeData(const std::vector<Expression::const_ptr>& vertices, Storage storage)
+    : vertices_(vertices), storage_(storage) {
+    compute_num_variables();
+  }
+
+  explicit ExpressionTreeData(std::vector<Expression::const_ptr>&& vertices, Storage storage)
+    : vertices_(vertices), storage_(storage) {
+    compute_num_variables();
+  }
 
   ExpressionTreeData(ExpressionTreeData&& other)
-    : vertices_(std::move(other.vertices_)) {}
+    : vertices_(std::move(other.vertices_)), storage_(other.storage_) {
+    compute_num_variables();
+  }
 
   ExpressionTreeData(const ExpressionTreeData&) = delete;
   ~ExpressionTreeData() = default;
@@ -49,24 +63,37 @@ public:
     std::vector<AD<B>> X(x.size());
     std::vector<AD<B>> Y(out_indexes.size());
 
-    std::vector<AD<B>> values(vertices_.size());
+    if (x.size() != num_variables_) {
+      throw std::runtime_error("Invalid variables size, expected: " + std::to_string(num_variables_));
+    }
+
     for (index_t i = 0; i < x.size(); ++i) {
       X[i] = AD<B>(x[i]);
     }
 
     CppAD::Independent(X);
 
-    for (index_t i = 0; i < x.size(); ++i) {
-      values[i] = X[i];
+    auto values = make_values<AD<B>>(vertices_.size());
+
+    index_t variable_idx = 0;
+    for (auto vertex : vertices_) {
+      if (vertex->is_variable()) {
+	(*values)[vertex] = X[variable_idx++];
+      }
+
+      // exit early to avoid iterations
+      if (variable_idx >= num_variables_) {
+	break;
+      }
     }
 
     for (auto vertex : vertices_) {
       auto result = vertex->eval(values);
-      values[vertex->idx()] = result;
+      (*values)[vertex] = result;
     }
-
     for (index_t i = 0; i < out_indexes.size(); ++i) {
-      Y[i] = values[out_indexes[i]];
+      auto expr = vertices_[out_indexes[i]];
+      Y[i] = (*values)[expr];
     }
     return ADFunc<U>(std::move(X), std::move(Y));
   }
@@ -86,7 +113,27 @@ public:
   }
 
 private:
+
+  template<class AD>
+  std::shared_ptr<Values<AD>> make_values(std::size_t size) const {
+    if (storage_ == ExpressionTreeDataStorage::vector) {
+      return std::make_shared<ValuesVector<AD>>(size);
+    }
+    return std::make_shared<ValuesMap<AD>>();
+  }
+
+  void compute_num_variables() {
+    num_variables_ = 0;
+    for (auto vertex : vertices_) {
+      if (vertex->is_variable()) {
+	num_variables_++;
+      }
+    }
+  }
+
   std::vector<Expression::const_ptr> vertices_;
+  Storage storage_;
+  std::size_t num_variables_;
 };
 
 }  // namespace ad

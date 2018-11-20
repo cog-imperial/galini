@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ======================================================================== */
 #include <algorithm>
+#include <cstdint>
 #include <set>
 #include <deque>
 #include <vector>
@@ -24,29 +25,43 @@ namespace galini {
 
 namespace expression {
 
-ad::ExpressionTreeData Expression::expression_tree_data() const {
-  std::vector<Expression::const_ptr> nodes;
-  std::set<index_t> seen = {idx()};
-  std::deque<Expression::const_ptr> to_visit = {self()};
-
-  while (!to_visit.empty()) {
-    auto current = to_visit.front();
-    to_visit.pop_front();
-    nodes.push_back(current);
-
-    for (index_t i = 0; i < current->num_children(); ++i) {
-      auto child = current->nth_children(i);
-      if (seen.find(child->idx()) == seen.end()) {
-	to_visit.push_front(child);
-	seen.insert(child->idx());
-      }
-    }
+namespace detail {
+  // Cast pointer to an int-like number. We use the expression memory location
+  // as uid so that we can support expression_trees for expression that are not
+  // part of a problem (and so don't have an idx)
+  inline std::uintptr_t expression_uid(Expression::const_ptr expr) {
+    return reinterpret_cast<std::uintptr_t>(expr.get());
   }
 
-  // we visited the nodes not in order, so we need to sort the result
-  std::sort(nodes.begin(), nodes.end(),
-	    [](auto a, auto b) { return a->idx() < b->idx(); });
-  return ad::ExpressionTreeData(nodes);
+  ad::ExpressionTreeData expression_tree_data(Expression::const_ptr root) {
+    std::vector<Expression::const_ptr> nodes;
+    std::set<std::uintptr_t> seen = {expression_uid(root)};
+    std::deque<Expression::const_ptr> to_visit = {root};
+
+    while (!to_visit.empty()) {
+      auto current = to_visit.front();
+      to_visit.pop_front();
+      nodes.push_back(current);
+
+      for (index_t i = 0; i < current->num_children(); ++i) {
+	auto child = current->nth_children(i);
+	auto child_uid = expression_uid(child);
+	if (seen.find(child_uid) == seen.end()) {
+	  to_visit.push_front(child);
+	  seen.insert(child_uid);
+	}
+      }
+    }
+
+    ad::ExpressionTreeData::Storage storage = ad::ExpressionTreeData::Storage::map;
+    // by reversing we hopefully retain ordering of children
+    std::reverse(nodes.begin(), nodes.end());
+    return ad::ExpressionTreeData(nodes, storage);
+  }
+}
+
+ad::ExpressionTreeData Expression::expression_tree_data() const {
+  return detail::expression_tree_data(self());
 }
 
 } // namespace expression

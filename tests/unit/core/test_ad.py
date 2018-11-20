@@ -3,16 +3,23 @@ import pytest
 import numpy as np
 import pyomo.environ as aml
 from galini.pyomo import dag_from_pyomo_model
+from suspect.interval import Interval as I
 from galini.core import (
     Problem,
     Variable,
     Constant,
     Domain,
+    LinearExpression,
+    LogExpression,
     JacobianEvaluator,
     ForwardJacobianEvaluator,
     ReverseJacobianEvaluator,
     HessianEvaluator,
 )
+
+def all_interval_close(expected, actual, tol=1e-5):
+    errs = np.array([abs(exp - act).size() for exp, act in zip(expected, actual)])
+    assert np.all(errs < tol)
 
 
 class TestExpressionTreeData(object):
@@ -34,6 +41,47 @@ class TestExpressionTreeData(object):
         cons = dag.constraint('c0')
         tree_data = cons.root_expr.expression_tree_data()
         assert len(tree_data.vertices()) == 2 + 2 + 1
+
+        f = tree_data.eval([10.0, 20.0])
+
+        f_x = f.forward(0, [10.0, 20.0])
+        assert np.allclose(f_x, [10.0**2 + 20.0**2])
+
+        df_dx = f.reverse(1, [1.0])
+        assert np.allclose(df_dx, [2*10.0, 2*20.0])
+
+        H = f.hessian([10.0, 20.0], [1.0])
+        assert np.allclose(H, [2, 0, 0, 2])
+
+    def test_expression_tree_of_standalone_expression(self):
+        x = Variable('x', None, None, None)
+        y = Variable('y', None, None, None)
+        w = LinearExpression([x, y], [1.0, 2.0], 0.0)
+        z = LogExpression([w])
+        tree_data = z.expression_tree_data()
+        assert len(tree_data.vertices()) == 1 + 1 + 2
+
+        f = tree_data.eval([4.0, 5.0])
+        g = tree_data.eval([I(4.0, 4.0), I(5.0, 5.0)])
+
+        f_x = f.forward(0, [4.0, 5.0])
+        expected_f_x = [np.log(4.0 + 2*5.0)]
+        assert np.allclose(f_x, expected_f_x)
+        g_x = g.forward(0, [I(4.0, 4.0), I(5.0, 5.0)])
+        all_interval_close(expected_f_x, g_x)
+
+        df_dx = f.reverse(1, [1.0])
+        expected_df_dx = [1/(4.0 + 2*5.0), 2/(4.0 + 2*5.0)]
+        assert np.allclose(df_dx, expected_df_dx)
+        dg_dx = g.reverse(1, [1.0])
+        all_interval_close(expected_df_dx, dg_dx)
+
+        H = f.hessian([4.0, 5.0], [1.0])
+        expected_H = [-1/(4.0 + 2*5.0)**2, -2/(4.0 + 2*5.0)**2,
+                      -2/(4.0 + 2*5.0)**2, -4/(4.0 + 2*5.0)**2]
+        assert np.allclose(H, expected_H)
+        H_g = g.hessian([I(4.0, 4.0), I(5.0, 5.0)], [1.0])
+        all_interval_close(expected_H, H_g)
 
 
 @pytest.mark.skip('Not updated to work with new DAG')

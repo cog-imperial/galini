@@ -20,12 +20,12 @@ namespace galini {
 
 namespace expression {
 
-ADFloat PowExpression::eval(const std::vector<ADFloat>& values) const {
-  return ad::pow(values[first_->idx()], values[second_->idx()]);
+ADFloat PowExpression::eval(values_ptr<ADFloat>& values) const {
+  return ad::pow((*values)[first_], (*values)[second_]);
 }
 
-ADObject PowExpression::eval(const std::vector<ADObject>& values) const {
-  return ad::pow(values[first_->idx()], values[second_->idx()]);
+ADObject PowExpression::eval(values_ptr<ADObject>& values) const {
+  return ad::pow((*values)[first_], (*values)[second_]);
 }
 
 } // namespace expression
