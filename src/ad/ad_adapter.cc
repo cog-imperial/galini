@@ -18,55 +18,46 @@ namespace galini {
 
 namespace ad {
 
-namespace detail {
-  // TODO(fra): use pybind11 provided methods when they update
-  // release on pypi.
-  bool rich_compare(const py::object& self, const py::object& other, int value) {
-    int result = PyObject_RichCompareBool(self.ptr(), other.ptr(), value);
-    if (result == -1) {
-      throw py::error_already_set();
-    }
-    return result == 1;
-  }
-
-}
-
-#define AD_PYOBJECT_ADAPTER_ASSIGN_OPERATOR_IMPL(op, pyop)	\
+#define AD_PYOBJECT_ADAPTER_ASSIGN_OPERATOR_IMPL(op, bop)			\
   void ADPyobjectAdapter::operator op(const ADPyobjectAdapter& other)	\
-  { inner_ = inner_.attr(#pyop)(other.inner_); }
+  { inner_ = inner_ bop other.inner_;}
 
 
-#define AD_PYOBJECT_ADAPTER_BINARY_OPERATOR_IMPL(op, pyop) \
-  ADPyobjectAdapter ADPyobjectAdapter::operator op(const ADPyobjectAdapter& other) const { \
-  auto result = inner_.attr(#pyop)(other.inner_); \
-  return ADPyobjectAdapter(result); }
+#define AD_PYOBJECT_ADAPTER_BINARY_OPERATOR_IMPL(op) \
+  ADPyobjectAdapter ADPyobjectAdapter::operator op(const ADPyobjectAdapter& other) const \
+  { return ADPyobjectAdapter(inner_ op other.inner_); }
 
 
-#define AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR_IMPL(op, pyop) \
+#define AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR_IMPL(op) \
   bool ADPyobjectAdapter::operator op(const ADPyobjectAdapter& other) const \
-  { return detail::rich_compare(inner_, other.inner_, pyop); }
+  { return inner_ op other.inner_; }
+
+
+#define AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR_EQUALITY_IMPL(op, pyop)			\
+  bool ADPyobjectAdapter::operator op(const ADPyobjectAdapter& other) const \
+  { return inner_.pyop(other.inner_); }
 
 
 #define AD_PYOBJECT_ADAPTER_UNARY_FUNC_IMPL(func) \
   ADPyobjectAdapter ADPyobjectAdapter::func() const	\
   { return ADPyobjectAdapter(inner_.attr(#func)()); }
 
-  AD_PYOBJECT_ADAPTER_ASSIGN_OPERATOR_IMPL(+=, __add__)
-  AD_PYOBJECT_ADAPTER_ASSIGN_OPERATOR_IMPL(-=, __sub__)
-  AD_PYOBJECT_ADAPTER_ASSIGN_OPERATOR_IMPL(*=, __mul__)
-  AD_PYOBJECT_ADAPTER_ASSIGN_OPERATOR_IMPL(/=, __div__)
+  AD_PYOBJECT_ADAPTER_ASSIGN_OPERATOR_IMPL(+=, +)
+  AD_PYOBJECT_ADAPTER_ASSIGN_OPERATOR_IMPL(-=, -)
+  AD_PYOBJECT_ADAPTER_ASSIGN_OPERATOR_IMPL(*=, *=)
+  AD_PYOBJECT_ADAPTER_ASSIGN_OPERATOR_IMPL(/=, /=)
 
-  AD_PYOBJECT_ADAPTER_BINARY_OPERATOR_IMPL(+, __add__)
-  AD_PYOBJECT_ADAPTER_BINARY_OPERATOR_IMPL(-, __sub__)
-  AD_PYOBJECT_ADAPTER_BINARY_OPERATOR_IMPL(*, __mul__)
-  AD_PYOBJECT_ADAPTER_BINARY_OPERATOR_IMPL(/, __div__)
+  AD_PYOBJECT_ADAPTER_BINARY_OPERATOR_IMPL(+)
+  AD_PYOBJECT_ADAPTER_BINARY_OPERATOR_IMPL(-)
+  AD_PYOBJECT_ADAPTER_BINARY_OPERATOR_IMPL(*)
+  AD_PYOBJECT_ADAPTER_BINARY_OPERATOR_IMPL(/)
 
-  AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR_IMPL(==, Py_EQ);
-  AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR_IMPL(!=, Py_NE);
-  AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR_IMPL(<, Py_LT);
-  AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR_IMPL(<=, Py_LE);
-  AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR_IMPL(>, Py_GT);
-  AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR_IMPL(>=, Py_GE);
+  AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR_EQUALITY_IMPL(==, equal)
+  AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR_EQUALITY_IMPL(!=, not_equal)
+  AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR_IMPL(<)
+  AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR_IMPL(<=)
+  AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR_IMPL(>)
+  AD_PYOBJECT_ADAPTER_COMPARE_OPERATOR_IMPL(>=)
 
   AD_PYOBJECT_ADAPTER_UNARY_FUNC_IMPL(acos)
   AD_PYOBJECT_ADAPTER_UNARY_FUNC_IMPL(asin)
@@ -91,11 +82,11 @@ namespace detail {
 #undef AD_PYOBJECT_ADAPTER_UNARY_FUNC_IMPL
 
 bool ADPyobjectAdapter::is_zero() const {
-  return py::bool_(inner_.attr("is_zero")());
+  return *this == ADPyobjectAdapter(0);
 }
 
 bool ADPyobjectAdapter::is_one() const {
-  return py::bool_(inner_.attr("is_one")());
+  return *this == ADPyobjectAdapter(1);
 }
 
 ADPyobjectAdapter ADPyobjectAdapter::pow(const ADPyobjectAdapter& other) const {
@@ -164,6 +155,7 @@ AD_PYOBJECT_ADAPTER_UNARY_FUNC_IMPL(sign)
 #undef AD_PYOBJECT_ADAPTER_UNARY_FUNC_IMPL
 
 std::ostream& operator<< (std::ostream &os, const galini::ad::ADPyobjectAdapter& x) {
+  os << x.to_string();
   return os;
 }
 
@@ -173,7 +165,7 @@ int Integer(const galini::ad::ADPyobjectAdapter& x) {
 
 #define AD_PYOBJECT_ADAPTER_COMPARE(name, op) \
   bool name(const galini::ad::ADPyobjectAdapter& x) \
-  { return x op 0.0; }
+  { return x op galini::ad::ADPyobjectAdapter(0.0); }
 
 AD_PYOBJECT_ADAPTER_COMPARE(GreaterThanZero, >)
 AD_PYOBJECT_ADAPTER_COMPARE(GreaterThanOrZero, >=)

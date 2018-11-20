@@ -40,6 +40,7 @@ namespace ad {
 #define AD_PYOBJECT_ADAPTER_UNARY_FUNC(func) \
   ADPyobjectAdapter func() const;
 
+
 /* Adapter to use Python objects as Base type for CppAD AD<Base>.
  *
  * https://coin-or.github.io/CppAD/doc/base_require.htm
@@ -50,6 +51,10 @@ public:
     : ADPyobjectAdapter(0) {}
   explicit ADPyobjectAdapter(int i)
     : ADPyobjectAdapter(py::int_(i)) {}
+  explicit ADPyobjectAdapter(std::size_t i)
+    : ADPyobjectAdapter(py::int_(i)) {}
+  explicit ADPyobjectAdapter(double f)
+    : ADPyobjectAdapter(py::float_(f)) {}
   ADPyobjectAdapter(py::object inner)
     : inner_(inner) {}
 
@@ -121,6 +126,10 @@ public:
   bool is_zero() const;
   bool is_one() const;
   ADPyobjectAdapter pow(const ADPyobjectAdapter&) const;
+
+  std::string to_string() const {
+    return py::str(inner_);
+  }
 private:
   py::object inner_;
 };

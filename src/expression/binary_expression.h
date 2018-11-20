@@ -62,12 +62,12 @@ public:
 
   using BinaryExpression::BinaryExpression;
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override {
-    return values[first_->idx()] * values[second_->idx()];
+  ADFloat eval(values_ptr<ADFloat>& values) const override {
+    return (*values)[first_] * (*values)[second_];
   }
 
-  ADObject eval(const std::vector<ADObject>& values) const override {
-    return values[first_->idx()] * values[second_->idx()];
+  ADObject eval(values_ptr<ADObject>& values) const override {
+    return (*values)[first_] * (*values)[second_];
   }
 
 };
@@ -78,12 +78,12 @@ public:
 
   using BinaryExpression::BinaryExpression;
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override {
-    return values[first_->idx()] / values[second_->idx()];
+  ADFloat eval(values_ptr<ADFloat>& values) const override {
+    return (*values)[first_] / (*values)[second_];
   }
 
-  ADObject eval(const std::vector<ADObject>& values) const override {
-    return values[first_->idx()] / values[second_->idx()];
+  ADObject eval(values_ptr<ADObject>& values) const override {
+    return (*values)[first_] / (*values)[second_];
   }
 
 };
@@ -94,8 +94,8 @@ public:
 
   using BinaryExpression::BinaryExpression;
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override;
-  ADObject eval(const std::vector<ADObject>& values) const override;
+  ADFloat eval(values_ptr<ADFloat>& values) const override;
+  ADObject eval(values_ptr<ADObject>& values) const override;
 
 };
 

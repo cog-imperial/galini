@@ -33,8 +33,8 @@ public:
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override;
-  ADObject eval(const std::vector<ADObject>& values) const override;
+  ADFloat eval(values_ptr<ADFloat>& values) const override;
+  ADObject eval(values_ptr<ADObject>& values) const override;
 
 };
 
@@ -44,8 +44,8 @@ public:
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override;
-  ADObject eval(const std::vector<ADObject>& values) const override;
+  ADFloat eval(values_ptr<ADFloat>& values) const override;
+  ADObject eval(values_ptr<ADObject>& values) const override;
 
 };
 
@@ -55,8 +55,8 @@ public:
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override;
-  ADObject eval(const std::vector<ADObject>& values) const override;
+  ADFloat eval(values_ptr<ADFloat>& values) const override;
+  ADObject eval(values_ptr<ADObject>& values) const override;
 
 };
 
@@ -66,8 +66,8 @@ public:
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override;
-  ADObject eval(const std::vector<ADObject>& values) const override;
+  ADFloat eval(values_ptr<ADFloat>& values) const override;
+  ADObject eval(values_ptr<ADObject>& values) const override;
 
 };
 
@@ -77,8 +77,8 @@ public:
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override;
-  ADObject eval(const std::vector<ADObject>& values) const override;
+  ADFloat eval(values_ptr<ADFloat>& values) const override;
+  ADObject eval(values_ptr<ADObject>& values) const override;
 
 };
 
@@ -88,8 +88,8 @@ public:
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override;
-  ADObject eval(const std::vector<ADObject>& values) const override;
+  ADFloat eval(values_ptr<ADFloat>& values) const override;
+  ADObject eval(values_ptr<ADObject>& values) const override;
 
 };
 
@@ -99,8 +99,8 @@ public:
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override;
-  ADObject eval(const std::vector<ADObject>& values) const override;
+  ADFloat eval(values_ptr<ADFloat>& values) const override;
+  ADObject eval(values_ptr<ADObject>& values) const override;
 
 };
 
@@ -110,8 +110,8 @@ public:
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override;
-  ADObject eval(const std::vector<ADObject>& values) const override;
+  ADFloat eval(values_ptr<ADFloat>& values) const override;
+  ADObject eval(values_ptr<ADObject>& values) const override;
 
 };
 
@@ -121,8 +121,8 @@ public:
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override;
-  ADObject eval(const std::vector<ADObject>& values) const override;
+  ADFloat eval(values_ptr<ADFloat>& values) const override;
+  ADObject eval(values_ptr<ADObject>& values) const override;
 
 };
 
@@ -132,8 +132,8 @@ public:
 
   using UnaryFunctionExpression::UnaryFunctionExpression;
 
-  ADFloat eval(const std::vector<ADFloat>& values) const override;
-  ADObject eval(const std::vector<ADObject>& values) const override;
+  ADFloat eval(values_ptr<ADFloat>& values) const override;
+  ADObject eval(values_ptr<ADObject>& values) const override;
 
 };
 
