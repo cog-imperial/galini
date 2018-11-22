@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Base classes for solvers."""
-from typing import Any
+import datetime
 from galini.core import Problem
-from galini.config import GaliniConfig
 
 
 class Solver(object):
+    name = None
     """Base class for all solvers.
 
     Arguments
@@ -29,12 +29,18 @@ class Solver(object):
     nl_solver_registry: NLPSolverRegistry
        registry of available NLP solvers.
     """
-    def __init__(self, config: GaliniConfig,
-                 _mip_solver_registry: 'MIPSolverRegistry',
-                 _nlp_solver_registry: 'NLPSolverRegistry') -> None:
+    def __init__(self, config, _mip_solver_registry, _nlp_solver_registry):
         pass
 
-    def solve(self, problem: Problem, **kwargs: Any) -> Any:
+    @property
+    def run_id(self):
+        """Solver run id."""
+        if not getattr(self, '_run_id', None):
+            dt = datetime.datetime.utcnow()
+            self._run_id = self.name + '_' + dt.strftime('%Y%m%d_%H%M%S')
+        return self._run_id
+
+    def solve(self, problem, **kwargs):
         """Solve the optimization problem.
 
         Arguments

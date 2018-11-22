@@ -41,7 +41,8 @@ class SolveCommand(CliCommand):
         if solver_cls is None:
             available = ', '.join(solvers_reg.keys())
             log.error(
-                'Solver %s not available. Available solvers: %s',
+                None, None,
+                'Solver {} not available. Available solvers: {}',
                 args.solver, available
             )
             sys.exit(1)

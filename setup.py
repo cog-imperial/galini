@@ -164,6 +164,7 @@ setup(
     install_requires=[
         'pyomo>=5.2',
         'cog-suspect>=1.0.6',
+        'galini-io>=0.1.0',
         'pypopt>=0.4.3',
         'numpy',
         'toml',
