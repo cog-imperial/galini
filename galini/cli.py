@@ -31,7 +31,7 @@ def collect_commands(parser, subcommands_entry_points_iter):
     commands = {}
     for entry_point in subcommands_entry_points_iter:
         if entry_point.name in commands:
-            log.error('Duplicate entry point %s found.', entry_point.name)
+            log.error(None, None, 'Duplicate entry point {} found.', entry_point.name)
             sys.exit(1)
         sub_cls = entry_point.load()
         sub = sub_cls()
@@ -61,7 +61,7 @@ def main(): # pragma: no cover
     command = subcommands.get(args.command)
 
     if command is None:
-        log.error('Invalid command %s', command)
+        log.error(None, None, 'Invalid command {}', command)
         sys.exit(1)
 
     command.execute(args)

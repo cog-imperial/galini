@@ -40,8 +40,11 @@ class DenseGaliniTNLP(TNLP):
     """
 
     # pylint: disable=invalid-name
-    def __init__(self, problem, retape=True):
+    def __init__(self, problem, solver, retape=True):
         self.retape = retape
+
+        self._solver_name = solver.name
+        self._run_id = solver.run_id
 
         self._solution = None
         self._problem = problem
@@ -62,6 +65,14 @@ class DenseGaliniTNLP(TNLP):
         self._x0 = np.zeros(self._nx)
         self._fg0 = np.zeros(self._nfg)
 
+        self._step_idx = 0
+
+    def log_tensor(self, group, dataset, data):
+        group_name = '{}/ipopt'.format(self._step_idx)
+        if group is not None:
+            group_name += '/' + str(group)
+        log.tensor(self._solver_name, self._run_id, group_name, dataset, data)
+
     def get_nlp_info(self):
         return NLPInfo(
             n = self._nx,
@@ -79,8 +90,8 @@ class DenseGaliniTNLP(TNLP):
                 x_l[i] = lb if lb is not None else -2e19
                 x_u[i] = ub if ub is not None else 2e19
 
-        log.matrix('ipopt/bounds/x_l', np.matrix(x_l))
-        log.matrix('ipopt/bounds/x_u', np.matrix(x_u))
+        self.log_tensor('bounds', 'x_l', x_l)
+        self.log_tensor('bounds', 'x_u', x_u)
 
         if g_l is not None and g_u is not None:
             for i in range(self._ng):
@@ -88,8 +99,9 @@ class DenseGaliniTNLP(TNLP):
                 g_l[i] = c.lower_bound if c.lower_bound is not None else -2e19
                 g_u[i] = c.upper_bound if c.upper_bound is not None else 2e19
 
-        log.matrix('ipopt/bounds/g_l', np.matrix(g_l))
-        log.matrix('ipopt/bounds/g_u', np.matrix(g_u))
+        self.log_tensor('bounds', 'g_l', g_l)
+        self.log_tensor('bounds', 'g_u', g_u)
+
         return True
 
     def get_starting_point(self, init_x, x, init_z, z_l, z_u, init_lambda, lambda_):
@@ -108,7 +120,7 @@ class DenseGaliniTNLP(TNLP):
 
         self._cache_new_x(x, initial=True)
 
-        log.matrix('ipopt/starting_point', np.matrix(x))
+        self.log_tensor(None, 'starting_point', x)
         return True
 
     def get_jac_g_structure(self, row, col):
@@ -118,8 +130,8 @@ class DenseGaliniTNLP(TNLP):
                 row[idx] = i
                 col[idx] = j
 
-        log.matrix('ipopt/jac_g_structure/row', np.array(row))
-        log.matrix('ipopt/jac_g_structure/col', np.array(col))
+        self.log_tensor('jac_g_structure', 'row', row)
+        self.log_tensor('jac_g_structure', 'col', col)
         return True
 
     def get_h_structure(self, row, col):
@@ -130,8 +142,8 @@ class DenseGaliniTNLP(TNLP):
                 col[idx] = j
                 idx += 1
 
-        log.matrix('ipopt/hess_structure/row', np.array(row))
-        log.matrix('ipopt/hess_structure/col', np.array(col))
+        self.log_tensor('hess_structure', 'row', row)
+        self.log_tensor('hess_structure', 'col', col)
         return True
 
     def eval_f(self, x, new_x):
@@ -140,7 +152,7 @@ class DenseGaliniTNLP(TNLP):
 
         # ipopt expects a scalar
         sum_ = np.sum(self._fg0[:self._nf])
-        log.matrix('ipopt/f', sum_)
+        self.log_tensor(None, 'f', sum_)
         return sum_
 
     def eval_grad_f(self, x, new_x, grad_f):
@@ -152,7 +164,8 @@ class DenseGaliniTNLP(TNLP):
         grad = self._fg.reverse(1, w)
         for i in range(self._nx):
             grad_f[i] = grad[i]
-        log.matrix('ipopt/grad_f', np.matrix(grad_f))
+
+        self.log_tensor(None, 'grad_f', grad_f)
         return True
 
     def eval_g(self, x, new_x, g):
@@ -162,7 +175,7 @@ class DenseGaliniTNLP(TNLP):
         for i in range(self._ng):
             g[i] = self._fg0[self._nf + i]
 
-        log.matrix('ipopt/g', np.array(g))
+        self.log_tensor(None, 'g', g)
         return True
 
     def eval_jac_g(self, x, new_x, jacobian):
@@ -182,7 +195,7 @@ class DenseGaliniTNLP(TNLP):
                     idx = i * self._nx + j
                     jacobian[idx] = jacobian_[j]
                 w[self._nf + i] = 0.0
-        log.matrix('ipopt/jacobian', np.matrix(jacobian))
+        self.log_tensor(None, 'jacobian', jacobian)
         return True
 
     def eval_h(self, x, new_x, obj_factor, lambda_, new_lambda, hess):
@@ -208,22 +221,25 @@ class DenseGaliniTNLP(TNLP):
             opt_vars = [OptimalVariable(var.name, x[i])
                         for i, var in enumerate(self._problem.variables)]
             self._solution = Solution(status, opt_objs, opt_vars)
-        log.matrix('ipopt/solution/x', np.array(x))
-        log.matrix('ipopt/solution/z_l', np.array(z_l))
-        log.matrix('ipopt/solution/z_u', np.array(z_u))
-        log.matrix('ipopt/solution/g', np.array(g))
-        log.matrix('ipopt/solution/lambda', np.array(lambda_))
-        log.matrix('ipopt/solution/obj_value', obj_value)
+
+        self.log_tensor('solution', 'x', x)
+        self.log_tensor('solution', 'z_l', z_l)
+        self.log_tensor('solution', 'z_u', z_u)
+        self.log_tensor('solution', 'g', g)
+        self.log_tensor('solution', 'lambda', lambda_)
+        self.log_tensor('solution', 'obj_value', obj_value)
 
     def _cache_new_x(self, x, initial=False):
         self._x0[:] = x
         if self.retape or initial:
             self._fg = self._expr_data.eval(self._x0, self._fg_idx)
         self._fg0[:] = self._fg.forward(0, self._x0)
+        self._step_idx += 1
 
 
 class IpoptNLPSolver(Solver):
     """Solver for NLP problems that uses Ipopt."""
+    name = 'ipopt'
     def __init__(self, config, mip_solver_registry, nlp_solver_registry):
         super().__init__(config, mip_solver_registry, nlp_solver_registry)
         self.config = config.ipopt
@@ -237,7 +253,7 @@ class IpoptNLPSolver(Solver):
         if self.sparse:
             raise RuntimeError('Sparse IpoptTNLP not yet implemented.')
         else:
-            tnlp = DenseGaliniTNLP(problem)
+            tnlp = DenseGaliniTNLP(problem, solver=self)
         self.app.optimize_tnlp(tnlp)
         return tnlp._solution
 

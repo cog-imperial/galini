@@ -26,7 +26,8 @@ class Registry(metaclass=abc.ABCMeta):
         for entry_point in self.iter_entry_points():
             if entry_point.name in self._registered:
                 log.error(
-                    'Duplicate registered item %s found in %s registry.',
+                    None, None,
+                    'Duplicate registered item {} found in {} registry.',
                     entry_point.name, self.group,
                 )
                 sys.exit(1)
