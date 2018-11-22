@@ -17,6 +17,7 @@ from abc import ABCMeta, abstractmethod
 from suspect.expression import ExpressionType, UnaryFunctionType
 from galini.core import (
     RelaxedProblem,
+    Variable,
     Constraint,
     Objective,
 )
@@ -39,6 +40,9 @@ class Relaxation(metaclass=ABCMeta):
             problem,
         )
 
+        for var in problem.variables:
+            self._relax_variable(problem, relaxed_problem, var)
+
         for obj in problem.objectives:
             self._relax_objective(problem, relaxed_problem, obj)
 
@@ -59,6 +63,20 @@ class Relaxation(metaclass=ABCMeta):
         Returns
         -------
         str
+        """
+        pass
+
+    def relax_variable(self, problem, variable): # pragma: no cover
+        """Relax the `variable`.
+
+        Parameters
+        ----------
+        problem : Problem
+        variable : Variable
+
+        Returns
+        -------
+        Variable
         """
         pass
 
@@ -98,6 +116,15 @@ class Relaxation(metaclass=ABCMeta):
 
     def after_relax(self, problem, relaxed_problem):
         """Callback executed after relaxing the problem."""
+        pass
+
+    def _relax_variable(self, problem, relaxed_problem, var):
+        result = self.relax_variable(problem, var)
+        if result is not None and not isinstance(result, Variable):
+            raise ValueError('relax_variable must return object of type Variable or None')
+        if result is not None:
+            self._problem_expr[var.uid] = result
+            self._insert_variable(result, problem, relaxed_problem)
 
     def _relax_objective(self, problem, relaxed_problem, obj):
         result = self.relax_objective(problem, obj)
@@ -126,20 +153,24 @@ class Relaxation(metaclass=ABCMeta):
         )
         self._insert_constraints(result.constraints, problem, relaxed_problem)
 
+    def _insert_variable(self, expr, problem, relaxed_problem):
+        assert expr.expression_type == ExpressionType.Variable
+        new_var = relaxed_problem.add_variable(
+            expr.name,
+            expr.lower_bound,
+            expr.upper_bound,
+            expr.domain,
+        )
+        self._problem_expr[expr.uid] = new_var
+        return new_var
+
     def _insert_expression(self, expr, problem, relaxed_problem):
         def _inner(expr):
             if expr.uid in self._problem_expr:
                 return self._problem_expr[expr.uid]
 
             if expr.expression_type == ExpressionType.Variable:
-                new_var = relaxed_problem.add_variable(
-                    expr.name,
-                    expr.lower_bound,
-                    expr.upper_bound,
-                    None,
-                )
-                self._problem_expr[expr.uid] = new_var
-                return new_var
+                return self._insert_variable(expr, problem, relaxed_problem)
             else:
                 children = [_inner(child) for child in expr.children]
                 new_expr = _clone_expression(expr, children)
