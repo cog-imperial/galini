@@ -42,6 +42,7 @@ class PyTestCommand(TestCommand):
     user_options = [
         ('unit', None, 'Specify to run unit tests only.'),
         ('e2e', None, 'Specify to run end to end tests only.'),
+        ('pdb', None, 'Drop into PDB on failure.'),
     ]
 
     def initialize_options(self):
@@ -53,6 +54,7 @@ class PyTestCommand(TestCommand):
         ]
         self.unit = None
         self.e2e = None
+        self.pdb = None
 
     def run_tests(self):
         import pytest
@@ -67,6 +69,9 @@ class PyTestCommand(TestCommand):
         if self.e2e:
             # run e2e tests only
             self.pytest_args.append('tests/e2e')
+
+        if self.pdb:
+            self.pytest_args.append('--pdb')
 
         errno = pytest.main(self.pytest_args)
         return sys.exit(errno)
