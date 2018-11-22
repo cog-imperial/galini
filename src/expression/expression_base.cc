@@ -64,6 +64,10 @@ ad::ExpressionTreeData Expression::expression_tree_data() const {
   return detail::expression_tree_data(self());
 }
 
+index_t Expression::uid() const {
+  return detail::expression_uid(self());
+}
+
 } // namespace expression
 
 } // namespace galini

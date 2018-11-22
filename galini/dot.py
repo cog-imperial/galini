@@ -34,8 +34,8 @@ def dag_to_pydot_graph(dag, ctx=None):
     nodes = {}
     # first add variables...
     subrank = pydot.Subgraph(rank='same')
-    for name, variable in dag.variables.items():
-        label = '\n'.join([name, str(variable.idx)])
+    for variable in dag.variables:
+        label = '\n'.join([variable.name, str(variable.idx)])
         if ctx is not None:
             label += '\n' + str(ctx[variable.idx])
         node = pydot.Node(variable.idx, label=label)
@@ -73,15 +73,16 @@ def dag_to_pydot_graph(dag, ctx=None):
 
     # ... finally constraints and objectives
     subrank = pydot.Subgraph(rank='same')
-    for name, expr in dag.constraints.items():
-        node = pydot.Node(id(expr), label=name, shape='box')
+    for expr in dag.constraints:
+        node = pydot.Node(expr.uid, label=expr.name, shape='box')
         subrank.add_node(node)
-        edge = pydot.Edge(expr.root_expr.idx, id(expr))
+        edge = pydot.Edge(expr.root_expr.idx, expr.uid)
         dot.add_edge(edge)
-    for name, expr in dag.objectives.items():
-        node = pydot.Node(id(expr), label=name, shape='box')
+
+    for expr in dag.objectives:
+        node = pydot.Node(expr.uid, label=expr.name, shape='box')
         subrank.add_node(node)
-        edge = pydot.Edge(expr.root_expr.idx, id(expr))
+        edge = pydot.Edge(expr.root_expr.idx, expr.uid)
         dot.add_edge(edge)
 
     dot.add_subgraph(subrank)

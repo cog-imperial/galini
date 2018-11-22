@@ -77,14 +77,16 @@ class get_pybind11_include(object):
         self.user = user
 
     def __str__(self):
-        import pybind11
-        return pybind11.get_include(self.user)
+        # import pybind11
+        # return pybind11.get_include(self.user)
+        return '/data/fc714/pybind11/include'
 
 
 extensions = [
     Extension(
         'galini_core',
         sources=[
+            'src/ad/values.cc',
             'src/ad/ad_adapter.cc',
             'src/expression/expression_base.cc',
             'src/expression/unary_function_expression.cc',

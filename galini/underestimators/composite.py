@@ -36,7 +36,7 @@ class SumOfUnderestimators(Underestimator):
         if self._can_be_underestimated_as_sum_of_expressions(problem, expr, ctx):
             return self._underestimate_as_sum(problem, expr, ctx)
         for underestimator in self._underestimators:
-            if underestimator.can_underestimate(problem, expr, cxt):
+            if underestimator.can_underestimate(problem, expr, ctx):
                 return underestimator.underestimate(problem, expr, ctx)
         return None
 

@@ -34,13 +34,15 @@ void init_module(py::module& m) {
   py::class_<Expression, Expression::ptr>(m, "Expression")
     .def_property_readonly("problem", &Expression::problem)
     .def_property_readonly("idx", &Expression::idx)
+    .def_property_readonly("uid", &Expression::uid)
     .def_property("depth", &Expression::depth, &Expression::set_depth)
     .def_property_readonly("default_depth", &Expression::default_depth)
     .def_property_readonly("num_children", &Expression::num_children)
     .def_property_readonly("children", &Expression::children)
     .def("expression_tree_data", &Expression::expression_tree_data)
     .def("nth_children", &Expression::nth_children)
-    .def("is_constant", &Expression::is_constant);
+    .def("is_constant", &Expression::is_constant)
+    .def("is_variable", &Expression::is_variable);
 
   py::class_<UnaryExpression, Expression, UnaryExpression::ptr>(m, "UnaryExpression");
   py::class_<BinaryExpression, Expression, BinaryExpression::ptr>(m, "BinaryExpression");

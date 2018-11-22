@@ -26,10 +26,10 @@ def test_relaxation_name(problem):
         def relaxed_problem_name(self, problem):
             return problem.name + '_relaxed'
 
-        def relax_objective(self, objective):
+        def relax_objective(self, problem, objective):
             return RelaxationResult(objective)
 
-        def relax_constraint(self, constraint):
+        def relax_constraint(self, problem, constraint):
             return RelaxationResult(constraint)
 
     r = MockRelaxation()
@@ -42,10 +42,10 @@ def test_relaxation_returning_original_problem(problem):
         def relaxed_problem_name(self, problem):
             return problem.name + '_relaxed'
 
-        def relax_objective(self, objective):
+        def relax_objective(self, problem, objective):
             return RelaxationResult(objective)
 
-        def relax_constraint(self, constraint):
+        def relax_constraint(self, problem, constraint):
             return RelaxationResult(constraint)
 
     r = MockRelaxation()
@@ -84,10 +84,10 @@ def test_relaxation_returning_new_expressions(problem):
         def relaxed_problem_name(self, problem):
             return problem.name + '_relaxed'
 
-        def relax_objective(self, objective):
+        def relax_objective(self, problem, objective):
             return RelaxationResult(objective)
 
-        def relax_constraint(self, constraint):
+        def relax_constraint(self, problem, constraint):
             if constraint.name != 'cons2':
                 return RelaxationResult(constraint)
             w = Variable('aux', None, None, None)
