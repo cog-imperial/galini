@@ -100,6 +100,8 @@ public:
     idx_ = idx;
   }
 
+  index_t uid() const;
+
   ptr self() {
     return this->shared_from_this();
   }

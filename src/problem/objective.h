@@ -14,6 +14,7 @@ limitations under the License.
 ======================================================================== */
 #pragma once
 
+#include <cstdint>
 #include <pybind11/pybind11.h>
 
 #include "expression/expression_base.h"
@@ -58,6 +59,10 @@ public:
 
   py::object sense() const {
     return sense_;
+  }
+
+  index_t uid() const {
+    return reinterpret_cast<std::uintptr_t>(this);
   }
 private:
   std::shared_ptr<Problem> problem_;

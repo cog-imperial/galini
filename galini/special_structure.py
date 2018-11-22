@@ -40,7 +40,7 @@ def detect_special_structure(problem):
     # set bounds of root_expr to constraints bounds
     # since GALINI doesn't consider constraints as expression we have
     # to do this manually.
-    for constraint in problem.constraints.values():
+    for constraint in problem.constraints:
         expr_bounds = Interval(constraint.lower_bound, constraint.upper_bound)
         ctx.set_bounds(constraint.root_expr, expr_bounds)
 

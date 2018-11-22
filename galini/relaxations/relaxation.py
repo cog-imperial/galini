@@ -63,11 +63,12 @@ class Relaxation(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def relax_objective(self, objective): # pragma: no cover
+    def relax_objective(self, problem, objective): # pragma: no cover
         """Relax the `objective`.
 
         Parameters
         ----------
+        problem : Problem
         objective : Objective
 
         Returns
@@ -77,11 +78,12 @@ class Relaxation(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def relax_constraint(self, constraint): # pragma: no cover
+    def relax_constraint(self, problem, constraint): # pragma: no cover
         """Relax the `constraint`.
 
         Parameters
         ----------
+        problem : Problem
         constraint : Constraint
 
         Returns
@@ -98,34 +100,36 @@ class Relaxation(metaclass=ABCMeta):
         """Callback executed after relaxing the problem."""
 
     def _relax_objective(self, problem, relaxed_problem, obj):
-        result = self.relax_objective(obj)
+        result = self.relax_objective(problem, obj)
         if not isinstance(result, ObjectiveRelaxationResult):
             raise ValueError('relax_objective must return object of type ObjectiveRelaxationResult')
         new_obj = result.objective
         new_expr = self._insert_expression(new_obj.root_expr, problem, relaxed_problem)
-        return relaxed_problem.add_objective(
+        relaxed_problem.add_objective(
             new_obj.name,
             new_expr,
             new_obj.sense,
         )
+        self._insert_constraints(result.constraints, problem, relaxed_problem)
 
     def _relax_constraint(self, problem, relaxed_problem, cons):
-        result = self.relax_constraint(cons)
+        result = self.relax_constraint(problem, cons)
         if not isinstance(result, ConstraintRelaxationResult):
             raise ValueError('relax_constraint must return object of type ConstraintRelaxationResult')
         new_cons = result.constraint
         new_expr = self._insert_expression(new_cons.root_expr, problem, relaxed_problem)
-        return relaxed_problem.add_constraint(
+        relaxed_problem.add_constraint(
             new_cons.name,
             new_expr,
             new_cons.lower_bound,
             new_cons.upper_bound,
         )
+        self._insert_constraints(result.constraints, problem, relaxed_problem)
 
     def _insert_expression(self, expr, problem, relaxed_problem):
         def _inner(expr):
-            if expr.problem is not None and expr.idx in self._problem_expr:
-                return self._problem_expr[expr.idx]
+            if expr.uid in self._problem_expr:
+                return self._problem_expr[expr.uid]
 
             if expr.expression_type == ExpressionType.Variable:
                 new_var = relaxed_problem.add_variable(
@@ -134,16 +138,26 @@ class Relaxation(metaclass=ABCMeta):
                     expr.upper_bound,
                     None,
                 )
-                self._problem_expr[expr.idx] = new_var
+                self._problem_expr[expr.uid] = new_var
                 return new_var
             else:
                 children = [_inner(child) for child in expr.children]
                 new_expr = _clone_expression(expr, children)
-                self._problem_expr[expr.idx] = new_expr
+                self._problem_expr[expr.uid] = new_expr
                 return new_expr
         new_expr = _inner(expr)
         relaxed_problem.insert_tree(new_expr)
         return new_expr
+
+    def _insert_constraints(self, new_constraints, problem, relaxed_problem):
+        for constraint in new_constraints:
+            new_expr = self._insert_expression(constraint.root_expr, problem, relaxed_problem)
+            x = relaxed_problem.add_constraint(
+                constraint.name,
+                new_expr,
+                constraint.lower_bound,
+                constraint.upper_bound,
+            )
 
 
 _EXPR_TYPE_TO_CLS = {

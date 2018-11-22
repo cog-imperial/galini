@@ -14,10 +14,18 @@
 
 """Module containing underestimators interfaces and implementations."""
 
-__all__ = ['Underestimator', 'UnderestimatorResult']
+__all__ = [
+    'Underestimator', 'UnderestimatorResult', 'McCormickUnderestimator',
+    'LinearUnderestimator', 'UnivariateConcaveUnderestimator',
+    'SumOfUnderestimators'
+]
 
 
 from galini.underestimators.underestimator import (
     Underestimator,
-    UnderestimatorResult,
+    UnderestimatorResult
 )
+from galini.underestimators.bilinear import McCormickUnderestimator
+from galini.underestimators.linear import LinearUnderestimator
+from galini.underestimators.concave import UnivariateConcaveUnderestimator
+from galini.underestimators.composite import SumOfUnderestimators

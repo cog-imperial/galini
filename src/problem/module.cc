@@ -118,7 +118,8 @@ void init_module(py::module& m) {
     .def_property_readonly("name", &Constraint::name)
     .def_property_readonly("root_expr", &Constraint::root_expr)
     .def_property_readonly("lower_bound", &Constraint::lower_bound)
-    .def_property_readonly("upper_bound", &Constraint::upper_bound);
+    .def_property_readonly("upper_bound", &Constraint::upper_bound)
+    .def_property_readonly("uid", &Constraint::uid);
 
   py::class_<Objective, Objective::ptr>(m, "Objective")
     .def(py::init<const Problem::ptr&, const std::string&,
@@ -127,7 +128,8 @@ void init_module(py::module& m) {
     .def_property_readonly("problem", &Objective::problem)
     .def_property_readonly("name", &Objective::name)
     .def_property_readonly("root_expr", &Objective::root_expr)
-    .def_property_readonly("sense", &Objective::sense);
+    .def_property_readonly("sense", &Objective::sense)
+    .def_property_readonly("uid", &Objective::uid);
 }
 
 } // namespace problem

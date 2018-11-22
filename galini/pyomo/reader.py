@@ -38,9 +38,9 @@ def read_python(filename, **_kwargs):
     spec = importlib.util.spec_from_file_location('_input_model_module', filename)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    if not hasattr(module, 'pyomo_create_model'):
-        raise InvalidPythonInputError('invalid python input')
-    return module.pyomo_create_model()
+    if not hasattr(module, 'get_pyomo_model'):
+        raise InvalidPythonInputError('invalid python input. Missing get_pyomo_model function')
+    return module.get_pyomo_model()
 
 
 READER_BY_EXT = {
