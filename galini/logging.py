@@ -29,3 +29,7 @@ def apply_config(config):
     """Apply config to current logger."""
     config = config.logging
     _logger.apply_config(config)
+
+
+def get_logger():
+    return _logger
