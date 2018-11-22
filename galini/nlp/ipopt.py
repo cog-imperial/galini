@@ -13,7 +13,7 @@
 # limitations under the License.
 """Solve NLP using Ipopt."""
 import numpy as np
-from pypopt import IpoptApplication, TNLP, NLPInfo
+from pypopt import IpoptApplication, TNLP, NLPInfo, PythonJournal, EJournalLevel
 import  galini.logging as log
 from galini.solvers import Solver, Solution, Status, OptimalObjective, OptimalVariable
 
@@ -237,9 +237,23 @@ class DenseGaliniTNLP(TNLP):
         self._step_idx += 1
 
 
+class GaliniLogIpoptJournal(object):
+    def __init__(self, logger, solver, run_id):
+        self._logger = logger
+        self._solver = solver
+        self._run_id = run_id
+
+    def write(self, msg):
+        self._logger.info(self._solver, self._run_id, msg)
+
+    def flush(self):
+        pass
+
+
 class IpoptNLPSolver(Solver):
     """Solver for NLP problems that uses Ipopt."""
     name = 'ipopt'
+
     def __init__(self, config, mip_solver_registry, nlp_solver_registry):
         super().__init__(config, mip_solver_registry, nlp_solver_registry)
         self.config = config.ipopt
@@ -248,6 +262,14 @@ class IpoptNLPSolver(Solver):
         self._apply_config()
 
     def solve(self, problem, **kwargs):
+        # setup ipopt logging to work with galini log
+        journalist = self.app.journalist()
+        journalist.delete_all_journals()
+        journalist.add_journal(
+            PythonJournal(
+                self.config.get('print_level', 5),
+                GaliniLogIpoptJournal(log.get_logger(), self.name, self.run_id)))
+
         if problem.num_objectives != 1:
             raise RuntimeError('IpoptNLPSolver expects problems with 1 objective function.')
         if self.sparse:
