@@ -19,7 +19,8 @@ from galini.relaxations.relaxation import (
     ObjectiveRelaxationResult,
     ConstraintRelaxationResult,
 )
+from galini.relaxations.continuous import ContinuousRelaxation
 
 
 __all__ = ['Relaxation', 'RelaxationResult', 'ObjectiveRelaxationResult',
-           'ConstraintRelaxationResult']
+           'ConstraintRelaxationResult', 'ContinuousRelaxation']

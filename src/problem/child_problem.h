@@ -85,6 +85,19 @@ public:
   VariableView variable_view(const std::string& name) override;
   VariableView variable_view(index_t idx) override;
 
+
+  std::vector<std::shared_ptr<Variable>>& variables() override {
+    return parent_->variables();
+  }
+
+  std::vector<std::shared_ptr<Constraint>>& constraints() override {
+    return parent_->constraints();
+  }
+
+  std::vector<std::shared_ptr<Objective>>& objectives() override {
+    return parent_->objectives();
+  }
+
   std::shared_ptr<ChildProblem> make_child() {
     return std::make_shared<ChildProblem>(this->self());
   }

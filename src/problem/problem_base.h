@@ -127,6 +127,10 @@ public:
   virtual VariableView variable_view(const std::string& name) = 0;
   virtual VariableView variable_view(index_t idx) = 0;
 
+  virtual std::vector<std::shared_ptr<Variable>>& variables() = 0;
+  virtual std::vector<std::shared_ptr<Constraint>>& constraints() = 0;
+  virtual std::vector<std::shared_ptr<Objective>>& objectives() = 0;
+
   virtual index_t size() const = 0;
   virtual index_t max_depth() const = 0;
   virtual index_t vertex_depth(index_t i) const = 0;

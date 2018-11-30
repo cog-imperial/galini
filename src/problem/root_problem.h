@@ -168,15 +168,15 @@ public:
     return vertices_;
   }
 
-  std::vector<std::shared_ptr<Variable>>& variables() {
+  std::vector<std::shared_ptr<Variable>>& variables() override {
     return variables_;
   }
 
-  std::vector<std::shared_ptr<Constraint>>& constraints() {
+  std::vector<std::shared_ptr<Constraint>>& constraints() override {
     return constraints_;
   }
 
-  std::vector<std::shared_ptr<Objective>>& objectives() {
+  std::vector<std::shared_ptr<Objective>>& objectives() override {
     return objectives_;
   }
 

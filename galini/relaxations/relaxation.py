@@ -123,8 +123,9 @@ class Relaxation(metaclass=ABCMeta):
         if result is not None and not isinstance(result, Variable):
             raise ValueError('relax_variable must return object of type Variable or None')
         if result is not None:
-            self._problem_expr[var.uid] = result
-            self._insert_variable(result, problem, relaxed_problem)
+            new_var = self._insert_variable(result, problem, relaxed_problem)
+            # overwrite var.uid to point to relaxed variable
+            self._problem_expr[var.uid] = new_var
 
     def _relax_objective(self, problem, relaxed_problem, obj):
         result = self.relax_objective(problem, obj)
