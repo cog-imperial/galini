@@ -85,10 +85,14 @@ class DenseGaliniTNLP(TNLP):
         if x_l is not None and x_u is not None:
             for i in range(self._nx):
                 v = self._problem.variable_view(i)
-                lb = v.lower_bound()
-                ub = v.upper_bound()
-                x_l[i] = lb if lb is not None else -2e19
-                x_u[i] = ub if ub is not None else 2e19
+                if v.is_fixed():
+                    x_l[i] = v.value()
+                    x_u[i] = v.value()
+                else:
+                    lb = v.lower_bound()
+                    ub = v.upper_bound()
+                    x_l[i] = lb if lb is not None else -2e19
+                    x_u[i] = ub if ub is not None else 2e19
 
         self.log_tensor('bounds', 'x_l', x_l)
         self.log_tensor('bounds', 'x_u', x_u)
@@ -221,6 +225,8 @@ class DenseGaliniTNLP(TNLP):
             opt_vars = [OptimalVariable(var.name, x[i])
                         for i, var in enumerate(self._problem.variables)]
             self._solution = Solution(status, opt_objs, opt_vars)
+        else:
+            self._solution = Solution(status)
 
         self.log_tensor('solution', 'x', x)
         self.log_tensor('solution', 'z_l', z_l)

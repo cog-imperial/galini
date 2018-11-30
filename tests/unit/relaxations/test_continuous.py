@@ -26,3 +26,8 @@ def test_continuous_relaxation(problem):
     relaxed = r.relax(problem)
     for var in relaxed.variables:
         assert var.domain == Domain.REAL
+
+    assert len(problem.expression_tree_data().vertices()) == len(relaxed.expression_tree_data().vertices())
+    assert len(problem.variables) == len(relaxed.variables)
+    assert len(problem.objectives) == len(relaxed.objectives)
+    assert len(problem.constraints) == len(relaxed.constraints)
