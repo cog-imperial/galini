@@ -6,6 +6,7 @@ nav:
 - Commands:
   - dot: commands/dot.md
   - special_structure: commands/special_structure.md
+  - plugins: commands/plugins.md
 - Configuration: configuration.md
 - Algorithms:
   - Outer Approximation: algorithms/outer_approximation.md
