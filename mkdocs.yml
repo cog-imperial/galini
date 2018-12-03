@@ -7,6 +7,8 @@ nav:
   - dot: commands/dot.md
   - special_structure: commands/special_structure.md
 - Configuration: configuration.md
+- Algorithms:
+  - Outer Approximation: algorithms/outer_approximation.md
 - Logging: logging.md
 - Branch & Bound:
   - Branching: bab/branching.md
