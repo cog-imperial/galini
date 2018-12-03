@@ -19,7 +19,10 @@ from galini.core import Domain
 from galini.solvers import MINLPSolver
 from galini.relaxations import ContinuousRelaxation
 from galini.solvers.solution import OptimalObjective, OptimalVariable, Status, Solution
+import  galini.logging as log
+from galini.__version__ import __version__
 import logging
+
 
 class PulpStatus(Status):
     def __init__(self, inner):
@@ -33,9 +36,29 @@ class PulpStatus(Status):
 
 
 class OuterApproximationAlgorithm(object):
-    def __init__(self, nlp_solver):
+    def __init__(self, nlp_solver, solver_name, run_id):
         self._nlp_solver = nlp_solver
         self._tolerance = 1e-5
+
+        self._iter = 1
+        self._maximum_iterations = 10
+        self._solver_name = solver_name
+        self._run_id = run_id
+
+    def _complete_iteration(self):
+        self._iter += 1
+
+    def _maximum_iterations_reached(self):
+        return self._iter > self._maximum_iterations
+
+    def _log_info(self, msg, *args, **kwargs):
+        log.info(self._solver_name, self._run_id, msg, *args, **kwargs)
+
+    def _log_tensor(self, group, dataset, data):
+        group_name = 'outer_approximation/{}'.format(self._iter)
+        if group is not None:
+            group_name += '/' + str(group)
+        log.tensor(self._solver_name, self._run_id, group_name, dataset, data)
 
     def solve_continuous_relaxation(self, problem):
         relaxation = ContinuousRelaxation()
@@ -102,17 +125,40 @@ class OuterApproximationAlgorithm(object):
             [OptimalVariable(v.name, pulp.value(xs[i])) for i, v in enumerate(problem.variables)],
         )
 
+    def log_header(self):
+        self._log_info("""
+This is GALINI outer_approximation.
+
+Version: {}
+        """.format(__version__))
+
+    def log_problem_summary(self, problem):
+        self._log_info("""
+Number of variables: {}
+Number of constraints: {}
+""".format(problem.num_variables, problem.num_constraints))
+
+    def log_iter_summary_header(self):
+        self._log_info('\t iter \t z_l \t z_u \t epsilon\n')
+
+    def log_iter_summary(self, z_l, z_u):
+        self._log_info('\t {} \t {} \t {} \t {}\n'.format(self._iter, z_l, z_u, z_u - z_l))
+
     def solve(self, problem):
+        self.log_header()
+        self.log_problem_summary(problem)
+
+        self._log_info("Solving continuous relaxation.")
         solution = self.solve_continuous_relaxation(problem)
         obj_upper = np.inf
         obj_lower = -np.inf
         linear_relax_feasible = True
         x_k = np.zeros(problem.num_variables, dtype=np.float)
-        iter_ = 0
-        max_iter = 10
+
+        self.log_iter_summary_header()
 
         while (obj_upper - obj_lower) > self._tolerance and linear_relax_feasible:
-            if iter_ > max_iter:
+            if self._maximum_iterations_reached():
                 break
 
             for i, sol in enumerate(solution.variables):
@@ -132,7 +178,11 @@ class OuterApproximationAlgorithm(object):
             if not solution.status.is_success():
                 raise NotImplementedError()
             obj_upper = min(obj_upper, solution.objectives[0].value)
-            iter_ += 1
+
+            self.log_iter_summary(obj_lower, obj_upper)
+            self._complete_iteration()
+
+        self._log_info('Number of iterations: {}'.format(self._iter))
 
         return solution
 
@@ -153,6 +203,8 @@ class OuterApproximationSolver(MINLPSolver):
         Mathematical Programming
         https://doi.org/10.1007/BF02592064
     """
+    name = 'outer_approximation'
+
     def __init__(self, config, mip_solver_registry, nlp_solver_registry):
         super().__init__(config, mip_solver_registry, nlp_solver_registry)
         self._nlp_solver_cls = nlp_solver_registry.get('ipopt')
@@ -162,5 +214,5 @@ class OuterApproximationSolver(MINLPSolver):
 
     def solve(self, problem, **kwargs):
         nlp_solver = self._nlp_solver_cls(self._config, None, None)
-        algo = OuterApproximationAlgorithm(nlp_solver)
+        algo = OuterApproximationAlgorithm(nlp_solver, self.name, self.run_id)
         return algo.solve(problem)
