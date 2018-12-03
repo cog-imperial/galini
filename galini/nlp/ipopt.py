@@ -260,6 +260,8 @@ class IpoptNLPSolver(Solver):
     """Solver for NLP problems that uses Ipopt."""
     name = 'ipopt'
 
+    description = 'NLP solver.'
+
     def __init__(self, config, mip_solver_registry, nlp_solver_registry):
         super().__init__(config, mip_solver_registry, nlp_solver_registry)
         self.config = config.ipopt

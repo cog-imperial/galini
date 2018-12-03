@@ -92,4 +92,5 @@ class SolveCommand(CliCommand):
         parser.add_argument('problem')
         parser.add_argument('--solver', help='Specify the solver to use', default=DEFAULT_SOLVER)
         parser.add_argument('--config', help='Specify the configuration file')
+
         add_output_format_parser_arguments(parser)

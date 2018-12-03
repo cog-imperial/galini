@@ -42,6 +42,10 @@ class Registry(metaclass=abc.ABCMeta):
         """Return the registered objects names."""
         return self._registered.keys()
 
+    def items(self):
+        """Return iterator over registered objects."""
+        return self._registered.items()
+
     @abc.abstractmethod
     def group_name(self): # pragma: no cover
         """Return this registry group name."""

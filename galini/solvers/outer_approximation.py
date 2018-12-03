@@ -205,6 +205,8 @@ class OuterApproximationSolver(MINLPSolver):
     """
     name = 'outer_approximation'
 
+    description = 'Outer-Approximation for convex MINLP.'
+
     def __init__(self, config, mip_solver_registry, nlp_solver_registry):
         super().__init__(config, mip_solver_registry, nlp_solver_registry)
         self._nlp_solver_cls = nlp_solver_registry.get('ipopt')

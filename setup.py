@@ -147,6 +147,7 @@ setup(
             'dot=galini.commands.dot:DotCommand',
             'special_structure=galini.commands.special_structure:SpecialStructureCommand',
             'info=galini.commands.info:InfoCommand',
+            'plugins=galini.commands.plugins:PluginsCommand',
         ],
         'galini.solvers': [
             'oa=galini.solvers.outer_approximation:OuterApproximationSolver',
