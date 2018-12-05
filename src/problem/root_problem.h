@@ -19,6 +19,7 @@ limitations under the License.
 #include "expression/expression_base.h"
 #include "expression/variable.h"
 #include "problem/problem_base.h"
+#include "types.h"
 
 namespace galini {
 
@@ -137,6 +138,10 @@ public:
 
   void insert_tree(const std::shared_ptr<Expression>& root_expr) {
     std::queue<std::shared_ptr<Expression>> stack;
+    std::vector<std::shared_ptr<Expression>> expressions;
+    std::set<index_t> seen;
+    // Do BFS visit on graph, accumulating expressions. Then insert them in problem.
+    // This is required to correctly update nodes depth.
     stack.push(root_expr);
     while (stack.size() > 0) {
       auto current_expr = stack.front();
@@ -146,13 +151,19 @@ public:
       if ((expr_problem != nullptr) && (expr_problem.get() != this)) {
 	throw std::runtime_error("Cannot insert vertex in multiple problems");
       }
-      if (expr_problem == nullptr) {
-	this->insert_vertex(current_expr);
+      auto already_visited = seen.find(current_expr->uid()) != seen.end();
+      if ((expr_problem == nullptr) && (!already_visited)) {
+	expressions.push_back(current_expr);
 
 	for (index_t i = 0; i < current_expr->num_children(); ++i) {
-	    stack.push(current_expr->nth_children(i));
+	  seen.insert(current_expr->uid());
+	  stack.push(current_expr->nth_children(i));
 	}
       }
+    }
+
+    for (auto it = expressions.rbegin(); it != expressions.rend(); ++it) {
+      this->insert_vertex(*it);
     }
   }
 
