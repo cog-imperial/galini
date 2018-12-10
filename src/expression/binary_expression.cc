@@ -15,6 +15,7 @@ limitations under the License.
 #include "binary_expression.h"
 
 #include "ad/ad.h"
+#include "expression/constant.h"
 
 namespace galini {
 
@@ -25,6 +26,12 @@ ADFloat PowExpression::eval(values_ptr<ADFloat>& values) const {
 }
 
 ADObject PowExpression::eval(values_ptr<ADObject>& values) const {
+  if (second_->is_constant()) {
+    auto constant = std::dynamic_pointer_cast<Constant>(second_);
+    if (constant != nullptr) {
+      return ad::pow((*values)[first_], constant->value());
+    }
+  }
   return ad::pow((*values)[first_], (*values)[second_]);
 }
 

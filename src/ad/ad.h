@@ -32,6 +32,9 @@ using ADObject = AD<ADPyobjectAdapter>;
 template<class U>
 AD<U> pow(const AD<U>& x, const AD<U>& y) { return CppAD::pow(x, y); }
 
+template<class U>
+AD<U> pow(const AD<U>&x, const int& y) { return CppAD::pow(x, y); }
+
 #define FORWARD_UNARY_FUNCTION(name) \
   template<class U> AD<U> name(const AD<U>& x) { return CppAD::name(x); }
 
