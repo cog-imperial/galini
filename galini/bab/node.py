@@ -25,15 +25,22 @@ class BranchingPoint(object):
 
 
 class Node(object):
-    def __init__(self, problem, tree=None, coordinate=None, variable=None):
+    def __init__(self, problem, tree=None, coordinate=None, variable=None, solution=None):
         self.children = None
         self.problem = problem
         self.tree = tree
         self.coordinate = coordinate
         self.variable = variable
+        self.solution = solution
 
-    def branch(self, strategy):
+    def branch(self, strategy=None):
         """Branch at the current node using strategy."""
+        if self.children is not None:
+            raise RuntimeError('Trying to branch on node with children.')
+        if strategy is None:
+            if self.tree is None:
+                raise RuntimeError('Trying to branch without associated strategy.')
+            strategy = self.tree.branching_strategy
         branching_point = strategy.branch(self, self.tree)
         if branching_point is None:
             raise RuntimeError('Could not branch')
@@ -45,6 +52,9 @@ class Node(object):
         if isinstance(branching_var, VariableView):
             branching_var = branching_var.variable
         var = self.problem.variable_view(branching_var.idx)
+        for point in branching_point.points:
+            if point < var.lower_bound() or point > var.upper_bound():
+                raise RuntimeError('Branching outside variable bounds')
         new_upper_bound = var.lower_bound()
         for point in branching_point.points:
             new_lower_bound = new_upper_bound

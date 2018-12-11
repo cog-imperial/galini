@@ -43,12 +43,20 @@ public:
     return parent_->size();
   }
 
+  std::string name() const override {
+    return parent_->name();
+  }
+
   index_t vertex_depth(index_t n) const override {
     return parent_->vertex_depth(n);
   }
 
   index_t max_depth() const override {
     return parent_->max_depth();
+  }
+
+  std::vector<std::shared_ptr<Expression>>& vertices() override {
+    return parent_->vertices();
   }
 
   ad::ExpressionTreeData expression_tree_data() const override;

@@ -18,22 +18,9 @@ import pulp
 from galini.core import Domain
 from galini.solvers import MINLPSolver
 from galini.relaxations import ContinuousRelaxation
-from galini.solvers.solution import OptimalObjective, OptimalVariable, Status, Solution
-import  galini.logging as log
 from galini.__version__ import __version__
-import logging
-
-
-class PulpStatus(Status):
-    def __init__(self, inner):
-        self._inner = inner
-
-    def is_success(self):
-        return self._inner == pulp.LpStatusOptimal
-
-    def description(self):
-        return pupl.LpStatus[self._inner]
-
+from galini.pulp import pulp_solve
+import  galini.logging as log
 
 class OuterApproximationAlgorithm(object):
     def __init__(self, nlp_solver, solver_name, run_id):
@@ -66,8 +53,6 @@ class OuterApproximationAlgorithm(object):
         return self._nlp_solver.solve(relaxed_problem)
 
     def build_linear_relaxation(self, problem, x_k):
-        log = logging.getLogger(pulp.__name__)
-        log.setLevel(4500) # silence pulp
         def _build_variable(var):
             assert var.lower_bound is not None
             assert var.upper_bound is not None
@@ -85,6 +70,8 @@ class OuterApproximationAlgorithm(object):
         g_idx = [g.root_expr.idx for g in problem.constraints]
         fg = problem.expression_tree_data().eval(x_k, f_idx + g_idx)
         fg_x = fg.forward(0, x_k)
+
+        self._log_tensor(None, 'fg_x', fg_x)
         w = np.zeros(num_obj + num_con)
 
         lp = pulp.LpProblem(problem.name + '_lp', pulp.LpMinimize)
@@ -104,6 +91,8 @@ class OuterApproximationAlgorithm(object):
 
             expr = np.dot(d_fg, x - x_k) + fg_x[i]
 
+            self._log_tensor('d_fg', str(i), d_fg)
+
             if i <= num_obj:
                 lp += expr <= alpha
             else:
@@ -113,17 +102,11 @@ class OuterApproximationAlgorithm(object):
                     lp += expr >= cons.lower_bound
                 if cons.upper_bound is not None:
                     lp += expr <= cons.upper_bound
-        return lp, alpha, x
+        return lp
 
     def solve_linear_relaxation(self, problem, x_k):
-        lp, alpha, xs = self.build_linear_relaxation(problem, x_k)
-        status = lp.solve()
-
-        return Solution(
-            PulpStatus(status),
-            [OptimalObjective(obj.name, pulp.value(alpha)) for obj in problem.objectives],
-            [OptimalVariable(v.name, pulp.value(xs[i])) for i, v in enumerate(problem.variables)],
-        )
+        lp = self.build_linear_relaxation(problem, x_k)
+        return pulp_solve(lp)
 
     def log_header(self):
         self._log_info("""
@@ -163,6 +146,8 @@ Number of constraints: {}
 
             for i, sol in enumerate(solution.variables):
                 x_k[i] = sol.value
+
+            self._log_tensor(None, 'x_k', x_k)
 
             solution = self.solve_linear_relaxation(problem, x_k)
 
