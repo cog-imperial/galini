@@ -19,15 +19,22 @@ from galini.solvers import Solver, Solution, Status, OptimalObjective, OptimalVa
 
 
 class IpoptStatus(Status):
-    DESCRIPTIONS = [
-        'Optimal Solution Found',
-    ]
+    DESCRIPTIONS = {
+        0: 'Optimal Solution Found',
+        2: 'Infeasible'
+    }
 
     def __init__(self, status):
         self._status = status
 
     def is_success(self):
         return self._status == 0
+
+    def is_infeasible(self):
+        return self._status == 2
+
+    def is_unbounded(self):
+        return False
 
     def description(self):
         return self.DESCRIPTIONS[self._status]

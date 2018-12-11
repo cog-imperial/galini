@@ -19,6 +19,7 @@ from collections import namedtuple
 OptimalObjective = namedtuple('OptimalObjective', ['name', 'value'])
 OptimalVariable = namedtuple('OptimalVariable', ['name', 'value'])
 
+
 class Status(metaclass=abc.ABCMeta):
     """Solver status."""
 
@@ -28,9 +29,20 @@ class Status(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
+    def is_infeasible(self):
+        """Predicate that return True if problem is infeasible."""
+        pass
+
+    @abc.abstractmethod
+    def is_unbounded(self):
+        """Predicate that return True if problem is unbounded."""
+        pass
+
+    @abc.abstractmethod
     def description(self):
         """Return status description."""
         pass
+
 
 class Solution(object):
     """Base class for all solutions.

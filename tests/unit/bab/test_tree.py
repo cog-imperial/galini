@@ -54,11 +54,9 @@ class TestBabTreeCoordinates:
         node = tree.node([0])
         assert node is tree.root
 
-    def test_starting_with_0(self, tree):
-        node = tree.node([0, 2, 1])
-        node2 = tree.node([2, 1])
-        assert node is node2
-        assert node.coordinate == [0, 2, 1]
+    def test_starting_without_0(self, tree):
+        with pytest.raises(ValueError):
+            node = tree.node([2, 1])
 
     def test_out_of_bounds(self, tree):
         with pytest.raises(IndexError):

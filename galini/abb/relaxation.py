@@ -39,11 +39,9 @@ class AlphaBBRelaxation(Relaxation):
     def before_relax(self, problem):
         ctx = detect_special_structure(problem)
         self._ctx = ctx
-        pass
 
     def after_relax(self, problem, relaxed_problem):
         self._ctx = None
-        pass
 
     def relax_objective(self, problem, objective):
         result = self.relax_expression(problem, objective.root_expr)

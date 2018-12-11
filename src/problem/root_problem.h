@@ -175,7 +175,7 @@ public:
 
   std::shared_ptr<ChildProblem> make_child();
 
-  std::vector<std::shared_ptr<Expression>>& vertices() {
+  std::vector<std::shared_ptr<Expression>>& vertices() override {
     return vertices_;
   }
 
@@ -191,7 +191,7 @@ public:
     return objectives_;
   }
 
-  std::string name() const {
+  std::string name() const override {
     return name_;
   }
 private:

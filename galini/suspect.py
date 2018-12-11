@@ -18,7 +18,7 @@ from suspect.interfaces import ForwardIterator, BackwardIterator
 
 class ExpressionDict(object):
     def __init__(self, problem):
-        self._dict = [None] * len(problem.vertices)
+        self._dict = [None] * problem.size
 
     def __getitem__(self, item):
         return self._dict[item.idx]

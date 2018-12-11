@@ -154,14 +154,17 @@ class Relaxation(metaclass=ABCMeta):
         )
         self._insert_constraints(result.constraints, problem, relaxed_problem)
 
-    def _insert_variable(self, expr, problem, relaxed_problem):
+    def _insert_variable(self, expr, problem, relaxed_problem, use_problem_bounds=False):
         assert expr.expression_type == ExpressionType.Variable
-        new_var = relaxed_problem.add_variable(
-            expr.name,
-            expr.lower_bound,
-            expr.upper_bound,
-            expr.domain,
-        )
+        if use_problem_bounds:
+            lower_bound = problem.lower_bound(expr)
+            upper_bound = problem.upper_bound(expr)
+            domain = problem.domain(expr)
+        else:
+            lower_bound = expr.lower_bound
+            upper_bound = expr.upper_bound
+            domain = expr.domain
+        new_var = relaxed_problem.add_variable(expr.name, lower_bound, upper_bound, domain)
         self._problem_expr[expr.uid] = new_var
         return new_var
 
@@ -171,7 +174,7 @@ class Relaxation(metaclass=ABCMeta):
                 return self._problem_expr[expr.uid]
 
             if expr.expression_type == ExpressionType.Variable:
-                return self._insert_variable(expr, problem, relaxed_problem)
+                return self._insert_variable(expr, problem, relaxed_problem, use_problem_bounds=True)
             else:
                 children = [_inner(child) for child in expr.children]
                 new_expr = _clone_expression(expr, children)

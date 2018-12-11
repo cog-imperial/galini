@@ -51,6 +51,8 @@ class KSectionBranchingStrategy(BranchingStrategy):
         return self._branch_on_var(var)
 
     def _branch_on_var(self, var):
-        step = (var.upper_bound() - var.lower_bound()) / self.k
-        points = step * (np.arange(self.k-1) + 1.0)
+        lower_bound = var.lower_bound()
+        upper_bound = var.upper_bound()
+        step = (upper_bound - lower_bound) / self.k
+        points = step * (np.arange(self.k-1) + 1.0) + lower_bound
         return BranchingPoint(var, points.tolist())

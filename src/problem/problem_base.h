@@ -131,10 +131,12 @@ public:
   virtual std::vector<std::shared_ptr<Constraint>>& constraints() = 0;
   virtual std::vector<std::shared_ptr<Objective>>& objectives() = 0;
 
+  virtual std::string name() const = 0;
   virtual index_t size() const = 0;
   virtual index_t max_depth() const = 0;
   virtual index_t vertex_depth(index_t i) const = 0;
   virtual std::shared_ptr<ChildProblem> make_child() = 0;
+  virtual std::vector<std::shared_ptr<Expression>>& vertices() = 0;
 
   virtual ~Problem() = default;
 protected:
