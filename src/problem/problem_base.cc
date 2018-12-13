@@ -29,7 +29,11 @@ namespace problem {
   }
 
   py::object Problem::lower_bound(const std::shared_ptr<Variable>& variable) const {
-    return lower_bounds_.at(variable->idx());
+    auto idx = variable->idx();
+    if (fixed_mask_.at(idx)) {
+      return py::float_(values_.at(idx));
+    }
+    return lower_bounds_.at(idx);
   }
 
   void Problem::set_lower_bound(const std::shared_ptr<Variable>& variable, py::object bound) {
@@ -37,7 +41,11 @@ namespace problem {
   }
 
   py::object Problem::upper_bound(const std::shared_ptr<Variable>& variable) const {
-    return upper_bounds_.at(variable->idx());
+    auto idx = variable->idx();
+    if (fixed_mask_.at(idx)) {
+      return py::float_(values_.at(idx));
+    }
+    return upper_bounds_.at(idx);
   }
 
   void Problem::set_upper_bound(const std::shared_ptr<Variable>& variable, py::object bound) {
