@@ -26,16 +26,9 @@ namespace galini {
 namespace expression {
 
 namespace detail {
-  // Cast pointer to an int-like number. We use the expression memory location
-  // as uid so that we can support expression_trees for expression that are not
-  // part of a problem (and so don't have an idx)
-  inline std::uintptr_t expression_uid(Expression::const_ptr expr) {
-    return reinterpret_cast<std::uintptr_t>(expr.get());
-  }
-
   ad::ExpressionTreeData expression_tree_data(Expression::const_ptr root) {
     std::vector<Expression::const_ptr> nodes;
-    std::set<std::uintptr_t> seen = {expression_uid(root)};
+    std::set<std::uintptr_t> seen = {root->uid()};
     std::deque<Expression::const_ptr> to_visit = {root};
 
     while (!to_visit.empty()) {
@@ -45,7 +38,7 @@ namespace detail {
 
       for (index_t i = 0; i < current->num_children(); ++i) {
 	auto child = current->nth_children(i);
-	auto child_uid = expression_uid(child);
+	auto child_uid = child->uid();
 	if (seen.find(child_uid) == seen.end()) {
 	  to_visit.push_front(child);
 	  seen.insert(child_uid);
@@ -62,10 +55,6 @@ namespace detail {
 
 ad::ExpressionTreeData Expression::expression_tree_data() const {
   return detail::expression_tree_data(self());
-}
-
-index_t Expression::uid() const {
-  return detail::expression_uid(self());
 }
 
 } // namespace expression

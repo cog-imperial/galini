@@ -19,6 +19,8 @@ limitations under the License.
 #include <vector>
 #include <unordered_map>
 
+#include "uid.h"
+
 namespace galini {
 
 namespace expression {
@@ -29,6 +31,7 @@ namespace ad {
 
 namespace detail {
   std::size_t expression_idx(std::shared_ptr<const expression::Expression> expr);
+  galini::uid_t expression_uid(std::shared_ptr<const expression::Expression> expr);
 }
 
 template<class AD>
@@ -59,7 +62,7 @@ template<class AD>
 class ValuesMap : public Values<AD> {
 public:
   AD& operator[](std::shared_ptr<const expression::Expression> expr) override {
-    std::uintptr_t idx = reinterpret_cast<std::uintptr_t>(expr.get());
+    auto idx = detail::expression_uid(expr);
     return vertices_[idx];
   }
 
@@ -67,7 +70,7 @@ public:
     return vertices_.size();
   }
 private:
-  std::unordered_map<std::uintptr_t, AD> vertices_;
+  std::unordered_map<galini::uid_t, AD> vertices_;
 };
 
 

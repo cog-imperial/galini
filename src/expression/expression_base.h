@@ -20,6 +20,7 @@ limitations under the License.
 #include "ad/ad.h"
 #include "ad/values.h"
 #include "types.h"
+#include "uid.h"
 
 namespace galini {
 
@@ -52,7 +53,7 @@ public:
   using problem_weak_ptr = std::weak_ptr<Problem>;
 
   Expression(const std::shared_ptr<Problem>& problem, const index_t depth)
-    : problem_(problem), depth_(depth), num_children_(0), idx_(0) {}
+    : uid_(generate_uid()), problem_(problem), depth_(depth), num_children_(0), idx_(0) {}
 
   Expression(const std::shared_ptr<Problem>& problem)
     : Expression(problem, Expression::DEFAULT_DEPTH) {}
@@ -100,7 +101,9 @@ public:
     idx_ = idx;
   }
 
-  index_t uid() const;
+  galini::uid_t uid() const {
+    return uid_;
+  }
 
   ptr self() {
     return this->shared_from_this();
@@ -121,6 +124,7 @@ public:
   virtual ~Expression() = default;
 
 protected:
+  galini::uid_t uid_;
   problem_weak_ptr problem_;
   index_t depth_;
   index_t num_children_;
