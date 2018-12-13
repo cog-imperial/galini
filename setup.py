@@ -149,10 +149,12 @@ setup(
             'special_structure=galini.commands.special_structure:SpecialStructureCommand',
             'info=galini.commands.info:InfoCommand',
             'plugins=galini.commands.plugins:PluginsCommand',
+            'abb=galini.commands.abb:AbbCommand',
         ],
         'galini.solvers': [
             'oa=galini.solvers.outer_approximation:OuterApproximationSolver',
             'ipopt=galini.nlp:IpoptNLPSolver',
+            'abb=galini.abb.solver:AlphaBBSolver',
         ],
         'galini.nlp_solvers': [
             'ipopt=galini.nlp:IpoptNLPSolver'
@@ -173,6 +175,7 @@ setup(
         'pydot',
         'texttable>=1.4.0',
         'pybind11>=2.2.3',
+        'pytimeparse>=1.1.8',
     ],
     setup_requires=['pytest-runner', 'cython', 'pybind11'],
     tests_require=['pytest', 'pytest-cov', 'hypothesis'],

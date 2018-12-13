@@ -156,7 +156,7 @@ class Relaxation(metaclass=ABCMeta):
 
     def _insert_variable(self, expr, problem, relaxed_problem, use_problem_bounds=False):
         assert expr.expression_type == ExpressionType.Variable
-        if use_problem_bounds:
+        if use_problem_bounds and expr.problem is not None:
             lower_bound = problem.lower_bound(expr)
             upper_bound = problem.upper_bound(expr)
             domain = problem.domain(expr)
