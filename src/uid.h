@@ -12,25 +12,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ======================================================================== */
-#include "values.h"
+#pragma once
 
-#include "expression/expression_base.h"
+#include <cstdint>
 
 namespace galini {
 
-namespace ad {
+using uid_t = std::uint64_t;
 
-namespace detail {
-  std::size_t expression_idx(std::shared_ptr<const expression::Expression> expr) {
-    return expr->idx();
-  }
-
-  galini::uid_t expression_uid(std::shared_ptr<const expression::Expression> expr) {
-    return expr->uid();
-  }
-}
-
-
-} // namespace ad
+uid_t generate_uid();
 
 } // namespace galini

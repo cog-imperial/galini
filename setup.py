@@ -91,6 +91,7 @@ extensions = [
     Extension(
         'galini_core',
         sources=[
+            'src/uid.cc',
             'src/ad/values.cc',
             'src/ad/ad_adapter.cc',
             'src/expression/expression_base.cc',
