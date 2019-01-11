@@ -25,6 +25,7 @@ __all__ = [
     'TanExpression', 'AsinExpression', 'AcosExpression', 'AtanExpression',
     'JacobianEvaluator', 'ForwardJacobianEvaluator', 'ReverseJacobianEvaluator',
     'HessianEvaluator', 'RootProblem', 'ChildProblem', 'RelaxedProblem', 'VariableView',
+    'ipopt_solve', 'IpoptSolution'
 ]
 
 
@@ -75,6 +76,8 @@ from galini_core import (
     RootProblem,
     ChildProblem,
     RelaxedProblem,
+    ipopt_solve,
+    IpoptSolution,
 )
 
 from galini.core.ad import (

@@ -58,6 +58,42 @@ public:
     return vertices_;
   }
 
+  template<class B>
+  void eval(std::vector<AD<B>>& fg, const std::vector<AD<B>>& x, const std::vector<index_t>& out_indexes) const {
+    if (x.size() != num_variables_) {
+      throw std::runtime_error("Invalid variables size, expected: " + std::to_string(num_variables_));
+    }
+
+    if (fg.size() != out_indexes.size()) {
+      throw std::runtime_error("Expected fg.size() == out_indexes.size()");
+    }
+
+    auto values = make_values<AD<B>>(vertices_.size());
+
+    index_t variable_idx = 0;
+    for (auto vertex : vertices_) {
+      if (vertex->is_variable()) {
+	(*values)[vertex] = x[variable_idx++];
+      }
+
+      // exit early to avoid iterations
+      if (variable_idx >= num_variables_) {
+	break;
+      }
+    }
+
+    for (auto vertex : vertices_) {
+      auto result = vertex->eval(values);
+      (*values)[vertex] = result;
+    }
+
+    // Copy to output
+    for (index_t i = 0; i < out_indexes.size(); ++i) {
+      auto expr = vertices_[out_indexes[i]];
+      fg[i] = (*values)[expr];
+    }
+  }
+
   template<class U, class B>
   ADFunc<U> eval(const std::vector<B>& x, const std::vector<index_t>& out_indexes) const {
     std::vector<AD<B>> X(x.size());
@@ -72,29 +108,8 @@ public:
     }
 
     CppAD::Independent(X);
+    eval(Y, X, out_indexes);
 
-    auto values = make_values<AD<B>>(vertices_.size());
-
-    index_t variable_idx = 0;
-    for (auto vertex : vertices_) {
-      if (vertex->is_variable()) {
-	(*values)[vertex] = X[variable_idx++];
-      }
-
-      // exit early to avoid iterations
-      if (variable_idx >= num_variables_) {
-	break;
-      }
-    }
-
-    for (auto vertex : vertices_) {
-      auto result = vertex->eval(values);
-      (*values)[vertex] = result;
-    }
-    for (index_t i = 0; i < out_indexes.size(); ++i) {
-      auto expr = vertices_[out_indexes[i]];
-      Y[i] = (*values)[expr];
-    }
     return ADFunc<U>(std::move(X), std::move(Y));
   }
 

@@ -128,7 +128,6 @@ class OuterApproximationAlgorithm(object):
         def _add_constraints(lp, alpha, x_k):
             fg = problem.expression_tree_data().eval(x_k, f_idx + g_idx)
             fg_x = fg.forward(0, x_k)
-            # self._log_tensor(None, 'fg_x', fg_x)
             w = np.zeros(num_obj + num_con)
 
             # build constraints
@@ -139,8 +138,6 @@ class OuterApproximationAlgorithm(object):
                 w[i] = 0.0
 
                 expr = np.dot(d_fg, x - x_k) + fg_x[i]
-
-                # self._log_tensor('d_fg', str(i), d_fg)
 
                 if i < num_obj:
                     lp += expr <= alpha
