@@ -13,6 +13,7 @@
 # limitations under the License.
 
 # pylint: skip-file
+import os
 import sys
 from pathlib import Path
 import glob
@@ -87,6 +88,16 @@ class get_pybind11_include(object):
         return '/data/fc714/pybind11/include'
 
 
+def get_ipopt_include():
+    if os.environ.get('IPOPT_INCLUDE_DIR'):
+        return os.environ.get('IPOPT_INCLUDE_DIR')
+
+
+def get_ipopt_library_dir():
+    if os.environ.get('IPOPT_LIBRARY_DIR'):
+        return os.environ.get('IPOPT_LIBRARY_DIR')
+
+
 extensions = [
     Extension(
         'galini_core',
@@ -101,6 +112,7 @@ extensions = [
             'src/problem/problem_base.cc',
             'src/problem/root_problem.cc',
             'src/problem/child_problem.cc',
+            'src/ad/ipopt_solve.cc',
             'src/ad/module.cc',
             'src/expression/module.cc',
             'src/problem/module.cc',
@@ -110,9 +122,12 @@ extensions = [
             'src',
             get_pybind11_include(),
             get_pybind11_include(user=True),
+            get_ipopt_include(),
         ],
+        library_dirs=[get_ipopt_library_dir()],
         language='c++',
         depends=glob.glob('src/**/*.h'),
+        libraries=['ipopt'],
     )
 ]
 
