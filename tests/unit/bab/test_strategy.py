@@ -6,6 +6,11 @@ from galini.bab.tree import BabTree
 from galini.bab.strategy import KSectionBranchingStrategy
 
 
+class FakeSelectionStrategy:
+    def insert_node(self, node):
+        pass
+
+
 @pytest.fixture()
 def problem():
     m = aml.ConcreteModel()
@@ -17,8 +22,9 @@ def problem():
 
 class TestKFoldBranchingStrategy:
     def test_bisect(self, problem):
-        tree = BabTree(problem)
         bisect_strat = KSectionBranchingStrategy()
+        tree = BabTree(bisect_strat, FakeSelectionStrategy())
+        tree.add_root(problem)
         node = tree.root
         for i in range(5):
             children = node.branch(bisect_strat)
@@ -28,8 +34,9 @@ class TestKFoldBranchingStrategy:
             node = children[0]
 
     def test_ksection(self, problem):
-        tree = BabTree(problem)
         ksection_strat = KSectionBranchingStrategy(7)
+        tree = BabTree(ksection_strat, FakeSelectionStrategy())
+        tree.add_root(problem)
         node = tree.root
         for i in range(5):
             children = node.branch(ksection_strat)

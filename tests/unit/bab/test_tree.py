@@ -3,7 +3,13 @@ import pytest
 import pyomo.environ as aml
 from galini.pyomo import dag_from_pyomo_model
 from galini.bab.node import Node
+from galini.bab.strategy import  KSectionBranchingStrategy
 from galini.bab.tree import BabTree
+
+
+class FakeSelectionStrategy:
+    def insert_node(self, node):
+        pass
 
 
 @pytest.fixture()
@@ -37,7 +43,9 @@ def tree():
      5 : [0, 2, 1]
 
     """
-    t = BabTree(problem())
+    # t = BabTree(problem(), None)
+    t = BabTree(KSectionBranchingStrategy(), FakeSelectionStrategy())
+    t.add_root(problem())
     root = t.root
     for _ in range(3):
         root.add_children()
