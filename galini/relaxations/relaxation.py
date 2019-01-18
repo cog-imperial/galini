@@ -32,8 +32,8 @@ class Relaxation(metaclass=ABCMeta):
     def __init__(self):
         self._problem_expr = {}
 
-    def relax(self, problem):
-        self.before_relax(problem)
+    def relax(self, problem, **kwargs):
+        self.before_relax(problem, **kwargs)
 
         relaxed_problem = RelaxedProblem(
             self.relaxed_problem_name(problem),
@@ -49,7 +49,7 @@ class Relaxation(metaclass=ABCMeta):
         for cons in problem.constraints:
             self._relax_constraint(problem, relaxed_problem, cons)
 
-        self.after_relax(problem, relaxed_problem)
+        self.after_relax(problem, relaxed_problem, **kwargs)
         return relaxed_problem
 
     @abstractmethod
@@ -110,11 +110,11 @@ class Relaxation(metaclass=ABCMeta):
         """
         pass
 
-    def before_relax(self, problem):
+    def before_relax(self, problem, **kwargs):
         """Callback executed before relaxing the problem."""
         pass
 
-    def after_relax(self, problem, relaxed_problem):
+    def after_relax(self, problem, relaxed_problem, **kwargs):
         """Callback executed after relaxing the problem."""
         pass
 

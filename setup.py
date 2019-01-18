@@ -167,7 +167,7 @@ setup(
             'abb=galini.commands.abb:AbbCommand',
         ],
         'galini.solvers': [
-            'oa=galini.solvers.outer_approximation:OuterApproximationSolver',
+            'oa=galini.outer_approximation.solver:OuterApproximationSolver',
             'ipopt=galini.nlp:IpoptNLPSolver',
             'abb=galini.abb.solver:AlphaBBSolver',
         ],
