@@ -34,7 +34,7 @@ class PulpStatus(Status):
         return self._inner == pulp.LpStatusUnbounded
 
     def description(self):
-        return pupl.LpStatus[self._inner]
+        return pulp.LpStatus[self._inner]
 
 
 def pulp_solve(problem):
