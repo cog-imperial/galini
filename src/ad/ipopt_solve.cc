@@ -51,7 +51,9 @@ ipopt_solve(std::shared_ptr<galini::problem::Problem>& problem,
   auto num_constraints = problem->num_constraints();
   auto num_objectives = problem->num_objectives();
 
-  std::string options = "";
+  std::string options;
+
+  options += "Numeric tol 1e-5\n";
 
   auto expression_tree_data = problem->expression_tree_data();
 

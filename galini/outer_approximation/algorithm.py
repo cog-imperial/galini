@@ -25,7 +25,6 @@ from galini.core import (
     LinearExpression,
     SumExpression,
 )
-
 from galini.relaxations import Relaxation, RelaxationResult, ContinuousRelaxation
 from galini.__version__ import __version__
 from galini.pulp import pulp_solve
@@ -33,7 +32,7 @@ from galini.solvers import Solution, Status, OptimalObjective, OptimalVariable
 from galini.outer_approximation.milp_relaxation import MilpRelaxation
 from galini.outer_approximation.feasibility_problem import FeasibilityProblemRelaxation
 from galini.outer_approximation.continuous_relaxation import FixedIntegerContinuousRelaxation
-import  galini.logging as log
+import galini.logging as log
 
 
 class State(object):
@@ -88,9 +87,9 @@ class OuterApproximationAlgorithm(object):
 
             # update lower bound
             state.z_l = p_oa_t.alpha.value()
-
             # Solve P_x
             fixed_integer_relaxation.update_relaxation(
+                problem,
                 p_x,
                 x_k=np.array([v.value() for v in p_oa_t.x])
             )

@@ -38,9 +38,16 @@ class PulpStatus(Status):
 
 
 def pulp_solve(problem):
-    status =  problem.solve()
+    solver = _solver()
+    status =  problem.solve(solver)
     return Solution(
         PulpStatus(status),
         [OptimalObjective(problem.objective.name, pulp.value(problem.objective))],
         [OptimalVariable(var.name, pulp.value(var)) for var in problem.variables()]
     )
+
+def _solver():
+    cplex = pulp.CPLEX_PY()
+    if cplex.available():
+        return cplex
+    return pulp.PULP_CBC_CMD()

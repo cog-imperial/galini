@@ -15,6 +15,8 @@
 
 import numpy as np
 from galini.solvers import MINLPSolver
+from galini.special_structure import detect_special_structure
+from galini.relaxations import ContinuousRelaxation
 from galini.outer_approximation.algorithm import OuterApproximationAlgorithm
 
 
@@ -48,4 +50,19 @@ class OuterApproximationSolver(MINLPSolver):
     def solve(self, problem, **kwargs):
         nlp_solver = self._nlp_solver_cls(self._config, None, None)
         algo = OuterApproximationAlgorithm(nlp_solver, self.name, self.run_id)
-        return algo.solve(problem, starting_point=np.zeros(problem.num_variables))
+
+        ctx = detect_special_structure(problem)
+        for v in problem.variables:
+            vv = problem.variable_view(v)
+            new_bound = ctx.bounds[v]
+            vv.set_lower_bound(new_bound.lower_bound)
+            vv.set_upper_bound(new_bound.upper_bound)
+
+        starting_point = self._starting_point(nlp_solver, problem)
+        return algo.solve(problem, starting_point=starting_point)
+
+    def _starting_point(self, nlp_solver, problem):
+        continuous_relax = ContinuousRelaxation()
+        relaxed = continuous_relax.relax(problem)
+        solution = nlp_solver.solve(relaxed)
+        return np.array([v.value for v in solution.variables])
