@@ -13,8 +13,15 @@
 # limitations under the License.
 """Fix integer variables of P to x_k."""
 
+import numpy as np
 from galini.core import Domain
 from galini.relaxations.relaxation import Relaxation, RelaxationResult
+
+
+def _inside_bounds(value, lower_bound, upper_bound):
+    greater_than = value > lower_bound or np.isclose(value, lower_bound)
+    less_than = value < upper_bound or np.isclose(value, upper_bound)
+    return greater_than and less_than
 
 
 class FixedIntegerContinuousRelaxation(Relaxation):
@@ -45,10 +52,13 @@ class FixedIntegerContinuousRelaxation(Relaxation):
                 # compare bounds with original problem bounds
                 view = problem.variable_view(variable)
                 new_value = x_k[i]
-                if not view.lower_bound() <= new_value <= view.upper_bound():
+                lower_bound = view.lower_bound()
+                upper_bound = view.upper_bound()
+
+                if not _inside_bounds(new_value, lower_bound, upper_bound):
                     message = (
                         'Fixed value must be within variable bounds: ' +
                         'variable={}, value={}, bounds=[{}, {}]'
-                    ).format(variable.name, new_value, view.lower_bound(), view.upper_bound())
+                    ).format(variable.name, new_value, lower_bound, upper_bound)
                     raise RuntimeError(message)
                 relaxed.fix(variable, x_k[i])
