@@ -29,9 +29,9 @@ class FixedIntegerContinuousRelaxation(Relaxation):
         return RelaxationResult(constraint)
 
     def after_relax(self, problem, relaxed_problem, **kwargs):
-        self.update_relaxation(relaxed_problem, **kwargs)
+        self.update_relaxation(problem, relaxed_problem, **kwargs)
 
-    def update_relaxation(self, problem, **kwargs):
+    def update_relaxation(self, problem, relaxed, **kwargs):
         """Update fixed integer variables to x_k."""
         x_k = kwargs.pop('x_k', None)
         if x_k is None:
@@ -40,6 +40,15 @@ class FixedIntegerContinuousRelaxation(Relaxation):
         if len(x_k) != problem.num_variables:
             raise ValueError('"x_k" must have same size as problem variables')
 
-        for i, variable in enumerate(problem.variables):
+        for i, variable in enumerate(relaxed.variables):
             if variable.domain != Domain.REAL:
-                problem.fix(variable, x_k[i])
+                # compare bounds with original problem bounds
+                view = problem.variable_view(variable)
+                new_value = x_k[i]
+                if not view.lower_bound() <= new_value <= view.upper_bound():
+                    message = (
+                        'Fixed value must be within variable bounds: ' +
+                        'variable={}, value={}, bounds=[{}, {}]'
+                    ).format(variable.name, new_value, view.lower_bound(), view.upper_bound())
+                    raise RuntimeError(message)
+                relaxed.fix(variable, x_k[i])

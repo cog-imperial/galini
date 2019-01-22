@@ -33,6 +33,7 @@ class Relaxation(metaclass=ABCMeta):
         self._problem_expr = {}
 
     def relax(self, problem, **kwargs):
+        self._problem_expr = {}
         self.before_relax(problem, **kwargs)
 
         relaxed_problem = RelaxedProblem(
@@ -125,6 +126,9 @@ class Relaxation(metaclass=ABCMeta):
         if result is not None:
             new_var = self._insert_variable(result, problem, relaxed_problem)
             # overwrite var.uid to point to relaxed variable
+            self._problem_expr[var.uid] = new_var
+        elif result is None:
+            new_var = self._insert_variable(var, problem, relaxed_problem)
             self._problem_expr[var.uid] = new_var
 
     def _relax_objective(self, problem, relaxed_problem, obj):

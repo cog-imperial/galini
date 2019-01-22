@@ -27,7 +27,7 @@ class MilpRelaxation(object):
         # TODO(fra): what if it's maximization problem?
         lp = pulp.LpProblem(problem.name + '_OA', pulp.LpMinimize)
         alpha = pulp.LpVariable('alpha')
-        x = [self._pulp_variable(v) for v in problem.variables]
+        x = [self._pulp_variable(problem, v) for v in problem.variables]
 
         lp += alpha
         relaxation = OAProblem(lp=lp, x=x, alpha=alpha)
@@ -42,6 +42,9 @@ class MilpRelaxation(object):
 
         if len(x_k) != problem.num_variables:
             raise ValueError('"x_k" must have same size as problem variables')
+
+        if not np.all(np.isfinite(x_k)):
+            raise ValueError('All "x_k" values must be finite')
 
         # obtain indexes of "output" expressions: objectives and constraints
         f_idx = [f.root_expr.idx for f in problem.objectives]
@@ -64,6 +67,11 @@ class MilpRelaxation(object):
             d_fg = fg.reverse(1, w)
             w[i] = 0.0
 
+            if not np.all(np.isfinite(d_fg)):
+                constraint = problem.constraints[i - num_objectives]
+                raise RuntimeError('d_fg of {} constraint is not all finite: x_k={} d_fg={}'.format(
+                    constraint.name, x_k, np.dot(d_fg, relaxation.x)
+                ))
             expr = np.dot(d_fg, relaxation.x - x_k) + fg_x[i]
 
             if i < num_objectives:
@@ -76,18 +84,21 @@ class MilpRelaxation(object):
                 if constraint.upper_bound is not None:
                     lp += expr <= constraint.upper_bound
 
-    def _pulp_variable(self, variable):
+    def _pulp_variable(self, problem, variable):
         # TODO(fra): can continuous variable be unbounded?
-        assert variable.lower_bound is not None
-        assert variable.upper_bound is not None
+        view = problem.variable_view(variable)
+        lower_bound = view.lower_bound()
+        upper_bound = view.upper_bound()
+        assert lower_bound is not None
+        assert upper_bound is not None
         domain = pulp.LpContinuous
-        if variable.domain == Domain.INTEGER:
+        if view.domain == Domain.INTEGER:
             domain = pulp.LpInteger
-        elif variable.domain == Domain.BINARY:
+        elif view.domain == Domain.BINARY:
             domain = pulp.LpBinary
         return pulp.LpVariable(
             variable.name,
-            variable.lower_bound,
-            variable.upper_bound,
+            lower_bound,
+            upper_bound,
             domain,
         )

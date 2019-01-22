@@ -11,6 +11,10 @@ from galini.core import (
     Domain,
     LinearExpression,
     LogExpression,
+    SqrtExpression,
+    SumExpression,
+    ProductExpression,
+    NegationExpression,
     JacobianEvaluator,
     ForwardJacobianEvaluator,
     ReverseJacobianEvaluator,
@@ -83,127 +87,24 @@ class TestExpressionTreeData(object):
         H_g = g.hessian([I(4.0, 4.0), I(5.0, 5.0)], [1.0])
         all_interval_close(expected_H, H_g)
 
+    def test_tls2_regression(self):
+        """tls2 from MINLPLib2.
 
-@pytest.mark.skip('Not updated to work with new DAG')
-class TestJacobian(object):
-    def test_raises_error_on_wrong_input_size(self):
-        m = aml.ConcreteModel()
-        m.I = range(10)
-        m.x = aml.Var(m.I)
-        m.obj = aml.Objective(expr=sum(m.x[i] for i in m.I))
-        dag = dag_from_pyomo_model(m)
-        jac = JacobianEvaluator(dag)
-        with pytest.raises(Exception):
-            jac.eval_at_x(np.zeros(20), 1)
+        sqrt(i*x) is problematic because x and i can be 0.
+        """
+        i = Variable('i', None, None, None)
+        j = Variable('i', None, None, None)
+        x = Variable('x', None, None, None)
+        y = Variable('y', None, None, None)
 
-    def test_jacobian_reverse_mode(self):
-        m = aml.ConcreteModel()
-        m.I = range(10)
-        m.J = range(5)
-        m.x = aml.Var(m.I)
-        m.obj = aml.Objective(expr=sum(m.x[i]*m.x[i] for i in m.I))
-        m.c = aml.Constraint(
-            m.J,
-            rule=lambda m, j: m.x[j] * sum(m.x[i] for i in m.I if i <= j) + m.x[9-j] * sum(m.x[i] for i in m.I if i >= 9-j) >= 0
-        )
+        prod_ix = ProductExpression([i, x])
+        sqrt_prod_ix = SqrtExpression([prod_ix])
+        prod_jy = ProductExpression([j, y])
+        sqrt_prod_jy = SqrtExpression([prod_jy])
+        sum_ = SumExpression([sqrt_prod_ix, sqrt_prod_jy])
+        negation = NegationExpression([sum_])
 
-        dag = dag_from_pyomo_model(m)
-
-        jac = JacobianEvaluator(dag)
-        assert isinstance(jac, ReverseJacobianEvaluator)
-        jac.eval_at_x(np.ones(10).astype(np.float64), 1)
-        jacobian = jac.jacobian
-        assert jacobian.shape == (len(m.J) + 1, len(m.I))
-
-        expected = np.array([
-            # x0   x1   x2   x3   x4   x5   x6   x7   x8   x9
-            [2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0],
-            [2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0],
-            [1.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 1.0],
-            [1.0, 1.0, 4.0, 0.0, 0.0, 0.0, 0.0, 4.0, 1.0, 1.0],
-            [1.0, 1.0, 1.0, 5.0, 0.0, 0.0, 5.0, 1.0, 1.0, 1.0],
-            [1.0, 1.0, 1.0, 1.0, 6.0, 6.0, 1.0, 1.0, 1.0, 1.0],
-        ])
-        assert np.array_equal(jacobian, expected)
-
-    def test_jacobian_forward_mode(self):
-        m = aml.ConcreteModel()
-        m.I = range(3)
-        m.J = range(5)
-
-        m.x = aml.Var(m.I)
-        m.obj = aml.Objective(expr=sum(m.x[i] for i in m.I))
-        m.c = aml.Constraint(m.J, rule=lambda m, j: sum(m.x[i]**(j+1) for i in m.I) >= 0)
-        dag = dag_from_pyomo_model(m)
-
-        jac = JacobianEvaluator(dag)
-        assert isinstance(jac, ForwardJacobianEvaluator)
-        jac.eval_at_x(np.ones(3).astype(np.float64) * 2.0, 1)
-        jacobian = jac.jacobian
-        assert jacobian.shape == (len(m.J) + 1, len(m.I))
-
-        assert np.array_equal(jacobian[0, :], np.ones(3))
-        assert np.array_equal(jacobian[1, :], np.ones(3))
-        assert np.array_equal(jacobian[2, :], np.ones(3) * 4.0)
-        assert np.array_equal(jacobian[3, :], np.ones(3) * 12.0)
-        assert np.array_equal(jacobian[4, :], np.ones(3) * 32.0)
-        assert np.array_equal(jacobian[5, :], np.ones(3) * 80.0)
-
-
-@pytest.mark.skip('Not updated to work with new DAG')
-class TestHessian(object):
-    def setup_method(self, _func):
-        m = aml.ConcreteModel()
-        m.I = range(4)
-        m.x = aml.Var(m.I)
-        m.obj = aml.Objective(expr=m.x[0]*m.x[3]*sum(m.x[i] for i in range(3)) + m.x[2])
-        m.c0 = aml.Constraint(expr=m.x[0] * m.x[1] * m.x[2] * m.x[3] >= 25)
-        m.c1 = aml.Constraint(expr=sum(m.x[i]*m.x[i] for i in m.I) == 40)
-        self.m = m
-        self.dag = dag_from_pyomo_model(self.m)
-        self.x = np.array([1.0, 5.0, 5.0, 1.0])
-
-    def test_hessian_size(self):
-        hes = HessianEvaluator(self.dag)
-        hes.eval_at_x(self.x, True)
-        hessian = hes.hessian
-        assert hessian.shape == (3, 4, 4)
-
-    def test_jacobian_at_x(self):
-        hes = HessianEvaluator(self.dag)
-        hes.eval_at_x(self.x)
-        jacobian = hes.jacobian
-
-        expected = np.array([
-            [12.0,  1.0,  2.0, 11.0],
-            [25.0,  5.0,  5.0, 25.0],
-            [ 2.0, 10.0, 10.0,  2.0],
-        ])
-
-        assert np.array_equal(expected, jacobian)
-
-    def test_hessian_at_x(self):
-        hes = HessianEvaluator(self.dag)
-        hes.eval_at_x(self.x)
-        hessian = hes.hessian
-
-        expected_obj = np.array([
-            [ 2.0,  1.0,  1.0, 12.0],
-            [ 1.0,  0.0,  0.0,  1.0],
-            [ 1.0,  0.0,  0.0,  1.0],
-            [12.0,  1.0,  1.0,  0.0],
-        ])
-
-        assert np.array_equal(expected_obj, hessian[0, :, :])
-
-        expected_c0 = np.array([
-            [ 0.0,  5.0,  5.0, 25.0],
-            [ 5.0,  0.0,  1.0,  5.0],
-            [ 5.0,  1.0,  0.0,  5.0],
-            [25.0,  5.0,  5.0,  0.0],
-        ])
-
-        assert np.array_equal(expected_c0, hessian[1, :, :])
-
-        expected_c1 = np.diag(np.ones(4) * 2.0)
-        assert np.array_equal(expected_c1, hessian[2, :, :])
+        tree_data = negation.expression_tree_data()
+        f = tree_data.eval(np.ones(4) * 1e-5)
+        d_f = f.reverse(1, [1.0])
+        assert np.all(np.isfinite(d_f))

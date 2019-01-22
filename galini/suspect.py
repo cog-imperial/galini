@@ -29,6 +29,9 @@ class ExpressionDict(object):
     def __setitem__(self, key, value):
         self._dict[key.idx] = value
 
+    def __len__(self):
+        return len(self._dict)
+
 
 class ProblemContext(object):
     def __init__(self, problem):
