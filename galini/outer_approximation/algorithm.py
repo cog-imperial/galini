@@ -56,6 +56,7 @@ class OuterApproximationAlgorithm(object):
     def __init__(self, nlp_solver, solver_name, run_id):
         self._nlp_solver = nlp_solver
         self.tolerance = 1e-5
+        self.not_success_is_infeasible = True
 
         self._maximum_iterations = 10
         self._solver_name = solver_name
@@ -102,7 +103,7 @@ class OuterApproximationAlgorithm(object):
                 obj_value = p_x_solution.objectives[0].value
                 assert np.isfinite(obj_value)
                 state.z_u = min(state.z_u, obj_value)
-            elif p_x_solution.status.is_infeasible():
+            elif p_x_solution.status.is_infeasible() or self.not_success_is_infeasible:
                 # solve feasibility problem
                 feasibility_problem = feasibility_problem_relaxation.relax(p_x)
                 feasibility_solution = self._nlp_solver.solve(feasibility_problem)
@@ -117,6 +118,7 @@ class OuterApproximationAlgorithm(object):
                 )
 
             state.iteration += 1
+            print(state)
         return self._build_solution_from_p_oa_t(problem, p_oa_t, p_oa_t_solution)
 
     def _converged(self, state):
