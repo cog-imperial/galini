@@ -19,8 +19,15 @@ from galini.relaxations.relaxation import Relaxation, RelaxationResult
 
 
 def _inside_bounds(value, lower_bound, upper_bound):
-    greater_than = value > lower_bound or np.isclose(value, lower_bound)
-    less_than = value < upper_bound or np.isclose(value, upper_bound)
+    if lower_bound is not None:
+        greater_than = value > lower_bound or np.isclose(value, lower_bound)
+    else:
+        greater_than = True
+
+    if upper_bound is not None:
+        less_than = value < upper_bound or np.isclose(value, upper_bound)
+    else:
+        less_than = True
     return greater_than and less_than
 
 

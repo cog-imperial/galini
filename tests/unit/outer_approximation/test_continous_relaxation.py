@@ -59,7 +59,7 @@ def test_continuous_relaxation_can_update_fixed_variables(problem):
             assert view.is_fixed()
 
     new_x_k = x_k * 2.0
-    r.update_relaxation(relaxed, x_k=new_x_k)
+    r.update_relaxation(problem, relaxed, x_k=new_x_k)
     for i, var in enumerate(relaxed.variables):
         if var.name[0] == 'x':
             view = relaxed.variable_view(var)
