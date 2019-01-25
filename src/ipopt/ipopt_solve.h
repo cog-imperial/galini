@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace galini {
 
-namespace ad {
+namespace ipopt {
 
 class IpoptSolution {
 public:
@@ -55,8 +55,8 @@ std::shared_ptr<IpoptSolution>
 ipopt_solve(std::shared_ptr<galini::problem::Problem>& problem,
 	    const std::vector<double>& xi, const std::vector<double> &xl,
 	    const std::vector<double>& xu, const std::vector<double> &gl,
-	    const std::vector<double>& gu);
+	    const std::vector<double>& gu, py::object stream);
 
-} // namespace ad
+} // namespace ipopt
 
 } // namespace galini

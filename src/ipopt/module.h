@@ -12,23 +12,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ======================================================================== */
+#pragma once
 
 #include <pybind11/pybind11.h>
 
-#include "ad/module.h"
-#include "expression/module.h"
-#include "problem/module.h"
-#include "ipopt/module.h"
-
-namespace py = pybind11;
-
 namespace galini {
+namespace ipopt {
 
-PYBIND11_MODULE(galini_core, m) {
-  ad::init_module(m);
-  expression::init_module(m);
-  ipopt::init_module(m);
-  problem::init_module(m);
-}
+void init_module(pybind11::module& m);
 
+} // namespace ipopt
 } // namespace galini
