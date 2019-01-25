@@ -112,10 +112,11 @@ extensions = [
             'src/problem/problem_base.cc',
             'src/problem/root_problem.cc',
             'src/problem/child_problem.cc',
-            'src/ad/ipopt_solve.cc',
+            'src/ipopt/ipopt_solve.cc',
             'src/ad/module.cc',
             'src/expression/module.cc',
             'src/problem/module.cc',
+            'src/ipopt/module.cc',
             'src/core.cc',
         ],
         include_dirs=[

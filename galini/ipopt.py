@@ -13,7 +13,7 @@
 # limitations under the License.
 """Solve NLP using Ipopt."""
 import numpy as np
-from galini.logging import Logger
+from galini.logging import Logger, INFO, WARNING
 from galini.solvers import (
     Solver,
     Solution,
@@ -54,7 +54,9 @@ class IpoptNLPSolver(Solver):
         xi, xl, xu = self.get_starting_point_and_bounds(problem)
         gl, gu = self.get_constraints_bounds(problem)
         self.logger.debug('Calling in IPOPT')
-        ipopt_solution = ipopt_solve(problem, xi, xl, xu, gl, gu)
+        ipopt_solution = ipopt_solve(
+            problem, xi, xl, xu, gl, gu, _IpoptLoggerAdapter(self.logger, INFO)
+        )
         solution = self._build_solution(problem, ipopt_solution)
         self.logger.debug('IPOPT returned {}', solution)
         return solution
@@ -117,3 +119,15 @@ class IpoptNLPSolver(Solver):
             self.logger.debug('Constraint: {} <= {} <= {}', gl[i], c.name, gu[i])
 
         return gl, gu
+
+
+class _IpoptLoggerAdapter(object):
+    def __init__(self, logger, level):
+        self._logger = logger
+        self._level = level
+
+    def write(self, msg):
+        self._logger.log(self._level, msg)
+
+    def flush(self):
+        pass
