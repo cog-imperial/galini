@@ -13,9 +13,14 @@
 # limitations under the License.
 """Solve NLP using Ipopt."""
 import numpy as np
-from pypopt import IpoptApplication, TNLP, NLPInfo, PythonJournal, EJournalLevel
-import  galini.logging as log
-from galini.solvers import Solver, Solution, Status, OptimalObjective, OptimalVariable
+from galini.logging import Logger
+from galini.solvers import (
+    Solver,
+    Solution,
+    Status,
+    OptimalObjective,
+    OptimalVariable,
+)
 from galini.core import ipopt_solve, IpoptSolution
 
 
@@ -42,16 +47,10 @@ class IpoptNLPSolver(Solver):
 
     description = 'NLP solver.'
 
-    def __init__(self, config, mip_solver_registry, nlp_solver_registry):
-        super().__init__(config, mip_solver_registry, nlp_solver_registry)
-        self.config = config.ipopt
-        self.app = IpoptApplication()
-        self.app.initialize()
-        self._apply_config()
-
-    def solve(self, problem, **kwargs):
+    def actual_solve(self, problem, **kwargs):
         if len(problem.objectives) != 1:
             raise ValueError('Problem must have exactly 1 objective function.')
+        logger = Logger.from_kwargs(**kwargs)
         xi, xl, xu = self.get_starting_point_and_bounds(problem)
         gl, gu = self.get_constraints_bounds(problem)
         ipopt_solution = ipopt_solve(problem, xi, xl, xu, gl, gu)
@@ -101,36 +100,3 @@ class IpoptNLPSolver(Solver):
             gl[i] = c.lower_bound if c.lower_bound is not None else -2e19
             gu[i] = c.upper_bound if c.upper_bound is not None else 2e19
         return gl, gu
-
-    def _solve(self, problem, **kwargs):
-        # setup ipopt logging to work with galini log
-        journalist = self.app.journalist()
-        journalist.delete_all_journals()
-        journalist.add_journal(
-            PythonJournal(
-                self.config.get('print_level', 5),
-                GaliniLogIpoptJournal(log.get_logger(), self.name, self.run_id)))
-
-        if problem.num_objectives != 1:
-            raise RuntimeError('IpoptNLPSolver expects problems with 1 objective function.')
-        if self.sparse:
-            raise RuntimeError('Sparse IpoptTNLP not yet implemented.')
-        else:
-            tnlp = DenseGaliniTNLP(problem, solver=self)
-        self.app.optimize_tnlp(tnlp)
-        return tnlp._solution
-
-    def _apply_config(self):
-        # pop nonipopt options
-        self.sparse = self.config.pop('sparse', False)
-
-        options = self.app.options()
-        for key, value in self.config.items():
-            if isinstance(value, str):
-                options.set_string_value(key, value)
-            elif isinstance(value, int):
-                options.set_integer_value(key, value)
-            elif isinstance(value, float):
-                options.set_numeric_value(key, value)
-            else:
-                raise RuntimeError('Invalid option type for {}'.format(key))

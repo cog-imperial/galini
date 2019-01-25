@@ -33,20 +33,29 @@ class InfoCommand(CliCommandWithProblem):
 
     def _output_variables_information(self, problem):
         table = OutputTable('Variables', ['name', 'lower_bound', 'upper_bound'])
-        for name, var in problem.variables.items():
-            table.add_row({'name': name, 'lower_bound': var.lower_bound, 'upper_bound': var.upper_bound})
+        for var in problem.variables:
+            view = problem.variable_view(var)
+            table.add_row({
+                'name': var.name,
+                'lower_bound': view.lower_bound(),
+                'upper_bound': view.upper_bound(),
+            })
         return table
 
     def _output_objectives_information(self, problem):
         table = OutputTable('Objectives', ['name', 'sense'])
-        for name, obj in problem.objectives.items():
-            table.add_row({'name': name, 'sense': 'minimize'})
+        for obj in problem.objectives:
+            table.add_row({'name': obj.name, 'sense': obj.sense})
         return table
 
     def _output_constraints_information(self, problem):
         table = OutputTable('Constraints', ['name', 'lower_bound', 'upper_bound'])
-        for name, cons in problem.constraints.items():
-            table.add_row({'name': name, 'lower_bound': cons.lower_bound, 'upper_bound': cons.upper_bound})
+        for cons in problem.constraints:
+            table.add_row({
+                'name': cons.name,
+                'lower_bound': cons.lower_bound,
+                'upper_bound': cons.upper_bound
+            })
         return table
 
     def help_message(self):

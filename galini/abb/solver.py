@@ -19,7 +19,7 @@ from galini.abb.algorithm import AlphaBBAlgorithm
 class AlphaBBSolver(MINLPSolver):
     name = 'alpha_bb'
 
-    describe = 'AlphaBB for nonconvex MINLP.'
+    description = 'AlphaBB for nonconvex MINLP.'
 
     def __init__(self, config, mip_solver_registry, nlp_solver_registry):
         super().__init__(config, mip_solver_registry, nlp_solver_registry)

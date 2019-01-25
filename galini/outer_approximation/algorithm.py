@@ -32,7 +32,6 @@ from galini.solvers import Solution, Status, OptimalObjective, OptimalVariable
 from galini.outer_approximation.milp_relaxation import MilpRelaxation
 from galini.outer_approximation.feasibility_problem import FeasibilityProblemRelaxation
 from galini.outer_approximation.continuous_relaxation import FixedIntegerContinuousRelaxation
-import galini.logging as log
 
 
 class State(object):
