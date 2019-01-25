@@ -28,7 +28,6 @@ from galini.core import (
 from galini.logging import Logger
 from galini.relaxations import Relaxation, RelaxationResult, ContinuousRelaxation
 from galini.__version__ import __version__
-from galini.pulp import pulp_solve
 from galini.solvers import Solution, Status, OptimalObjective, OptimalVariable
 from galini.outer_approximation.milp_relaxation import MilpRelaxation
 from galini.outer_approximation.feasibility_problem import FeasibilityProblemRelaxation
@@ -53,8 +52,9 @@ class State(object):
         )
 
 class OuterApproximationAlgorithm(object):
-    def __init__(self, nlp_solver):
+    def __init__(self, nlp_solver, mip_solver):
         self._nlp_solver = nlp_solver
+        self._mip_solver = mip_solver
         self.tolerance = 1e-5
         self.not_success_is_infeasible = True
 
@@ -85,7 +85,7 @@ class OuterApproximationAlgorithm(object):
                 p_oa_t = milp_relaxation.relax(problem, x_k=starting_point)
             else:
                 milp_relaxation.update_relaxation(problem, p_oa_t, x_k=x_k)
-            p_oa_t_solution = pulp_solve(p_oa_t.lp)
+            p_oa_t_solution = self._mip_solver.solve(p_oa_t.lp, logger=self.logger)
             assert np.isfinite(p_oa_t.alpha.value())
 
             # update lower bound
