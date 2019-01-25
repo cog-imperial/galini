@@ -12,4 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """GALINI Logging module."""
-from galini_io import Logger, RootLogger
+from galini_io import (
+    Logger,
+    RootLogger,
+
+    NOTSET,
+    DEBUG,
+    INFO,
+    WARNING,
+    ERROR,
+    CRITICAL,
+)
