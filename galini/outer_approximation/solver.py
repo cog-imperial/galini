@@ -14,14 +14,15 @@
 """Outer Approximation solver."""
 
 import numpy as np
-from galini.solvers import MINLPSolver
+from galini.logging import Logger
+from galini.solvers import Solver
 from galini.special_structure import detect_special_structure
 from galini.relaxations import ContinuousRelaxation
 from galini.outer_approximation.algorithm import OuterApproximationAlgorithm
 
 
 # TODO(fra): add options to check convexity of problem before solve
-class OuterApproximationSolver(MINLPSolver):
+class OuterApproximationSolver(Solver):
     """Solver implementing Outer-Appoximation for Convex MINLP problems.
 
     References
@@ -41,6 +42,7 @@ class OuterApproximationSolver(MINLPSolver):
     description = 'Outer-Approximation for convex MINLP.'
 
     def actual_solve(self, problem, **kwargs):
+        logger = Logger.from_kwargs(kwargs)
         nlp_solver = self.instantiate_solver('ipopt')
         algo = OuterApproximationAlgorithm(nlp_solver)
 
@@ -51,14 +53,14 @@ class OuterApproximationSolver(MINLPSolver):
             vv.set_lower_bound(new_bound.lower_bound)
             vv.set_upper_bound(new_bound.upper_bound)
 
-        starting_point = self._starting_point(nlp_solver, problem)
+        starting_point = self._starting_point(nlp_solver, problem, logger)
         return algo.solve(
             problem,
             starting_point=starting_point,
             logger=logger)
 
-    def _starting_point(self, nlp_solver, problem):
+    def _starting_point(self, nlp_solver, problem, logger):
         continuous_relax = ContinuousRelaxation()
         relaxed = continuous_relax.relax(problem)
-        solution = nlp_solver.solve(relaxed)
+        solution = nlp_solver.solve(relaxed, logger=logger)
         return np.array([v.value for v in solution.variables])

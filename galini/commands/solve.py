@@ -22,6 +22,7 @@ from galini.commands import (
     print_output_table,
     add_output_format_parser_arguments,
 )
+from galini.logging import RootLogger
 from galini.solvers import SolversRegistry
 from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
 
@@ -45,8 +46,8 @@ class SolveCommand(CliCommand):
 
         config = GaliniConfig(args.config)
 
-        root_logger = RootLogger(config)
-        solver = solver_cls(config, solver_registry)
+        root_logger = RootLogger(config.logging)
+        solver = solver_cls(config, solvers_reg)
 
         pyomo_model = read_pyomo_model(args.problem)
         dag = dag_from_pyomo_model(pyomo_model)

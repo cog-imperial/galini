@@ -72,3 +72,8 @@ class Solution(object):
         self.status = status
         self.objectives = optimal_obj
         self.variables = optimal_vars
+
+    def __str__(self):
+        return 'Solution(status={}, objectives={}, variables={})'.format(
+            self.status.description(), self.objectives, self.variables
+        )

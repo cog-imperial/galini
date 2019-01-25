@@ -25,6 +25,7 @@ from galini.core import (
     LinearExpression,
     SumExpression,
 )
+from galini.logging import Logger
 from galini.relaxations import Relaxation, RelaxationResult, ContinuousRelaxation
 from galini.__version__ import __version__
 from galini.pulp import pulp_solve
@@ -52,19 +53,19 @@ class State(object):
         )
 
 class OuterApproximationAlgorithm(object):
-    def __init__(self, nlp_solver, solver_name, run_id):
+    def __init__(self, nlp_solver):
         self._nlp_solver = nlp_solver
         self.tolerance = 1e-5
         self.not_success_is_infeasible = True
 
         self._maximum_iterations = 10
-        self._solver_name = solver_name
-        self._run_id = run_id
 
     def solve(self, problem, **kwargs):
         starting_point = kwargs.pop('starting_point', None)
         if starting_point is None:
             raise ValueError('"starting_point" must be specified')
+
+        self.logger = Logger.from_kwargs(kwargs)
 
         state = State()
         solutions = [starting_point]
@@ -74,9 +75,11 @@ class OuterApproximationAlgorithm(object):
         feasibility_problem_relaxation = FeasibilityProblemRelaxation()
 
         p_oa_t = None
+
         p_x = fixed_integer_relaxation.relax(problem, x_k=starting_point)
 
         while self._converged(state) and self._iterations_exceeded(state):
+            self.logger.info('Starting Iteration: {}', state)
             # Solve P_OA(T) to obtain (alpha, x)
             if p_oa_t is None:
                 p_oa_t = milp_relaxation.relax(problem, x_k=starting_point)
@@ -93,7 +96,7 @@ class OuterApproximationAlgorithm(object):
                 p_x,
                 x_k=np.array([v.value() for v in p_oa_t.x])
             )
-            p_x_solution = self._nlp_solver.solve(p_x)
+            p_x_solution = self._nlp_solver.solve(p_x, logger=self.logger)
 
             if p_x_solution.status.is_success():
                 # update upper bound
@@ -102,10 +105,18 @@ class OuterApproximationAlgorithm(object):
                 obj_value = p_x_solution.objectives[0].value
                 assert np.isfinite(obj_value)
                 state.z_u = min(state.z_u, obj_value)
+                self.logger.info('P_X solution was successful, new z_u = {}', state.z_u)
             elif p_x_solution.status.is_infeasible() or self.not_success_is_infeasible:
+                self.logger.info(
+                    'P_X was not successful: {}. Solving feasibilty',
+                    p_x_solution.status.description()
+                )
                 # solve feasibility problem
                 feasibility_problem = feasibility_problem_relaxation.relax(p_x)
-                feasibility_solution = self._nlp_solver.solve(feasibility_problem)
+                feasibility_solution = self._nlp_solver.solve(
+                    feasibility_problem,
+                    logger=self.logger,
+                )
                 # feasibility problem cannot be infeasible
                 assert feasibility_solution.status.is_success()
                 variables_value = dict([(v.name, v.value) for v in feasibility_solution.variables])
@@ -116,8 +127,8 @@ class OuterApproximationAlgorithm(object):
                         p_x_solution.status.description())
                 )
 
+            self.logger.info('Iteration Completed: {}', state)
             state.iteration += 1
-            print(state)
         return self._build_solution_from_p_oa_t(problem, p_oa_t, p_oa_t_solution)
 
     def _converged(self, state):
