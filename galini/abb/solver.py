@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """AlphaBB Solver."""
-from galini.solvers import MINLPSolver, SolversRegistry
+from galini.solvers import Solver, SolversRegistry
 from galini.abb.algorithm import AlphaBBAlgorithm
 
 
-class AlphaBBSolver(MINLPSolver):
+class AlphaBBSolver(Solver):
     name = 'alpha_bb'
 
     description = 'AlphaBB for nonconvex MINLP.'

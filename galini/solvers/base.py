@@ -20,7 +20,7 @@ from galini.core import Problem
 
 def _create_run_id(solver):
     now = datetime.datetime.utcnow()
-    return '{}_{}'.format(now, now.strftime('%Y%m%d_%H%M%S'))
+    return '{}_{}'.format(solver, now.strftime('%Y%m%d%H%M%S'))
 
 
 class Solver(metaclass=abc.ABCMeta):
@@ -64,10 +64,13 @@ class Solver(metaclass=abc.ABCMeta):
         -------
         Solution
         """
-        logger = Logger.from_kwargs(**kwargs)
+        logger = Logger.from_kwargs(kwargs)
         run_id = _create_run_id(self.name)
         with logger.child_logger(solver=self.name, run_id=run_id) as child_logger:
-            return self.actual_solve(problem, logger=child_logger, **kwargs)
+            child_logger.log_solve_start()
+            solution = self.actual_solve(problem, logger=child_logger, **kwargs)
+            child_logger.log_solve_end()
+            return solution
 
     @abc.abstractmethod
     def actual_solve(self, problem, **kwargs):

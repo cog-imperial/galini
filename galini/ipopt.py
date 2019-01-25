@@ -50,11 +50,14 @@ class IpoptNLPSolver(Solver):
     def actual_solve(self, problem, **kwargs):
         if len(problem.objectives) != 1:
             raise ValueError('Problem must have exactly 1 objective function.')
-        logger = Logger.from_kwargs(**kwargs)
+        self.logger = Logger.from_kwargs(kwargs)
         xi, xl, xu = self.get_starting_point_and_bounds(problem)
         gl, gu = self.get_constraints_bounds(problem)
+        self.logger.debug('Calling in IPOPT')
         ipopt_solution = ipopt_solve(problem, xi, xl, xu, gl, gu)
-        return self._build_solution(problem, ipopt_solution)
+        solution = self._build_solution(problem, ipopt_solution)
+        self.logger.debug('IPOPT returned {}', solution)
+        return solution
 
     def _build_solution(self, problem, solution):
         status = IpoptStatus(solution.status)
@@ -72,10 +75,14 @@ class IpoptNLPSolver(Solver):
 
     def get_starting_point_and_bounds(self, problem):
         nx = problem.num_variables
+
+        self.logger.debug('Problem has {} variables', nx)
+
         xi = np.zeros(nx)
         xl = np.zeros(nx)
         xu = np.zeros(nx)
         for i in range(nx):
+            var = problem.variable(i)
             v = problem.variable_view(i)
             if v.has_starting_point():
                 x[i] = v.starting_point()
@@ -89,14 +96,24 @@ class IpoptNLPSolver(Solver):
                 xi[i] = max(lb, min(ub, 0))
                 xl[i] = lb
                 xu[i] = ub
+
+                self.logger.debug(
+                    'Variable: {} <= {} <= {}, starting {}',
+                    xl[i], var.name, xu[i], xi[i]
+                )
         return xi, xl, xu
 
     def get_constraints_bounds(self, problem):
         ng = problem.num_constraints
+
+        self.logger.debug('Problem has {} constraints', ng)
+
         gl = np.zeros(ng)
         gu = np.zeros(ng)
         for i in range(ng):
             c = problem.constraint(i)
             gl[i] = c.lower_bound if c.lower_bound is not None else -2e19
             gu[i] = c.upper_bound if c.upper_bound is not None else 2e19
+            self.logger.debug('Constraint: {} <= {} <= {}', gl[i], c.name, gu[i])
+
         return gl, gu
