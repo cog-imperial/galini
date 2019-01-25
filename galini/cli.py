@@ -16,7 +16,6 @@
 import sys
 import argparse
 import pkg_resources
-import galini.logging as log
 from galini.pyomo import set_pyomo4_expression_tree
 
 
@@ -31,7 +30,7 @@ def collect_commands(parser, subcommands_entry_points_iter):
     commands = {}
     for entry_point in subcommands_entry_points_iter:
         if entry_point.name in commands:
-            log.error(None, None, 'Duplicate entry point {} found.', entry_point.name)
+            print('Duplicate entry point {} found.'.format(entry_point.name))
             sys.exit(1)
         sub_cls = entry_point.load()
         sub = sub_cls()
@@ -61,7 +60,7 @@ def main(): # pragma: no cover
     command = subcommands.get(args.command)
 
     if command is None:
-        log.error(None, None, 'Invalid command {}', command)
+        print('Invalid command {}'.format(command))
         sys.exit(1)
 
     command.execute(args)

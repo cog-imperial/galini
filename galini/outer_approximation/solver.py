@@ -40,16 +40,9 @@ class OuterApproximationSolver(MINLPSolver):
 
     description = 'Outer-Approximation for convex MINLP.'
 
-    def __init__(self, config, mip_solver_registry, nlp_solver_registry):
-        super().__init__(config, mip_solver_registry, nlp_solver_registry)
-        self._nlp_solver_cls = nlp_solver_registry.get('ipopt')
-        if self._nlp_solver_cls is None:
-            raise RuntimeError('ipopt solver is required for OuterApproximationSolver')
-        self._config = config
-
-    def solve(self, problem, **kwargs):
-        nlp_solver = self._nlp_solver_cls(self._config, None, None)
-        algo = OuterApproximationAlgorithm(nlp_solver, self.name, self.run_id)
+    def actual_solve(self, problem, **kwargs):
+        nlp_solver = self.instantiate_solver('ipopt')
+        algo = OuterApproximationAlgorithm(nlp_solver)
 
         ctx = detect_special_structure(problem)
         for v in problem.variables:
@@ -59,7 +52,10 @@ class OuterApproximationSolver(MINLPSolver):
             vv.set_upper_bound(new_bound.upper_bound)
 
         starting_point = self._starting_point(nlp_solver, problem)
-        return algo.solve(problem, starting_point=starting_point)
+        return algo.solve(
+            problem,
+            starting_point=starting_point,
+            logger=logger)
 
     def _starting_point(self, nlp_solver, problem):
         continuous_relax = ContinuousRelaxation()

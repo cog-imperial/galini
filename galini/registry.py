@@ -15,7 +15,6 @@
 import abc
 import sys
 import pkg_resources
-import galini.logging as log
 
 
 class Registry(metaclass=abc.ABCMeta):
@@ -25,10 +24,9 @@ class Registry(metaclass=abc.ABCMeta):
         self._registered = {}
         for entry_point in self.iter_entry_points():
             if entry_point.name in self._registered:
-                log.error(
-                    None, None,
-                    'Duplicate registered item {} found in {} registry.',
-                    entry_point.name, self.group,
+                print(
+                    'Duplicate registered item {} found in {} registry.'.format(
+                    entry_point.name, self.group)
                 )
                 sys.exit(1)
             obj_cls = entry_point.load()

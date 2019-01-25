@@ -58,13 +58,13 @@ class SpecialStructureCommand(CliCommandWithProblem):
             {'id': 'lower_bound', 'name': 'LB', 'type': 'f'},
             {'id': 'upper_bound', 'name': 'UB', 'type': 'f'},
         ])
-        for var_name in problem.variables.keys():
-            var = problem.variable_view(var_name)
+        for variable in problem.variables:
+            var = problem.variable_view(variable)
             var_bounds = bounds(var.variable)
             var_domain = var.domain.name[0]
             table.add_row({
-                'name': var_name,
-                'domain': var_domain,
+                'name': variable.name,
+                'domain': var.domain,
                 'lower_bound': var_bounds.lower_bound,
                 'upper_bound': var_bounds.upper_bound,
             })
@@ -74,7 +74,7 @@ class SpecialStructureCommand(CliCommandWithProblem):
         return self._output_expressions(
             problem,
             ctx,
-            problem.objectives.items(),
+            problem.objectives,
             'Obj.',
             'Objectives',
         )
@@ -83,7 +83,7 @@ class SpecialStructureCommand(CliCommandWithProblem):
         return self._output_expressions(
             problem,
             ctx,
-            problem.constraints.items(),
+            problem.constraints,
             'Cons.',
             'Constraints',
         )
@@ -96,13 +96,13 @@ class SpecialStructureCommand(CliCommandWithProblem):
             {'id': 'convexity', 'name': 'Cvx', 'type': 't'},
             {'id': 'monotonicity', 'name': 'Mono', 'type': 't'},
         ])
-        for expr_name, expr in expressions:
+        for expr in expressions:
             root_expr = expr.root_expr
             cvx = _cvx_to_str(ctx.convexity(root_expr))
             mono = _mono_to_str(ctx.monotonicity(root_expr))
             bounds = ctx.bounds(root_expr)
             table.add_row({
-                'name': expr_name,
+                'name': expr.name,
                 'lower_bound': bounds.lower_bound,
                 'upper_bound': bounds.upper_bound,
                 'convexity': cvx,

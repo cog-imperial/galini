@@ -15,7 +15,6 @@
 
 import sys
 from argparse import ArgumentParser, Namespace
-import galini.logging as log
 from galini.config import GaliniConfig
 from galini.commands import (
     CliCommand,
@@ -24,8 +23,6 @@ from galini.commands import (
     add_output_format_parser_arguments,
 )
 from galini.solvers import SolversRegistry
-from galini.mip import MIPSolverRegistry
-from galini.nlp import NLPSolverRegistry
 from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
 
 
@@ -40,24 +37,20 @@ class SolveCommand(CliCommand):
         solver_cls = solvers_reg.get(args.solver.lower())
         if solver_cls is None:
             available = ', '.join(solvers_reg.keys())
-            log.error(
-                None, None,
-                'Solver {} not available. Available solvers: {}',
-                args.solver, available
+            print(
+                'Solver {} not available. Available solvers: {}'.format(
+                args.solver, available)
             )
             sys.exit(1)
 
         config = GaliniConfig(args.config)
 
-        log.apply_config(config)
-
-        mip_solver_registry = MIPSolverRegistry()
-        nlp_solver_registry = NLPSolverRegistry()
-        solver = solver_cls(config, mip_solver_registry, nlp_solver_registry)
+        root_logger = RootLogger(config)
+        solver = solver_cls(config, solver_registry)
 
         pyomo_model = read_pyomo_model(args.problem)
         dag = dag_from_pyomo_model(pyomo_model)
-        solution = solver.solve(dag)
+        solution = solver.solve(dag, logger=root_logger)
 
         if solution is None:
             raise RuntimeError('Solver did not return a solution')

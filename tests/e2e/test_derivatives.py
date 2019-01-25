@@ -6,7 +6,7 @@ import pyomo.environ as aml
 from pypopt import PythonJournal, EJournalLevel
 from galini import GaliniConfig
 from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
-from galini.nlp import IpoptNLPSolver
+from galini.ipopt import IpoptNLPSolver
 
 
 def derivative_check(model, order, sparse):

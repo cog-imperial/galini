@@ -168,11 +168,8 @@ setup(
         ],
         'galini.solvers': [
             'oa=galini.outer_approximation.solver:OuterApproximationSolver',
-            'ipopt=galini.nlp:IpoptNLPSolver',
+            'ipopt=galini.ipopt:IpoptNLPSolver',
             'abb=galini.abb.solver:AlphaBBSolver',
-        ],
-        'galini.nlp_solvers': [
-            'ipopt=galini.nlp:IpoptNLPSolver'
         ],
     },
     ext_modules=cythonize(extensions, annotate=True),

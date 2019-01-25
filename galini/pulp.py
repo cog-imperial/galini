@@ -51,3 +51,31 @@ def _solver():
     if cplex.available():
         return cplex
     return pulp.PULP_CBC_CMD()
+
+
+class CplexSolver(object):
+    """Wrapper around pulp.CPLEX_PY to integrate with GALINI."""
+    def __init__(self):
+        self._inner = pulp.CPLEX_PY()
+
+    def available(self):
+        return self._inner.available()
+
+    def actualSolve(self, lp):
+        # Same as CPLEX_PY.actualSolve, but overrides log settings
+        self._inner.buildSolverModel(lp)
+
+        self._setup_logs()
+
+        self._inner.callSolver(lp)
+        solutionStatus = self._inner.findSolutionValues(lp)
+        for var in lp.variables():
+            var.modified = False
+        for constraint in lp.constraints.values():
+            constraint.modified = False
+        return solutionStatus
+
+    def _setup_logs(self):
+        if not self.available():
+            return
+        model = self._inner.solverModel

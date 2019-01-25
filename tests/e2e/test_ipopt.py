@@ -4,7 +4,7 @@ import pathlib
 import numpy as np
 from galini import GaliniConfig
 from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
-from galini.nlp import IpoptNLPSolver
+from galini.ipopt import IpoptNLPSolver
 
 
 @pytest.mark.parametrize('model_name', [
@@ -17,7 +17,7 @@ def test_ipopt_solver(model_name):
     problem = dag_from_pyomo_model(pyomo_model)
 
     config = GaliniConfig()
-    solver = IpoptNLPSolver(config, None, None)
+    solver = IpoptNLPSolver(config, None)
     solution = solver.solve(problem)
 
     assert solution.status.is_success()

@@ -13,32 +13,42 @@
 # limitations under the License.
 """Base classes for solvers."""
 import datetime
+import abc
+from galini.logging import Logger
 from galini.core import Problem
 
 
-class Solver(object):
+def _create_run_id(solver):
+    now = datetime.datetime.utcnow()
+    return '{}_{}'.format(now, now.strftime('%Y%m%d_%H%M%S'))
+
+
+class Solver(metaclass=abc.ABCMeta):
     name = None
     """Base class for all solvers.
 
     Arguments
     ---------
-    config: GaliniConfig
-       Galini configuration file.
-    mip_solver_registry: MIPSolverRegistry
-       registry of available MIP solvers.
-    nl_solver_registry: NLPSolverRegistry
-       registry of available NLP solvers.
+    config : GaliniConfig
+        Galini configuration
+    solver_registry : SolverRegistry
+        Registry of available solvers
     """
-    def __init__(self, config, _mip_solver_registry, _nlp_solver_registry):
-        pass
+    def __init__(self, config, solver_registry):
+        self.config = config
+        self.solver_registry = solver_registry
 
-    @property
-    def run_id(self):
-        """Solver run id."""
-        if not getattr(self, '_run_id', None):
-            dt = datetime.datetime.utcnow()
-            self._run_id = self.name + '_' + dt.strftime('%Y%m%d_%H%M%S')
-        return self._run_id
+    def get_solver(self, solver_name):
+        """Get solver from the registry."""
+        solver_cls = self.solver_registry.get(solver_name, None)
+        if solver_cls is None:
+            raise ValueError('No solver "{}"'.format(solver_name))
+        return solver_cls
+
+    def instantiate_solver(self, solver_name):
+        """Get and instantiate solver from the registry."""
+        solver_cls = self.get_solver(solver_name)
+        return solver_cls(self.config, self.solver_registry)
 
     def solve(self, problem, **kwargs):
         """Solve the optimization problem.
@@ -54,6 +64,13 @@ class Solver(object):
         -------
         Solution
         """
+        logger = Logger.from_kwargs(**kwargs)
+        run_id = _create_run_id(self.name)
+        with logger.child_logger(solver=self.name, run_id=run_id) as child_logger:
+            return self.actual_solve(problem, logger=child_logger, **kwargs)
+
+    @abc.abstractmethod
+    def actual_solve(self, problem, **kwargs):
         pass
 
 
