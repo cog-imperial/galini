@@ -90,6 +90,8 @@ class OuterApproximationAlgorithm(object):
 
             # update lower bound
             state.z_l = p_oa_t.alpha.value()
+            self.logger.update_variable('z_l', state.iteration, state.z_l)
+
             # Solve P_x
             fixed_integer_relaxation.update_relaxation(
                 problem,
@@ -105,6 +107,7 @@ class OuterApproximationAlgorithm(object):
                 obj_value = p_x_solution.objectives[0].value
                 assert np.isfinite(obj_value)
                 state.z_u = min(state.z_u, obj_value)
+                self.logger.update_variable('z_u', state.iteration, state.z_u)
                 self.logger.info('P_X solution was successful, new z_u = {}', state.z_u)
             elif p_x_solution.status.is_infeasible() or self.not_success_is_infeasible:
                 self.logger.info(
