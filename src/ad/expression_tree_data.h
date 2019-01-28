@@ -61,7 +61,7 @@ public:
   template<class B>
   void eval(std::vector<AD<B>>& fg, const std::vector<AD<B>>& x, const std::vector<index_t>& out_indexes) const {
     if (x.size() != num_variables_) {
-      throw std::runtime_error("Invalid variables size, expected: " + std::to_string(num_variables_));
+      throw std::runtime_error("Invalid variables size " + std::to_string(x.size()) + ", expected: " + std::to_string(num_variables_));
     }
 
     if (fg.size() != out_indexes.size()) {
@@ -100,7 +100,7 @@ public:
     std::vector<AD<B>> Y(out_indexes.size());
 
     if (x.size() != num_variables_) {
-      throw std::runtime_error("Invalid variables size, expected: " + std::to_string(num_variables_));
+      throw std::runtime_error("Invalid variables size " + std::to_string(x.size()) + ", expected: " + std::to_string(num_variables_));
     }
 
     for (index_t i = 0; i < x.size(); ++i) {

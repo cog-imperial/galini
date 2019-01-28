@@ -23,9 +23,8 @@ __all__ = [
     'LinearExpression', 'UnaryFunctionExpression', 'NegationExpression', 'AbsExpression',
     'SqrtExpression', 'ExpExpression', 'LogExpression', 'SinExpression', 'CosExpression',
     'TanExpression', 'AsinExpression', 'AcosExpression', 'AtanExpression',
-    'JacobianEvaluator', 'ForwardJacobianEvaluator', 'ReverseJacobianEvaluator',
-    'HessianEvaluator', 'RootProblem', 'ChildProblem', 'RelaxedProblem', 'VariableView',
-    'ipopt_solve', 'IpoptSolution'
+    'RootProblem', 'ChildProblem', 'RelaxedProblem', 'VariableView',
+    'ipopt_solve', 'IpoptSolution', 'IpoptApplication', 'PythonJournal',
 ]
 
 
@@ -78,11 +77,6 @@ from galini_core import (
     RelaxedProblem,
     ipopt_solve,
     IpoptSolution,
-)
-
-from galini.core.ad import (
-    JacobianEvaluator,
-    ForwardJacobianEvaluator,
-    ReverseJacobianEvaluator,
-    HessianEvaluator,
+    IpoptApplication,
+    PythonJournal,
 )

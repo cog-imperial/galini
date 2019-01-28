@@ -45,43 +45,9 @@ private:
   std::vector<index_t> out_indexes_;
 };
 
-class PythonJournal : public Ipopt::Journal {
-public:
-  PythonJournal(Ipopt::EJournalLevel default_level, py::object stream)
-    : Journal("PythonJournal", default_level)
-    , stream_(stream)
-  {}
-protected:
-  virtual void PrintImpl(Ipopt::EJournalCategory category,
-			 Ipopt::EJournalLevel level,
-			 const char* str) override {
-    auto write = stream_.attr("write");
-    write(str);
-  }
-
-  virtual void PrintfImpl(Ipopt::EJournalCategory category,
-			  Ipopt::EJournalLevel level,
-			  const char* pformat,
-			  va_list ap) override {
-    // Define string
-    static const int max_len = 8192;
-    char s[max_len];
-
-    if (vsnprintf(s, max_len, pformat, ap) > max_len) {
-      PrintImpl(category, level, "Warning: not all characters of next line are printed to the file.\n");
-    }
-    PrintImpl(category, level, s);
-  }
-
-  virtual void FlushBufferImpl() override {
-    stream_.attr("flush")();
-}
-private:
-  py::object stream_;
-};
-
 template<class DVector, class FGEval>
-std::shared_ptr<IpoptSolution> solve(const DVector& xi,
+std::shared_ptr<IpoptSolution> solve(Ipopt::SmartPtr<Ipopt::IpoptApplication>& app,
+				     const DVector& xi,
 				     const DVector& xl,
 				     const DVector& xu,
 				     const DVector& gl,
@@ -89,18 +55,6 @@ std::shared_ptr<IpoptSolution> solve(const DVector& xi,
 				     FGEval& fg_eval,
 				     py::object stream) {
   typedef typename FGEval::ADvector ADvector;
-
-  Ipopt::SmartPtr<Ipopt::IpoptApplication> app = new Ipopt::IpoptApplication();
-  Ipopt::SmartPtr<Ipopt::Journal> journal = new PythonJournal(Ipopt::EJournalLevel::J_ITERSUMMARY, stream);
-
-  auto journalist = app->Jnlst();
-  journalist->DeleteAllJournals();
-  journalist->AddJournal(journal);
-
-  auto status = app->Initialize();
-  if (status != Ipopt::Solve_Succeeded) {
-    throw std::runtime_error("Could not initialize Ipopt");
-  }
 
   CppAD::ipopt::solve_result<std::vector<double>> solution;
 
@@ -135,7 +89,8 @@ std::shared_ptr<IpoptSolution> solve(const DVector& xi,
 } // namespace detail
 
 std::shared_ptr<IpoptSolution>
-ipopt_solve(std::shared_ptr<galini::problem::Problem>& problem,
+ipopt_solve(Ipopt::SmartPtr<Ipopt::IpoptApplication>& app,
+	    std::shared_ptr<galini::problem::Problem>& problem,
 	    const std::vector<double>& xi, const std::vector<double> &xl,
 	    const std::vector<double>& xu, const std::vector<double> &gl,
 	    const std::vector<double>& gu, py::object stream) {
@@ -157,7 +112,7 @@ ipopt_solve(std::shared_ptr<galini::problem::Problem>& problem,
   }
 
   detail::FGEval fg_eval(std::move(expression_tree_data), std::move(out_indexes));
-  return detail::solve(xi, xl, xu, gl, gu, fg_eval, stream);
+  return detail::solve(app, xi, xl, xu, gl, gu, fg_eval, stream);
 }
 
 } // namespace ipopt

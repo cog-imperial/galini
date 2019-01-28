@@ -14,16 +14,20 @@ limitations under the License.
 ======================================================================== */
 #include <pybind11/stl.h>
 
+#include <coin/IpIpoptApplication.hpp>
+
 #include "module.h"
 #include "ipopt_solve.h"
+#include "bindings.h"
 
-namespace py = pybind11;
 
 namespace galini {
 
 namespace ipopt {
 
 void init_module(py::module& m) {
+  init_ipopt_bindings(m);
+
   m.def("ipopt_solve", &ipopt_solve);
 
   py::class_<IpoptSolution, std::shared_ptr<IpoptSolution>> solution(m, "IpoptSolution");

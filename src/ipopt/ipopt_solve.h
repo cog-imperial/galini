@@ -17,6 +17,7 @@ limitations under the License.
 #include <memory>
 #include <ad/ad.h>
 #include <cppad/ipopt/solve.hpp>
+#include <coin/IpIpoptApplication.hpp>
 #include <problem/problem_base.h>
 
 namespace galini {
@@ -52,7 +53,8 @@ public:
 };
 
 std::shared_ptr<IpoptSolution>
-ipopt_solve(std::shared_ptr<galini::problem::Problem>& problem,
+ipopt_solve(Ipopt::SmartPtr<Ipopt::IpoptApplication>& app,
+	    std::shared_ptr<galini::problem::Problem>& problem,
 	    const std::vector<double>& xi, const std::vector<double> &xl,
 	    const std::vector<double>& xu, const std::vector<double> &gl,
 	    const std::vector<double>& gu, py::object stream);
