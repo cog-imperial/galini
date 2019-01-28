@@ -3,5 +3,5 @@ sparse = true
 tol = 1e-7
 
 [logging]
-level = 0
+level = 'INFO'
 stdout = true
