@@ -52,13 +52,13 @@ class State(object):
         )
 
 class OuterApproximationAlgorithm(object):
-    def __init__(self, nlp_solver, mip_solver):
+    def __init__(self, nlp_solver, mip_solver, config):
         self._nlp_solver = nlp_solver
         self._mip_solver = mip_solver
-        self.tolerance = 1e-5
         self.not_success_is_infeasible = True
 
-        self._maximum_iterations = 10
+        self.tolerance = config['tolerance']
+        self._maximum_iterations = config['maxiter']
 
     def solve(self, problem, **kwargs):
         starting_point = kwargs.pop('starting_point', None)

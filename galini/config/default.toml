@@ -2,6 +2,10 @@
 sparse = true
 tol = 1e-7
 
+[outer_approximation]
+maxiter = 50
+tolerance = 1e-5
+
 [logging]
 level = 'INFO'
 stdout = true
