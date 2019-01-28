@@ -45,7 +45,10 @@ class OuterApproximationSolver(Solver):
         logger = Logger.from_kwargs(kwargs)
         nlp_solver = self.instantiate_solver('ipopt')
         mip_solver = self.instantiate_solver('mip')
-        algo = OuterApproximationAlgorithm(nlp_solver, mip_solver)
+        algo = OuterApproximationAlgorithm(
+            nlp_solver,
+            mip_solver,
+            self.config.outer_approximation)
 
         ctx = detect_special_structure(problem)
         for v in problem.variables:
