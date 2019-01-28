@@ -21,7 +21,7 @@ from galini.solvers import (
     OptimalObjective,
     OptimalVariable,
 )
-from galini.core import ipopt_solve, IpoptSolution
+from galini.core import ipopt_solve, IpoptSolution, IpoptApplication, PythonJournal
 
 
 class IpoptStatus(Status):
@@ -54,12 +54,28 @@ class IpoptNLPSolver(Solver):
         xi, xl, xu = self.get_starting_point_and_bounds(problem)
         gl, gu = self.get_constraints_bounds(problem)
         self.logger.debug('Calling in IPOPT')
+
+        app = IpoptApplication()
+        self._configure_ipopt_application(app, self.config.ipopt)
+
         ipopt_solution = ipopt_solve(
-            problem, xi, xl, xu, gl, gu, _IpoptLoggerAdapter(self.logger, INFO)
+            app, problem, xi, xl, xu, gl, gu, _IpoptLoggerAdapter(self.logger, INFO)
         )
         solution = self._build_solution(problem, ipopt_solution)
         self.logger.debug('IPOPT returned {}', solution)
         return solution
+
+    def _configure_ipopt_application(self, app, config):
+        options = app.options()
+        for key, value in config.items():
+            if isinstance(value, str):
+                options.set_string_value(key, value, True, False)
+            elif isinstance(value, int):
+                options.set_integer_value(key, value, True, False)
+            elif isinstance(value, float):
+                options.set_numeric_value(key, value, True, False)
+            else:
+                raise RuntimeError('Invalid option type for {}'.format(key))
 
     def _build_solution(self, problem, solution):
         status = IpoptStatus(solution.status)

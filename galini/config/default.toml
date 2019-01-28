@@ -1,5 +1,4 @@
 [ipopt]
-sparse = true
 tol = 1e-7
 
 [outer_approximation]
