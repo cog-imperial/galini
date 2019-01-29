@@ -21,7 +21,6 @@ from setuptools import setup, find_packages
 from setuptools.extension import Extension
 from setuptools.command.test import test as TestCommand
 from setuptools.command.build_ext import build_ext
-from Cython.Build import cythonize
 
 import numpy as np
 
@@ -83,9 +82,11 @@ class get_pybind11_include(object):
         self.user = user
 
     def __str__(self):
-        # import pybind11
-        # return pybind11.get_include(self.user)
-        return '/data/fc714/pybind11/include'
+        if os.environ.get('PYBIND11_INCLUDE_DIR'):
+            return os.environ.get('PYBIND11_INCLUDE_DIR')
+
+        import pybind11
+        return pybind11.get_include(self.user)
 
 
 def get_ipopt_include():
@@ -174,7 +175,7 @@ setup(
             'abb=galini.abb.solver:AlphaBBSolver',
         ],
     },
-    ext_modules=cythonize(extensions, annotate=True),
+    ext_modules=extensions,
     cmdclass={
         'test': PyTestCommand,
         'build_ext': BuildExt,
