@@ -56,14 +56,19 @@ class IpoptNLPSolver(Solver):
     def actual_solve(self, problem, **kwargs):
         if len(problem.objectives) != 1:
             raise ValueError('Problem must have exactly 1 objective function.')
+
         self.logger = Logger.from_kwargs(kwargs)
+        if 'ipopt_application' in kwargs:
+            app = kwargs.pop('ipopt_application')
+            print('Using app = ', app)
+        else:
+            app = IpoptApplication()
+            self._configure_ipopt_application(app, self.config.ipopt)
+            self._configure_ipopt_logger(app, self.config.ipopt)
+
         xi, xl, xu = self.get_starting_point_and_bounds(problem)
         gl, gu = self.get_constraints_bounds(problem)
         self.logger.debug('Calling in IPOPT')
-
-        app = IpoptApplication()
-        self._configure_ipopt_application(app, self.config.ipopt)
-        self._configure_ipopt_logger(app, self.config.ipopt)
 
         ipopt_solution = ipopt_solve(
             app, problem, xi, xl, xu, gl, gu, _IpoptLoggerAdapter(self.logger, INFO)
@@ -117,7 +122,7 @@ class IpoptNLPSolver(Solver):
             var = problem.variable(i)
             v = problem.variable_view(i)
             if v.has_starting_point():
-                x[i] = v.starting_point()
+                xi[i] = v.starting_point()
             else:
                 lb = v.lower_bound()
                 lb = lb if lb is not None else -2e19

@@ -3,29 +3,34 @@ import pytest
 import pathlib
 import io
 import pyomo.environ as aml
-from pypopt import PythonJournal, EJournalLevel
 from galini import GaliniConfig
 from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
 from galini.ipopt import IpoptNLPSolver
+from galini.core import (
+    IpoptApplication,
+    EJournalLevel,
+    PythonJournal,
+)
 
 
-def derivative_check(model, order, sparse):
+def derivative_check(model_name, model, order):
     config = GaliniConfig()
     config.update({
         'ipopt': {
-            'sparse': sparse,
             'derivative_test': order,
+            'max_iter': 1,
         }
     })
 
-    solver = IpoptNLPSolver(config, None, None)
+    solver = IpoptNLPSolver(config, None)
     # setup Ipopt journalist
     output_str = io.StringIO()
-    journalist = solver.app.journalist()
+    app = IpoptApplication()
+    journalist = app.journalist()
     journalist.delete_all_journals()
-    journalist.add_journal(PythonJournal(EJournalLevel.J_WARNING, output_str))
+    journalist.add_journal(PythonJournal('Default', EJournalLevel.J_WARNING, output_str))
 
-    solver.solve(model)
+    solver.solve(model, ipopt_application=app)
     output = output_str.getvalue()
     output_str.close()
 
@@ -35,9 +40,8 @@ def derivative_check(model, order, sparse):
         assert check_ok
 
 
-@pytest.mark.skip('Second order derivatives failing.')
+@pytest.mark.skip('Failing.')
 @pytest.mark.parametrize('order', ['first-order', 'only-second-order'])
-@pytest.mark.parametrize('sparse', [False])
 @pytest.mark.parametrize('model_name', [
     # simple derivative tests
     'dev_product.py', 'dev_division.py', 'dev_sum.py', 'dev_power.py',
@@ -48,12 +52,12 @@ def derivative_check(model, order, sparse):
     'hs071.py', 'hs078.py', 'cresc4.py', 'eg1.py', 'hatfldf.py', 'hong.py',
     'polak1.py',
 ])
-def test_osil_model(sparse, order, model_name):
-    if model_name in ['hatfldf.py']:
-        pytest.skip('Known derivative fail.')
+def test_osil_model(order, model_name):
+    # if model_name in ['hatfldf.py']:
+    #     pytest.skip('Known derivative fail.')
     current_dir = pathlib.Path(__file__).parent
     osil_file = current_dir / 'models' / model_name
 
     pyomo_model = read_pyomo_model(osil_file)
     dag = dag_from_pyomo_model(pyomo_model)
-    derivative_check(dag, order, sparse)
+    derivative_check(model_name, dag, order)

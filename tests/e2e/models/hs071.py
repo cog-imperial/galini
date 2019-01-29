@@ -2,7 +2,7 @@
 import pyomo.environ as aml
 
 
-def pyomo_create_model(*args, **kwargs):
+def get_pyomo_model(*args, **kwargs):
     m = aml.ConcreteModel()
 
     m.I = range(4)
