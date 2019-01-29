@@ -3,7 +3,7 @@ import pyomo.environ as aml
 import math
 
 
-def pyomo_create_model():
+def get_pyomo_model():
     m = aml.ConcreteModel()
     m.x1 = aml.Var(bounds=(1, None), initialize=2.0)
     m.x2 = aml.Var(bounds=(1, None), initialize=2.0)
