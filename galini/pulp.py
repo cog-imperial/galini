@@ -49,7 +49,7 @@ class MIPSolver(Solver):
 
     def actual_solve(self, problem, **kwargs):
         logger = Logger.from_kwargs(kwargs)
-        solver = _solver(logger)
+        solver = _solver(logger, self.config)
         status =  problem.solve(solver)
         return Solution(
             PulpStatus(status),
@@ -60,9 +60,10 @@ class MIPSolver(Solver):
 
 class CplexSolver(object):
     """Wrapper around pulp.CPLEX_PY to integrate with GALINI."""
-    def __init__(self, logger):
+    def __init__(self, logger, config):
         self._inner = pulp.CPLEX_PY()
         self._logger = logger
+        self._config = config.cplex
 
     def available(self):
         return self._inner.available()
@@ -90,8 +91,17 @@ class CplexSolver(object):
         model.set_log_stream(_CplexLoggerAdapter(self._logger, INFO))
         model.set_results_stream(_CplexLoggerAdapter(self._logger, INFO))
 
-def _solver(logger):
-    cplex = CplexSolver(logger)
+        print(model.parameters.mip.tolerances.mipgap)
+        for key, value in self._config.items():
+            # Parameters are specified as a path (mip.tolerances.mipgap)
+            # access one attribute at the time.
+            attr = model.parameters
+            for p in key.split('.'):
+                attr = getattr(attr, p)
+            attr.set(value)
+
+def _solver(logger, config):
+    cplex = CplexSolver(logger, config)
     if cplex.available():
         return cplex
     return pulp.PULP_CBC_CMD()
