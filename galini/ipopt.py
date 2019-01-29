@@ -21,7 +21,13 @@ from galini.solvers import (
     OptimalObjective,
     OptimalVariable,
 )
-from galini.core import ipopt_solve, IpoptSolution, IpoptApplication, PythonJournal
+from galini.core import (
+    ipopt_solve,
+    IpoptSolution,
+    IpoptApplication,
+    EJournalLevel,
+    PythonJournal,
+)
 
 
 class IpoptStatus(Status):
@@ -57,6 +63,7 @@ class IpoptNLPSolver(Solver):
 
         app = IpoptApplication()
         self._configure_ipopt_application(app, self.config.ipopt)
+        self._configure_ipopt_logger(app, self.config.ipopt)
 
         ipopt_solution = ipopt_solve(
             app, problem, xi, xl, xu, gl, gu, _IpoptLoggerAdapter(self.logger, INFO)
@@ -74,8 +81,15 @@ class IpoptNLPSolver(Solver):
                 options.set_integer_value(key, value, True, False)
             elif isinstance(value, float):
                 options.set_numeric_value(key, value, True, False)
-            else:
-                raise RuntimeError('Invalid option type for {}'.format(key))
+
+    def _configure_ipopt_logger(self, app, config):
+        logging_config = config['logging']
+        level_name = logging_config.get('level', 'J_ITERSUMMARY')
+        level = getattr(EJournalLevel, level_name)
+        journal = PythonJournal('Default', level, _IpoptLoggerAdapter(self.logger, INFO))
+        journalist = app.journalist()
+        journalist.delete_all_journals()
+        journalist.add_journal(journal)
 
     def _build_solution(self, problem, solution):
         status = IpoptStatus(solution.status)

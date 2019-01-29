@@ -1,6 +1,10 @@
 [ipopt]
 tol = 1e-7
 
+[ipopt.logging]
+level = 'J_ITERSUMMARY'
+
+
 [outer_approximation]
 maxiter = 50
 tolerance = 1e-5

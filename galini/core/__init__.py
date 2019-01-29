@@ -75,8 +75,12 @@ from galini_core import (
     RootProblem,
     ChildProblem,
     RelaxedProblem,
+
     ipopt_solve,
     IpoptSolution,
     IpoptApplication,
+    EJournalLevel,
+    Journalist,
+    OptionsList,
     PythonJournal,
 )
