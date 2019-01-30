@@ -15,6 +15,7 @@
 import pulp
 import logging
 from galini.logging import Logger, INFO, WARNING, ERROR
+from galini.timelimit import seconds_left
 from galini.solvers import (
     Solver,
     OptimalObjective,
@@ -94,6 +95,9 @@ class CplexSolver(object):
         for key, value in self._config.items():
             # Parameters are specified as a path (mip.tolerances.mipgap)
             # access one attribute at the time.
+            if key == 'timelimit':
+                # make sure we respect global timelimit
+                value = min(value, seconds_left())
             attr = model.parameters
             for p in key.split('.'):
                 attr = getattr(attr, p)

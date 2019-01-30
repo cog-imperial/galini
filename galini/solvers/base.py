@@ -14,6 +14,7 @@
 """Base classes for solvers."""
 import datetime
 import abc
+from galini.timelimit import seconds_left
 from galini.logging import Logger
 from galini.core import Problem
 
@@ -64,6 +65,8 @@ class Solver(metaclass=abc.ABCMeta):
         -------
         Solution
         """
+        if seconds_left() <= 0:
+            raise TimeoutError('Timelimit reached.')
         logger = Logger.from_kwargs(kwargs)
         run_id = _create_run_id(self.name)
         with logger.child_logger(solver=self.name, run_id=run_id) as child_logger:
