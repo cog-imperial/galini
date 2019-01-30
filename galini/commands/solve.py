@@ -24,6 +24,7 @@ from galini.commands import (
 )
 from galini.logging import RootLogger
 from galini.solvers import SolversRegistry
+from galini.timelimit import timeout
 from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
 
 
@@ -51,7 +52,10 @@ class SolveCommand(CliCommand):
 
         pyomo_model = read_pyomo_model(args.problem)
         dag = dag_from_pyomo_model(pyomo_model)
-        solution = solver.solve(dag, logger=root_logger)
+
+        timelimit = config.get('timelimit')
+        with timeout(timelimit):
+            solution = solver.solve(dag, logger=root_logger)
 
         if solution is None:
             raise RuntimeError('Solver did not return a solution')
