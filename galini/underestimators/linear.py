@@ -20,7 +20,10 @@ from galini.underestimators.underestimator import Underestimator, Underestimator
 class LinearUnderestimator(Underestimator):
     """Underestimator for linear expressions."""
     def can_underestimate(self, problem, expr, ctx):
-        return expr.expression_type == ExpressionType.Linear
+        return (
+            expr.expression_type == ExpressionType.Linear or
+            expr.expression_type == ExpressionType.Variable
+        )
 
     def underestimate(self, problem, expr, ctx):
         return UnderestimatorResult(expr)

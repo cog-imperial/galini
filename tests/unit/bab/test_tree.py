@@ -1,8 +1,9 @@
 # pylint: skip-file
 import pytest
 import pyomo.environ as aml
+import numpy as np
 from galini.pyomo import dag_from_pyomo_model
-from galini.bab.node import Node
+from galini.bab.node import Node, NodeSolution
 from galini.bab.strategy import  KSectionBranchingStrategy
 from galini.bab.tree import BabTree
 
@@ -19,6 +20,11 @@ def problem():
     m.x = aml.Var(m.I, bounds=(-1, 2))
     m.obj = aml.Objective(expr=sum(m.x[i] for i in m.I))
     return dag_from_pyomo_model(m)
+
+
+@pytest.fixture()
+def solution():
+    return NodeSolution(0.0, 1.0, None)
 
 
 @pytest.fixture()
@@ -45,7 +51,7 @@ def tree():
     """
     # t = BabTree(problem(), None)
     t = BabTree(KSectionBranchingStrategy(), FakeSelectionStrategy())
-    t.add_root(problem())
+    t.add_root(problem(), solution())
     root = t.root
     for _ in range(3):
         root.add_children()
@@ -72,3 +78,23 @@ class TestBabTreeCoordinates:
 
         with pytest.raises(IndexError):
             node = tree.node([0, 3])
+
+
+class TestBabTreeState:
+    def test_update_with_new_lower_bound(self, tree):
+        sol = NodeSolution(0.5, 2.0, None)
+        tree.update_state(sol)
+        assert np.isclose(0.5, tree.state.lower_bound)
+        assert np.isclose(1.0, tree.state.upper_bound)
+
+    def test_update_with_new_upper_bound(self, tree):
+        sol = NodeSolution(-10.0, 0.5, None)
+        tree.update_state(sol)
+        assert np.isclose(0.0, tree.state.lower_bound)
+        assert np.isclose(0.5, tree.state.upper_bound)
+
+    def test_update_with_both_new_bounds(self, tree):
+        sol = NodeSolution(0.5, 0.5, None)
+        tree.update_state(sol)
+        assert np.isclose(0.5, tree.state.lower_bound)
+        assert np.isclose(0.5, tree.state.upper_bound)

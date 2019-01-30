@@ -11,9 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Branch & Bound node."""
+from collections import namedtuple
 from galini.core import VariableView
+
+
+NodeState = namedtuple('NodeState', ['lower_bound', 'upper_bound'])
+NodeSolution = namedtuple('NodeSolution', ['lower_bound', 'upper_bound', 'solution'])
 
 
 class BranchingPoint(object):
@@ -23,6 +27,11 @@ class BranchingPoint(object):
             points = [points]
         self.points = points
 
+    def __str__(self):
+        return 'BranchingPoint(variable={}, points={})'.format(
+            self.variable.variable.name, self.points
+        )
+
 
 class Node(object):
     def __init__(self, problem, tree=None, coordinate=None, variable=None, solution=None):
@@ -31,7 +40,19 @@ class Node(object):
         self.tree = tree
         self.coordinate = coordinate
         self.variable = variable
-        self.solution = solution
+        self.solution = None
+        self.state = None
+
+        if solution:
+            self.update(solution)
+
+    def update(self, solution):
+        assert self.state is None
+        self.state = NodeState(
+            lower_bound=solution.lower_bound,
+            upper_bound=solution.upper_bound,
+        )
+        self.solution = solution.solution
 
     def branch(self, strategy=None):
         """Branch at the current node using strategy."""
@@ -45,7 +66,7 @@ class Node(object):
         if branching_point is None:
             raise RuntimeError('Could not branch')
         self.branch_at_point(branching_point)
-        return self.children
+        return self.children, branching_point
 
     def branch_at_point(self, branching_point):
         branching_var = branching_point.variable

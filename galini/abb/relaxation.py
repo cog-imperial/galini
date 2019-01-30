@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from galini.core import Objective, Constraint
+from galini.core import Objective, Constraint, Variable
 from galini.relaxations import Relaxation, RelaxationResult
 from galini.abb.underestimator import AlphaBBUnderestimator
 from galini.special_structure import detect_special_structure
@@ -42,6 +42,14 @@ class AlphaBBRelaxation(Relaxation):
 
     def after_relax(self, problem, relaxed_problem):
         self._ctx = None
+
+    def relax_variable(self, problem, variable):
+        return Variable(
+            variable.name,
+            problem.lower_bound(variable),
+            problem.upper_bound(variable),
+            problem.domain(variable)
+        )
 
     def relax_objective(self, problem, objective):
         result = self.relax_expression(problem, objective.root_expr)

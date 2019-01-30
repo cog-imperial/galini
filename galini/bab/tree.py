@@ -13,7 +13,12 @@
 # limitations under the License.
 
 """Branch & Bound tree."""
-from galini.bab.node import Node
+from collections import namedtuple
+import numpy as np
+from galini.bab.node import Node, NodeSolution
+
+
+TreeState = namedtuple('TreeState', ['lower_bound', 'upper_bound'])
 
 
 class BabTree(object):
@@ -21,15 +26,19 @@ class BabTree(object):
         self.root = None
         self.branching_strategy = branching_strategy
         self.selection_strategy = selection_strategy
+        self.state = TreeState(lower_bound=-np.inf, upper_bound=np.inf)
 
-    def add_root(self, problem, solution=None):
-        self.root = Node(problem, tree=self, coordinate=[0], solution=solution)
-        self.insert_node(self.root)
+    def add_root(self, problem, solution):
+        self.root = Node(problem, tree=self, coordinate=[0])
+        self.update_node(self.root, solution)
 
     def next_node(self):
         return self.selection_strategy.next_node()
 
-    def insert_node(self, node):
+    def update_node(self, node, solution):
+        assert isinstance(solution, NodeSolution)
+        node.update(solution)
+        self.update_state(solution)
         self.selection_strategy.insert_node(node)
 
     def node(self, coord):
@@ -49,3 +58,8 @@ class BabTree(object):
                 raise IndexError('Node index out of bounds at {}', coord[:i])
             current = current.children[c]
         return current
+
+    def update_state(self, solution):
+        new_lower_bound = max(solution.lower_bound, self.state.lower_bound)
+        new_upper_bound = min(solution.upper_bound, self.state.upper_bound)
+        self.state = TreeState(new_lower_bound, new_upper_bound)
