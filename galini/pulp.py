@@ -91,7 +91,6 @@ class CplexSolver(object):
         model.set_log_stream(_CplexLoggerAdapter(self._logger, INFO))
         model.set_results_stream(_CplexLoggerAdapter(self._logger, INFO))
 
-        print(model.parameters.mip.tolerances.mipgap)
         for key, value in self._config.items():
             # Parameters are specified as a path (mip.tolerances.mipgap)
             # access one attribute at the time.
@@ -113,6 +112,9 @@ class _CplexLoggerAdapter(object):
         self._level = level
 
     def write(self, msg):
+        # strip newline
+        if msg[-1] == '\n':
+            msg = msg[:-1]
         self._logger.log(self._level, msg)
 
     def flush(self):

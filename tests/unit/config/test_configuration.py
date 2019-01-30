@@ -13,7 +13,7 @@ def user_config():
 def test_default_config():
     config = GaliniConfig()
     assert config
-    assert config.logging['level'] == 0
+    assert config.logging['level'] == 'INFO'
 
 
 def test_user_config_overrides_existing_keys(user_config):

@@ -50,12 +50,14 @@ class OuterApproximationSolver(Solver):
             mip_solver,
             self.config.outer_approximation)
 
+        # TODO(fra): detect_special_structure uses bound information from variables
+        # and not the problem, this causes problems when the two don't coincide.
         ctx = detect_special_structure(problem)
         for v in problem.variables:
             vv = problem.variable_view(v)
             new_bound = ctx.bounds[v]
-            vv.set_lower_bound(new_bound.lower_bound)
-            vv.set_upper_bound(new_bound.upper_bound)
+            vv.set_lower_bound(_safe_lb(new_bound.lower_bound, vv.lower_bound()))
+            vv.set_upper_bound(_safe_ub(new_bound.upper_bound, vv.upper_bound()))
 
         starting_point = self._starting_point(nlp_solver, problem, logger)
         return algo.solve(
@@ -68,3 +70,14 @@ class OuterApproximationSolver(Solver):
         relaxed = continuous_relax.relax(problem)
         solution = nlp_solver.solve(relaxed, logger=logger)
         return np.array([v.value for v in solution.variables])
+
+
+def _safe_lb(a, b):
+    if b is None:
+        return a
+    return max(a, b)
+
+def _safe_ub(a, b):
+    if b is None:
+        return a
+    return min(a, b)

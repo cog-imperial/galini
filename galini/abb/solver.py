@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """AlphaBB Solver."""
+from galini.logging import Logger
+from galini.special_structure import detect_special_structure
 from galini.solvers import Solver, SolversRegistry
 from galini.abb.algorithm import AlphaBBAlgorithm
 
@@ -21,25 +23,17 @@ class AlphaBBSolver(Solver):
 
     description = 'AlphaBB for nonconvex MINLP.'
 
-    def __init__(self, config, mip_solver_registry, nlp_solver_registry):
-        super().__init__(config, mip_solver_registry, nlp_solver_registry)
+    def actual_solve(self, problem, **kwargs):
+        logger = Logger.from_kwargs(kwargs)
+        nlp_solver = self.instantiate_solver('ipopt')
+        minlp_solver = self.instantiate_solver('oa')
 
-        self._nlp_solver_registry = nlp_solver_registry
-        self._nlp_solver_cls = nlp_solver_registry.get('ipopt')
+        ctx = detect_special_structure(problem)
+        for v in problem.variables:
+            vv = problem.variable_view(v)
+            new_bound = ctx.bounds[v]
+            vv.set_lower_bound(new_bound.lower_bound)
+            vv.set_upper_bound(new_bound.upper_bound)
 
-        registry = SolversRegistry()
-        self._cvx_minlp_solver_cls = registry.get('oa')
-
-        if self._nlp_solver_cls is None:
-            raise RuntimeError('ipopt solver is required for AlphaBBSolver')
-
-        if self._cvx_minlp_solver_cls is None:
-            raise RuntimeError('outer_approximation solver is required for AlphaBBSolver')
-
-        self._config = config
-
-    def solve(self, problem, **kwargs):
-        nlp_solver = self._nlp_solver_cls(self._config, None, self._nlp_solver_registry)
-        minlp_solver = self._cvx_minlp_solver_cls(self._config, None, self._nlp_solver_registry)
-        algo = AlphaBBAlgorithm(nlp_solver, minlp_solver, self.name, self.run_id)
-        return algo.solve(problem)
+        algo = AlphaBBAlgorithm(nlp_solver, minlp_solver)
+        return algo.solve(problem, logger=logger)

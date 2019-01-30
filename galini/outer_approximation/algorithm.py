@@ -73,37 +73,45 @@ class OuterApproximationAlgorithm(object):
         fixed_integer_relaxation = FixedIntegerContinuousRelaxation()
         milp_relaxation = MilpRelaxation()
         feasibility_problem_relaxation = FeasibilityProblemRelaxation()
-
         p_oa_t = None
 
         p_x = fixed_integer_relaxation.relax(problem, x_k=starting_point)
 
-        while self._converged(state) and self._iterations_exceeded(state):
+        self.logger.info(
+            'Starting iterations, maximum iterations = {}, tolerance = {}',
+            self._maximum_iterations, self.tolerance
+        )
+        while not self._converged(state) and not self._iterations_exceeded(state):
             self.logger.info('Starting Iteration: {}', state)
+
             # Solve P_OA(T) to obtain (alpha, x)
             if p_oa_t is None:
                 p_oa_t = milp_relaxation.relax(problem, x_k=starting_point)
             else:
                 milp_relaxation.update_relaxation(problem, p_oa_t, x_k=x_k)
+            self.logger.debug('Solving MILP {}', p_oa_t)
             p_oa_t_solution = self._mip_solver.solve(p_oa_t.lp, logger=self.logger)
+            self.logger.debug('P_OA_T solution is {}', p_oa_t_solution)
             assert np.isfinite(p_oa_t.alpha.value())
 
             # update lower bound
             state.z_l = p_oa_t.alpha.value()
             self.logger.update_variable('z_l', state.iteration, state.z_l)
+            x_k_p_oa_t = np.array([v.value() for v in p_oa_t.x])
 
             # Solve P_x
             fixed_integer_relaxation.update_relaxation(
                 problem,
                 p_x,
-                x_k=np.array([v.value() for v in p_oa_t.x])
+                x_k=x_k_p_oa_t,
             )
             p_x_solution = self._nlp_solver.solve(p_x, logger=self.logger)
+            self.logger.debug('P_X solution is {}', p_x_solution)
+            x_k = np.array([v.value for v in p_x_solution.variables])
 
             if p_x_solution.status.is_success():
                 # update upper bound
                 assert len(p_x_solution.objectives) == 1
-                x_k = np.array([v.value for v in p_x_solution.variables])
                 obj_value = p_x_solution.objectives[0].value
                 assert np.isfinite(obj_value)
                 state.z_u = min(state.z_u, obj_value)
@@ -132,22 +140,24 @@ class OuterApproximationAlgorithm(object):
 
             self.logger.info('Iteration Completed: {}', state)
             state.iteration += 1
-        return self._build_solution_from_p_oa_t(problem, p_oa_t, p_oa_t_solution)
+        return self._build_solution_from_p_oa_t(problem, state, p_oa_t, x_k, p_oa_t_solution)
 
     def _converged(self, state):
-        return (state.z_u - state.z_l) > self.tolerance
+        return (state.z_u - state.z_l) < self.tolerance
 
     def _iterations_exceeded(self, state):
-        return state.iteration < self._maximum_iterations
+        return state.iteration > self._maximum_iterations
 
-    def _build_solution_from_p_oa_t(self, problem, p_oa_t, solution):
+    def _build_solution_from_p_oa_t(self, problem, state, p_oa_t, x_k, solution):
+        if not self._converged(state):
+            raise RuntimeError('Did not converge.')
         status = solution.status
         obj_name = problem.objectives[0].name
         opt_obj = [
             OptimalObjective(name=obj_name, value=p_oa_t.alpha.value())
         ]
         opt_vars = [
-            OptimalVariable(name=variable.name, value=p_oa_t.x[i].value())
+            OptimalVariable(name=variable.name, value=x_k[i])
             for i, variable in enumerate(problem.variables)
         ]
         return Solution(status, optimal_obj=opt_obj, optimal_vars=opt_vars)

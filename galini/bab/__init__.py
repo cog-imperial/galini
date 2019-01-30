@@ -17,5 +17,5 @@
 __all__ = ['BabTree', 'Node', 'BranchingStrategy', 'KSectionBranchingStrategy']
 
 from .tree import BabTree
-from .node import Node
+from .node import Node, NodeSolution
 from .strategy import BranchingStrategy, KSectionBranchingStrategy
