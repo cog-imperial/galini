@@ -57,6 +57,7 @@ class TestMcCormickUnderestimator:
         assert expr.expression_type == ExpressionType.Linear
         assert np.allclose(expr.coefficients, np.array([5.0]))
 
+    @pytest.mark.skip('Requires better conversion to Quadratic')
     def test_bilinear_with_coef_2(self, problem):
         ctx = ProblemContext(problem)
         r = McCormickUnderestimator()
