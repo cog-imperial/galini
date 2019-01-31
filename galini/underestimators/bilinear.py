@@ -85,33 +85,9 @@ class McCormickUnderestimator(Underestimator):
         )
 
     def _get_variables(self, expr):
-        x = expr.children[0]
-        y = expr.children[1]
-
-        if x.expression_type == ExpressionType.Linear:
-            assert len(x.children) == 1
-            assert y.expression_type == ExpressionType.Variable
-            c = x.coefficients[0]
-            x = x.children[0]
-            return x, y, c
-
-        if y.expression_type == ExpressionType.Linear:
-            assert len(y.children) == 1
-            assert x.expression_type == ExpressionType.Variable
-            c = y.coefficients[0]
-            y = y.children[0]
-            return x, y, c
-
-        if x.expression_type == ExpressionType.Product:
-            assert y.expression_type == ExpressionType.Constant
-            x_ = x.children[1]
-            y_ = x.children[0]
-            c = y.value
-            return x_, y_, c
-
-        assert x.expression_type == ExpressionType.Variable
-        assert y.expression_type == ExpressionType.Variable
-        return x, y, 1.0
+        assert len(expr.terms) == 1
+        term = expr.terms[0]
+        return term.var1, term.var2, term.coefficient
 
     def _format_aux_name(self, x, y):
         return '_aux_bilinear_{}_{}'.format(x.name, y.name)
