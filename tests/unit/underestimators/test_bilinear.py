@@ -111,7 +111,7 @@ class TestMcCormickUnderestimator:
         power = problem.constraint('power').root_expr
         ctx.set_polynomiality(power, PolynomialDegree(2))
 
-        assert not r.can_underestimate(problem, power, ctx)
+        assert r.can_underestimate(problem, power, ctx)
 
     def _check_underestimator_expr(self, expr):
         assert len(expr.children) == 3

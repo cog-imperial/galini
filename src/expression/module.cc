@@ -172,6 +172,22 @@ void init_module(py::module& m) {
     .def_property_readonly("expression_type",
 			   [ExpressionType](const LinearExpression&) { return ExpressionType.attr("Linear"); });
 
+  py::class_<QuadraticExpression, NaryExpression, QuadraticExpression::ptr>(m, "QuadraticExpression")
+    .def(py::init<const std::vector<typename Expression::ptr>&,
+	 const std::vector<typename Expression::ptr>&, const std::vector<double>&>())
+    .def(py::init<const Expression::problem_ptr&, const std::vector<typename Expression::ptr>&,
+	 const std::vector<typename Expression::ptr>&, const std::vector<double>&>())
+    .def(py::init<const std::vector<QuadraticExpression::ptr>&>())
+    .def(py::init<const Expression::problem_ptr&, const std::vector<QuadraticExpression::ptr>&>())
+    .def("coefficient", &QuadraticExpression::coefficient)
+    .def_property_readonly("terms", &QuadraticExpression::terms)
+    .def_property_readonly("expression_type",
+			   [ExpressionType](const QuadraticExpression&) { return ExpressionType.attr("Quadratic"); });
+
+  py::class_<QuadraticTerm>(m, "QuadraticTerm")
+    .def_readonly("var1", &QuadraticTerm::var1)
+    .def_readonly("var2", &QuadraticTerm::var2)
+    .def_readonly("coefficient", &QuadraticTerm::coefficient);
 }
 
 } // namespace expression

@@ -100,6 +100,7 @@ def _node_label(vertex):
         core.SumExpression: '+',
         core.PowExpression: '^',
         core.LinearExpression: 'Σ',
+        core.QuadraticExpression: 'Q',
         core.NegationExpression: '-',
         core.AbsExpression: '|.|',
         core.SqrtExpression: '√',

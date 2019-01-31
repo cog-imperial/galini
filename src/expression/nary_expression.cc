@@ -20,6 +20,16 @@ namespace galini {
 
 namespace expression {
 
+namespace detail {
+
+struct ExpressionCmp {
+  bool operator()(const Expression::ptr& lhs, const Expression::ptr& rhs) {
+    return lhs->uid() < rhs->uid();
+  }
+};
+
+}
+
 ADFloat SumExpression::eval(values_ptr<ADFloat>& values) const {
   return eval_sum(values);
 }
@@ -37,6 +47,91 @@ ADObject LinearExpression::eval(values_ptr<ADObject>& values) const {
   return eval_linear(values);
 }
 
+QuadraticExpression::QuadraticExpression(const std::shared_ptr<Problem>& problem,
+					 const std::vector<typename Expression::ptr>& vars1,
+					 const std::vector<typename Expression::ptr>& vars2,
+					 const std::vector<double>& coefficients)
+  : NaryExpression(problem) {
+  if ((vars1.size() != vars2.size()) || (vars1.size() != coefficients.size())) {
+    throw std::runtime_error("vars1, vars2 and coefficients must have the same size");
+  }
+
+  std::set<Expression::ptr, detail::ExpressionCmp> unique_children;
+
+  for (index_t i = 0; i < vars1.size(); ++i) {
+    auto var1 = vars1[i];
+    auto idx1 = var1->idx();
+    auto var2 = vars2[i];
+    auto idx2 = var2->idx();
+    auto coefficient = coefficients[i];
+
+    unique_children.insert(var1);
+    unique_children.insert(var2);
+
+    if (idx1 < idx2) {
+      auto term = QuadraticTerm{var1, var2, coefficient};
+      terms_[std::make_tuple(idx1, idx2)] = term;
+    } else {
+      auto term = QuadraticTerm{var2, var1, coefficient};
+      terms_[std::make_tuple(idx2, idx1)] = term;
+    }
+  }
+
+  std::copy(unique_children.begin(), unique_children.end(), std::back_inserter(children_));
+  num_children_ = children_.size();
+}
+
+QuadraticExpression::QuadraticExpression(const std::shared_ptr<Problem>& problem,
+					 const std::vector<QuadraticExpression::ptr>& expressions)
+  : NaryExpression(problem) {
+
+  std::set<Expression::ptr, detail::ExpressionCmp> unique_children;
+
+  for (const auto& expr : expressions) {
+    for (const auto& t : expr->terms_) {
+      unique_children.insert(t.second.var1);
+      unique_children.insert(t.second.var2);
+
+      if (terms_.find(t.first) != terms_.end()) {
+	auto existing = terms_[t.first];
+	auto new_coefficient = existing.coefficient + t.second.coefficient;
+	auto term = QuadraticTerm{existing.var1, existing.var2, new_coefficient};
+	terms_[t.first] = term;
+      } else {
+	terms_.emplace(t);
+      }
+    }
+  }
+
+  std::copy(unique_children.begin(), unique_children.end(), std::back_inserter(children_));
+  num_children_ = children_.size();
+}
+
+double QuadraticExpression::coefficient(const std::shared_ptr<Expression>& v1,
+					const std::shared_ptr<Expression>& v2) const {
+  auto idx1 = std::min(v1->idx(), v2->idx());
+  auto idx2 = std::max(v1->idx(), v2->idx());
+  auto idx = std::make_tuple(idx1, idx2);
+  auto term = terms_.at(idx);
+  return term.coefficient;
+}
+
+std::vector<QuadraticTerm> QuadraticExpression::terms() const {
+  std::vector<QuadraticTerm> result;
+  for (const auto& t : terms_) {
+    result.push_back(t.second);
+  }
+  return result;
+}
+
+
+ADFloat QuadraticExpression::eval(values_ptr<ADFloat>& values) const {
+  return eval_quadratic(values);
+}
+
+ADObject QuadraticExpression::eval(values_ptr<ADObject>& values) const {
+  return eval_quadratic(values);
+}
 
 } // namespace expression
 
