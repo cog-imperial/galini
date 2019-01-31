@@ -33,7 +33,7 @@ class TestKFoldBranchingStrategy:
         tree.add_root(problem, solution)
         node = tree.root
         for i in range(5):
-            children = node.branch(bisect_strat)
+            children, _ = node.branch(bisect_strat)
             assert len(children) == 2
             for child in children:
                 assert child.variable.idx == i
@@ -45,7 +45,7 @@ class TestKFoldBranchingStrategy:
         tree.add_root(problem, solution)
         node = tree.root
         for i in range(5):
-            children = node.branch(ksection_strat)
+            children, _ = node.branch(ksection_strat)
             assert len(children) == 7
             for child in children:
                 assert child.variable.idx == i

@@ -54,6 +54,7 @@ from galini_core import (
     SumExpression,
     PowExpression,
     LinearExpression,
+    QuadraticExpression,
     UnaryFunctionExpression,
     NegationExpression,
     AbsExpression,

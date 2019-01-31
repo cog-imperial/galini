@@ -23,10 +23,11 @@ class McCormickUnderestimator(Underestimator):
     """Underestimate bilinear terms using McCormick envelope."""
     def can_underestimate(self, problem, expr, ctx):
         poly = ctx.polynomial(expr)
-        return poly.is_quadratic() and expr.expression_type == ExpressionType.Product
+        return poly.is_quadratic() and expr.expression_type == ExpressionType.Quadratic
 
     def underestimate(self, problem, expr, ctx):
-        assert expr.expression_type == ExpressionType.Product
+        assert expr.expression_type == ExpressionType.Quadratic
+        assert len(expr.terms) == 1
         x_expr, y_expr, c = self._get_variables(expr)
 
         x = problem.variable_view(x_expr)

@@ -32,7 +32,7 @@ class TestBranching:
     def test_branch_on_single_point(self, problem):
         tree = MockTree()
         node = Node(problem, tree, [0])
-        new_nodes = node.branch(MockBranching(1.5))
+        new_nodes, _ = node.branch(MockBranching(1.5))
 
         assert len(new_nodes) == 2
 
@@ -42,7 +42,7 @@ class TestBranching:
     def test_branch_on_list_of_points(self, problem):
         tree = MockTree()
         node = Node(problem, tree, [0])
-        new_nodes = node.branch(MockBranching([-0.5, 0.0, 0.5, 1.0, 1.5]))
+        new_nodes, _ = node.branch(MockBranching([-0.5, 0.0, 0.5, 1.0, 1.5]))
         assert len(new_nodes) == 6
 
         expected_bounds = [

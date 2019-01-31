@@ -79,6 +79,7 @@ class _ComponentFactory(object):
         """Convert and add constraint to the problem."""
         (lower_bound, upper_bound), expr = bounds_and_expr(omo_cons.expr)
         root_expr = self._expression(expr)
+        self.dag.insert_tree(root_expr)
         constraint = self.dag.add_constraint(
             omo_cons.name,
             root_expr,
@@ -95,6 +96,7 @@ class _ComponentFactory(object):
             sense = core.Sense.MAXIMIZE
 
         root_expr = self._expression(omo_obj.expr)
+        self.dag.insert_tree(root_expr)
         obj = self.dag.add_objective(
             omo_obj.name,
             root_expr,
@@ -127,7 +129,6 @@ def _convert_expression(memo, dag, expr):
 class _ExpressionConverterHandler(ExpressionHandler):
     def __init__(self, memo, dag):
         self.memo = memo
-        self.dag = dag
 
     def get(self, expr):
         """Get galini expression equivalent to expr."""
@@ -138,7 +139,7 @@ class _ExpressionConverterHandler(ExpressionHandler):
 
     def set(self, expr, new_expr):
         """Set expr to new_expr index."""
-        self.dag.insert_vertex(new_expr)
+        # self.dag.insert_vertex(new_expr)
         self.memo.set(expr, new_expr)
 
     def _check_children(self, expr):
@@ -153,7 +154,7 @@ class _ExpressionConverterHandler(ExpressionHandler):
     def visit_numeric_constant(self, expr):
         if self.memo[expr] is not None:
             return self.memo[expr]
-        const = core.Constant(self.dag, expr.value)
+        const = core.Constant(expr.value)
         self.set(expr, const)
         return None
 
@@ -169,11 +170,41 @@ class _ExpressionConverterHandler(ExpressionHandler):
         raise AssertionError('Invalid EqualityExpression encountered')
 
     def visit_product(self, expr):
+        def _is_bilinear(children):
+            if len(children) != 2:
+                return False
+            a, b = children
+            if isinstance(a, core.Variable) and isinstance(b, core.Variable):
+                return True
+            if isinstance(a, core.Variable) and isinstance(b, core.LinearExpression):
+                return len(b.children) == 1
+            if isinstance(a, core.LinearExpression) and isinstance(b, core.Variable):
+                return len(a.children) == 1
+            return False
+
+        def _bilinear_variables_with_coefficient(children):
+            assert len(children) == 2
+            a, b = children
+            if isinstance(a, core.Variable) and isinstance(b, core.Variable):
+                return a, b, 1.0
+            if isinstance(a, core.Variable) and isinstance(b, core.LinearExpression):
+                assert len(b.children) == 1
+                assert b.constant_term == 0.0
+                return a, b.children[0], b.coefficients[0]
+            if isinstance(a, core.LinearExpression) and isinstance(b, core.Variable):
+                assert len(a.children) == 1
+                assert a.constant_term == 0.0
+                return a.children[0], b, a.coefficients[0]
+
         if self.memo[expr] is not None:
             return self.memo[expr]
         self._check_children(expr)
         children = [self.get(a) for a in expr._args]
-        new_expr = core.ProductExpression(self.dag, children)
+        if _is_bilinear(children):
+            a, b, c = _bilinear_variables_with_coefficient(children)
+            new_expr = core.QuadraticExpression([a], [b], [c])
+        else:
+            new_expr = core.ProductExpression(children)
         self.set(expr, new_expr)
         return None
 
@@ -183,17 +214,44 @@ class _ExpressionConverterHandler(ExpressionHandler):
 
         self._check_children(expr)
         children = [self.get(a) for a in expr._args]
-        new_expr = core.DivisionExpression(self.dag, children)
+        new_expr = core.DivisionExpression(children)
         self.set(expr, new_expr)
         return None
 
     def visit_sum(self, expr):
+        def _has_bilinear_terms(children):
+            for child in children:
+                if isinstance(child, core.QuadraticExpression):
+                    return True
+            return False
+
+        def _quadratic_and_other_children(children):
+            quadratic = []
+            other = []
+            for child in children:
+                if isinstance(child, core.QuadraticExpression):
+                    quadratic.append(child)
+                else:
+                    other.append(child)
+            return quadratic, other
+
         if self.memo[expr] is not None:
             return self.memo[expr]
 
         self._check_children(expr)
         children = [self.get(a) for a in expr._args]
-        new_expr = core.SumExpression(self.dag, children)
+        if _has_bilinear_terms(children):
+            # get quadratic terms and combine them in one.
+            # Rest stays unchanged.
+            quadratic_children, other_children = _quadratic_and_other_children(children)
+            if len(other_children) == 0:
+                new_expr = core.QuadraticExpression(quadratic_children)
+            else:
+                quadratic_expr = core.QuadraticExpression(quadratic_children)
+                other_children.append(quadratic_expr)
+                new_expr = core.SumExpression(other_children)
+        else:
+            new_expr = core.SumExpression(children)
         self.set(expr, new_expr)
         return None
 
@@ -204,9 +262,7 @@ class _ExpressionConverterHandler(ExpressionHandler):
         children = [self.get(a) for a in expr._args]
         coeffs = np.array([expr._coef[id(a)] for a in expr._args])
         const = expr._const
-        new_expr = core.LinearExpression(
-            self.dag, children, coeffs, const
-        )
+        new_expr = core.LinearExpression(children, coeffs, const)
         self.set(expr, new_expr)
         return None
 
@@ -216,7 +272,7 @@ class _ExpressionConverterHandler(ExpressionHandler):
 
         self._check_children(expr)
         children = [self.get(a) for a in expr._args]
-        new_expr = core.NegationExpression(self.dag, children)
+        new_expr = core.NegationExpression(children)
         self.set(expr, new_expr)
         return None
 
@@ -242,7 +298,7 @@ class _ExpressionConverterHandler(ExpressionHandler):
         }.get(fun)
         if ExprClass is None:
             raise AssertionError('Unknwon function', fun)
-        new_expr = ExprClass(self.dag, children)
+        new_expr = ExprClass(children)
         self.set(expr, new_expr)
         return None
 
@@ -252,16 +308,43 @@ class _ExpressionConverterHandler(ExpressionHandler):
 
         self._check_children(expr)
         children = [self.get(a) for a in expr._args]
-        new_expr = core.AbsExpression(self.dag, children)
+        new_expr = core.AbsExpression(children)
         self.set(expr, new_expr)
         return None
 
     def visit_pow(self, expr):
+        def _is_square(children):
+            assert len(children) == 2
+            base, expo = children
+            if not isinstance(expo, core.Constant):
+                return False
+
+            if not (int(expo.value) == expo.value == 2.0):
+                return False
+
+            if isinstance(base, core.LinearExpression):
+                return len(base.children) == 1 and base.constant_term == 0.0
+            if isinstance(base, core.Variable):
+                return True
+            return False
+
+        def _square_variable_and_exponent(children):
+            assert len(children) == 2
+            base, expo = children
+            if isinstance(base, core.LinearExpression):
+                assert len(base.children) == 1
+                return base.children[0], expo.value
+            return base, expo.value
+
         if self.memo[expr] is not None:
             return self.memo[expr]
 
         self._check_children(expr)
         children = [self.get(a) for a in expr._args]
-        new_expr = core.PowExpression(self.dag, children)
+        if _is_square(children):
+            var, expo = _square_variable_and_exponent(children)
+            new_expr = core.QuadraticExpression([var], [var], [expo])
+        else:
+            new_expr = core.PowExpression(children)
         self.set(expr, new_expr)
         return None

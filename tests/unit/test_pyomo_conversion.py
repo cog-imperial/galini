@@ -111,7 +111,7 @@ class TestConvertExpression(object):
         m.I = range(10)
         m.x = aml.Var(m.I)
 
-        m.c = aml.Constraint(range(9), rule=lambda m, i: 2*m.x[i] * 3*m.x[i+1] >= 0)
+        m.c = aml.Constraint(range(9), rule=lambda m, i: aml.sin(m.x[i]) * aml.cos(m.x[i+1]) >= 0)
 
         dag = dag_from_pyomo_model(m)
 
@@ -120,13 +120,33 @@ class TestConvertExpression(object):
             root = constraint.root_expr
             assert isinstance(root, core.ProductExpression)
             assert root.num_children == 2
-            linear, var = root.children
-            assert isinstance(var, core.Variable)
-            assert isinstance(linear, core.LinearExpression)
-            assert np.array_equal(linear.coefficients, [6.0])
+            child1, child2 = root.children
+            assert isinstance(child1, core.SinExpression)
+            assert isinstance(child2, core.CosExpression)
             self._check_depth(root)
 
-    def test_sum(self):
+    def test_product_as_quadratic(self):
+        m = aml.ConcreteModel()
+        m.I = range(10)
+        m.x = aml.Var(m.I)
+
+        m.c = aml.Constraint(range(9), rule=lambda m, i: 2*m.x[i] * 3*m.x[i+1] >= 0)
+
+        dag = dag_from_pyomo_model(m)
+
+        assert len(dag.constraints) == 9
+        for constraint in dag.constraints:
+            root = constraint.root_expr
+            assert isinstance(root, core.QuadraticExpression)
+            assert root.num_children == 2
+            assert len(root.terms) == 1
+            var1, var2 = root.children
+            assert isinstance(var1, core.Variable)
+            assert isinstance(var2, core.Variable)
+            assert np.isclose(root.coefficient(var1, var2), 6.0)
+            self._check_depth(root)
+
+    def test_sum_as_quadratic(self):
         m = aml.ConcreteModel()
         m.I = range(10)
         m.x = aml.Var(m.I)
@@ -138,9 +158,25 @@ class TestConvertExpression(object):
         assert len(dag.constraints) == 8
         for constraint in dag.constraints:
             root = constraint.root_expr
+            assert isinstance(root, core.QuadraticExpression)
+            self._check_depth(root)
+
+
+    def test_sum(self):
+        m = aml.ConcreteModel()
+        m.I = range(10)
+        m.x = aml.Var(m.I)
+
+        m.c = aml.Constraint(range(8), rule=lambda m, j: sum(aml.sin(m.x[i+1]) for i in range(j+2)) >= 0)
+
+        dag = dag_from_pyomo_model(m)
+
+        assert len(dag.constraints) == 8
+        for constraint in dag.constraints:
+            root = constraint.root_expr
             assert isinstance(root, core.SumExpression)
             for c in root.children:
-                assert isinstance(c, core.ProductExpression)
+                assert isinstance(c, core.SinExpression)
             self._check_depth(root)
 
     def test_negation(self):

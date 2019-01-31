@@ -25,6 +25,18 @@ namespace galini {
 
 namespace expression {
 
+namespace detail {
+
+struct IndexPairHash : public std::unary_function<std::tuple<index_t, index_t>, std::size_t> {
+  std::size_t operator()(const std::tuple<index_t, index_t>& pair) const {
+    auto h0 = std::hash<index_t>()(std::get<0>(pair));
+    auto h1 = std::hash<index_t>()(std::get<1>(pair));
+    return h0 ^ (h1 << 1);
+  }
+};
+
+}
+
 class NaryExpression : public Expression {
 public:
   using ptr = std::shared_ptr<NaryExpression>;
@@ -32,6 +44,11 @@ public:
   NaryExpression(const std::shared_ptr<Problem>& problem,
 		 const std::vector<Expression::ptr>& children)
     : Expression(problem), children_(children) {
+    this->num_children_ = children_.size();
+  }
+  NaryExpression(const std::shared_ptr<Problem>& problem)
+    : Expression(problem) {
+    children_ = {};
     this->num_children_ = children_.size();
   }
 
@@ -110,6 +127,55 @@ private:
 
   coefficients_t coefficients_;
   double constant_;
+};
+
+
+struct QuadraticTerm {
+  std::shared_ptr<Expression> var1;
+  std::shared_ptr<Expression> var2;
+  double coefficient;
+};
+
+
+class QuadraticExpression : public NaryExpression {
+public:
+  using ptr = std::shared_ptr<QuadraticExpression>;
+
+  QuadraticExpression(const std::shared_ptr<Problem>& problem,
+		      const std::vector<typename Expression::ptr>& vars1,
+		      const std::vector<typename Expression::ptr>& vars2,
+		      const std::vector<double>& coefficients);
+
+  QuadraticExpression(const std::vector<typename Expression::ptr>& vars1,
+		      const std::vector<typename Expression::ptr>& vars2,
+		      const std::vector<double>& coefficients)
+    : QuadraticExpression(nullptr, vars1, vars2, coefficients) {}
+
+  QuadraticExpression(const std::shared_ptr<Problem>& problem,
+		      const std::vector<QuadraticExpression::ptr>& expressions);
+
+  QuadraticExpression(const std::vector<QuadraticExpression::ptr>& expressions)
+    : QuadraticExpression(nullptr, expressions) {}
+
+  double coefficient(const std::shared_ptr<Expression>& v1, const std::shared_ptr<Expression>& v2) const;
+  std::vector<QuadraticTerm> terms() const;
+
+  ADFloat eval(values_ptr<ADFloat>& values) const override;
+  ADObject eval(values_ptr<ADObject>& values) const override;
+
+private:
+  template<class T>
+  T eval_quadratic(values_ptr<T>& values) const {
+    T result(0.0);
+    for (const auto& p : terms_) {
+      auto t = p.second;
+      result += (*values)[t.var1] * (*values)[t.var2] * T(t.coefficient);
+    }
+    return result;
+  }
+
+  using index_pair = std::tuple<index_t, index_t>;
+  std::unordered_map<index_pair, QuadraticTerm, detail::IndexPairHash> terms_;
 };
 
 } // namespace expression

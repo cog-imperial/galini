@@ -35,6 +35,8 @@ class Timelimit(object):
         self.start = datetime.datetime.utcnow()
 
     def seconds_left(self):
+        if self.start is None:
+            return DEFAULT_TIMELIMIT
         now = datetime.datetime.utcnow()
         difference = now - self.start
         time_left = int(self.timelimit - difference.total_seconds())
