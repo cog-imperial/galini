@@ -227,7 +227,12 @@ def _clone_expression(expr, children):
     if type_ == ExpressionType.Linear:
         return core.LinearExpression(children, expr.coefficients, expr.constant_term)
     elif type_ == ExpressionType.Quadratic:
-        return core.QuadraticExpression([expr])
+        child_by_index = dict([(ch.idx, ch) for ch in children])
+        terms = expr.terms
+        coefficients = [t.coefficient for t in terms]
+        vars1 = [child_by_index[t.var1.idx] for t in terms]
+        vars2 = [child_by_index[t.var2.idx] for t in terms]
+        return core.QuadraticExpression(vars1, vars2, coefficients)
     elif type_ == ExpressionType.Constant:
         return core.Constant(expr.value)
     elif type_ == ExpressionType.UnaryFunction:
