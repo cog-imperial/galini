@@ -161,6 +161,20 @@ class TestConvertExpression(object):
             assert isinstance(root, core.QuadraticExpression)
             self._check_depth(root)
 
+    def test_sum_of_quadratic_and_other(self):
+        m = aml.ConcreteModel()
+        m.I = range(10)
+        m.x = aml.Var(m.I)
+
+        m.c = aml.Objective(expr=2*m.x[0]*m.x[1] + 3*m.x[0]*m.x[1] + m.x[3]*m.x[4] + m.x[5] + aml.sin(m.x[6]))
+
+        dag = dag_from_pyomo_model(m)
+
+        root_expr = dag.objectives[0].root_expr
+        assert isinstance(root_expr, core.SumExpression)
+        assert len(root_expr.children) == 3
+        assert len([expr for expr in root_expr.children if isinstance(expr, core.QuadraticExpression)]) == 1
+        assert len([expr for expr in root_expr.children if isinstance(expr, core.SinExpression)]) == 1
 
     def test_sum(self):
         m = aml.ConcreteModel()
