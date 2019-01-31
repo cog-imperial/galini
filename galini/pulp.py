@@ -48,6 +48,8 @@ class PulpStatus(Status):
 class MIPSolver(Solver):
     name = 'mip'
 
+    description = 'MIP Solver that delegates to Cplex or CBC.'
+
     def actual_solve(self, problem, **kwargs):
         logger = Logger.from_kwargs(kwargs)
         solver = _solver(logger, self.config)
