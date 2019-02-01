@@ -343,7 +343,7 @@ class _ExpressionConverterHandler(ExpressionHandler):
         children = [self.get(a) for a in expr._args]
         if _is_square(children):
             var, expo = _square_variable_and_exponent(children)
-            new_expr = core.QuadraticExpression([var], [var], [expo])
+            new_expr = core.QuadraticExpression([var], [var], [1.0])
         else:
             new_expr = core.PowExpression(children)
         self.set(expr, new_expr)
