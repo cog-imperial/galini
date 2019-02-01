@@ -181,9 +181,10 @@ setup(
         'build_ext': BuildExt,
     },
     install_requires=[
-        'pyomo>=5.2',
+        'pyomo==5.5',
         'cog-suspect>=1.1.0',
         'galini-io>=0.1.0',
+        'pulp>=1.6',
         'numpy',
         'toml',
         'pydot',
@@ -191,6 +192,6 @@ setup(
         'pybind11>=2.2.3',
         'pytimeparse>=1.1.8',
     ],
-    setup_requires=['pytest-runner', 'cython', 'pybind11'],
+    setup_requires=['pytest-runner', 'pybind11'],
     tests_require=['pytest', 'pytest-cov', 'hypothesis'],
 )

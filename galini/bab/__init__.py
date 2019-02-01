@@ -14,8 +14,12 @@
 
 """Galini Branch & Bound module."""
 
-__all__ = ['BabTree', 'Node', 'BranchingStrategy', 'KSectionBranchingStrategy']
+__all__ = [
+    'BabTree', 'Node', 'BranchingStrategy', 'KSectionBranchingStrategy', 'BabAlgorithm',
+    'NodeSelectionstrategy',
+]
 
+from .algorithm import NodeSelectionStrategy, BabAlgorithm
 from .tree import BabTree
 from .node import Node, NodeSolution
 from .strategy import BranchingStrategy, KSectionBranchingStrategy
