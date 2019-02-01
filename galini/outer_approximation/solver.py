@@ -38,7 +38,6 @@ class OuterApproximationSolver(Solver):
         https://doi.org/10.1007/BF02592064
     """
     name = 'outer_approximation'
-
     description = 'Outer-Approximation for convex MINLP.'
 
     def actual_solve(self, problem, **kwargs):

@@ -32,6 +32,7 @@ from galini.solvers import Solution, Status, OptimalObjective, OptimalVariable
 from galini.outer_approximation.milp_relaxation import MilpRelaxation
 from galini.outer_approximation.feasibility_problem import FeasibilityProblemRelaxation
 from galini.outer_approximation.continuous_relaxation import FixedIntegerContinuousRelaxation
+from galini.quantities import relative_gap
 
 
 class State(object):
@@ -45,11 +46,13 @@ class State(object):
         self.z_l = z_l
 
         self.iteration = 0
+        self.acceptable_iterations = 0
 
     def __str__(self):
         return 'State(iteration={}, z_l={}, z_u={})'.format(
             self.iteration, self.z_l, self.z_u
         )
+
 
 class OuterApproximationAlgorithm(object):
     def __init__(self, nlp_solver, mip_solver, config):
@@ -58,6 +61,8 @@ class OuterApproximationAlgorithm(object):
         self.not_success_is_infeasible = True
 
         self.tolerance = config['tolerance']
+        self.acceptable_tolerance = config['acceptable_tolerance']
+        self.acceptable_iter = config['acceptable_iter']
         self._maximum_iterations = config['maxiter']
 
     def solve(self, problem, **kwargs):
@@ -143,7 +148,14 @@ class OuterApproximationAlgorithm(object):
         return self._build_solution_from_p_oa_t(problem, state, p_oa_t, x_k, p_oa_t_solution)
 
     def _converged(self, state):
-        return (state.z_u - state.z_l) < self.tolerance
+        gap = relative_gap(state.z_u, state.z_l)
+        if gap <= self.tolerance:
+            return True
+        if gap <= self.acceptable_tolerance:
+            state.acceptable_iterations += 1
+            if state.acceptable_iterations >= self.acceptable_iter:
+                return True
+        return False
 
     def _iterations_exceeded(self, state):
         return state.iteration > self._maximum_iterations
