@@ -184,10 +184,10 @@ void init_module(py::module& m) {
     .def_property_readonly("expression_type",
 			   [ExpressionType](const QuadraticExpression&) { return ExpressionType.attr("Quadratic"); });
 
-  py::class_<QuadraticTerm>(m, "QuadraticTerm")
-    .def_readonly("var1", &QuadraticTerm::var1)
-    .def_readonly("var2", &QuadraticTerm::var2)
-    .def_readonly("coefficient", &QuadraticTerm::coefficient);
+  py::class_<BilinearTerm>(m, "BilinearTerm")
+    .def_readonly("var1", &BilinearTerm::var1)
+    .def_readonly("var2", &BilinearTerm::var2)
+    .def_readonly("coefficient", &BilinearTerm::coefficient);
 }
 
 } // namespace expression

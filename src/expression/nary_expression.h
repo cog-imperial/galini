@@ -130,7 +130,7 @@ private:
 };
 
 
-struct QuadraticTerm {
+struct BilinearTerm {
   std::shared_ptr<Expression> var1;
   std::shared_ptr<Expression> var2;
   double coefficient;
@@ -158,7 +158,7 @@ public:
     : QuadraticExpression(nullptr, expressions) {}
 
   double coefficient(const std::shared_ptr<Expression>& v1, const std::shared_ptr<Expression>& v2) const;
-  std::vector<QuadraticTerm> terms() const;
+  std::vector<BilinearTerm> terms() const;
 
   ADFloat eval(values_ptr<ADFloat>& values) const override;
   ADObject eval(values_ptr<ADObject>& values) const override;
@@ -175,7 +175,7 @@ private:
   }
 
   using index_pair = std::tuple<index_t, index_t>;
-  std::unordered_map<index_pair, QuadraticTerm, detail::IndexPairHash> terms_;
+  std::unordered_map<index_pair, BilinearTerm, detail::IndexPairHash> terms_;
 };
 
 } // namespace expression

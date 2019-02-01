@@ -69,10 +69,10 @@ QuadraticExpression::QuadraticExpression(const std::shared_ptr<Problem>& problem
     unique_children.insert(var2);
 
     if (idx1 < idx2) {
-      auto term = QuadraticTerm{var1, var2, coefficient};
+      auto term = BilinearTerm{var1, var2, coefficient};
       terms_[std::make_tuple(idx1, idx2)] = term;
     } else {
-      auto term = QuadraticTerm{var2, var1, coefficient};
+      auto term = BilinearTerm{var2, var1, coefficient};
       terms_[std::make_tuple(idx2, idx1)] = term;
     }
   }
@@ -95,7 +95,7 @@ QuadraticExpression::QuadraticExpression(const std::shared_ptr<Problem>& problem
       if (terms_.find(t.first) != terms_.end()) {
 	auto existing = terms_[t.first];
 	auto new_coefficient = existing.coefficient + t.second.coefficient;
-	auto term = QuadraticTerm{existing.var1, existing.var2, new_coefficient};
+	auto term = BilinearTerm{existing.var1, existing.var2, new_coefficient};
 	terms_[t.first] = term;
       } else {
 	terms_.emplace(t);
@@ -116,8 +116,8 @@ double QuadraticExpression::coefficient(const std::shared_ptr<Expression>& v1,
   return term.coefficient;
 }
 
-std::vector<QuadraticTerm> QuadraticExpression::terms() const {
-  std::vector<QuadraticTerm> result;
+std::vector<BilinearTerm> QuadraticExpression::terms() const {
+  std::vector<BilinearTerm> result;
   for (const auto& t : terms_) {
     result.push_back(t.second);
   }
