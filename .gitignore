@@ -18,3 +18,8 @@ docs/_build
 *.so
 galini/core/*.c
 galini/core/*.html
+.cquery_cached_index
+compile_commands.json
+compile.log
+dist
+site/
