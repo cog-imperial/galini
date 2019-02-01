@@ -177,6 +177,21 @@ class TestConvertExpression(object):
         assert term.var2 == dag.variable('x[1]')
         assert term.coefficient == 5.0
 
+    def test_sum_of_quadratic_with_same_variables2(self):
+        m = aml.ConcreteModel()
+        m.I = range(10)
+        m.x = aml.Var(m.I)
+
+        m.c = aml.Objective(expr=m.x[0]**2 + m.x[1]**2 + m.x[0])
+        dag = dag_from_pyomo_model(m)
+
+        root_expr = dag.objectives[0].root_expr
+        assert isinstance(root_expr, core.SumExpression)
+        expr = [ex for ex in root_expr.children if isinstance(ex, core.QuadraticExpression)][0]
+        assert len(expr.terms) == 2
+        for term in expr.terms:
+            assert term.coefficient == 1.0
+
     def test_sum_of_quadratic_and_other(self):
         m = aml.ConcreteModel()
         m.I = range(10)
