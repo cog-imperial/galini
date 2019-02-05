@@ -1,4 +1,4 @@
-ARG UBUNTU_VERSION=16.04
+ARG UBUNTU_VERSION=18.04
 FROM ubuntu:${UBUNTU_VERSION} as base
 
 MAINTAINER Francesco Ceccon <francesco@ceccon.me>
@@ -8,6 +8,7 @@ ENV LANG C.UTF-8
 
 RUN apt-get update && apt-get install -y \
 	build-essential \
+	gfortran \
 	wget \
 	git \
 	unzip \
