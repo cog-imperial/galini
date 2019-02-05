@@ -25,6 +25,10 @@ def absolute_gap(ub, lb):
 
 def relative_gap(ub, lb):
     """Compute relative gap `(ub - lb) / ub`."""
+    assert not np.isnan(ub)
+    assert not np.isnan(lb)
+    if not np.isfinite(ub) or not np.isfinite(lb):
+        return np.inf
     if np.isclose(ub, 0):
         return (ub - lb) / _finfo.eps
     return (ub - lb) / np.abs(ub)
