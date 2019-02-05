@@ -75,6 +75,7 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
                     current_node.state.lower_bound,
                     tree.state.upper_bound,
                 )
+                self.logger.log_prune_bab_node(current_node.coordinate)
                 continue
 
             node_children, branching_point = current_node.branch()
@@ -83,6 +84,13 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
                 solution = self.solve_problem(child.problem)
                 self.logger.info('Child {} has solution {}', child.coordinate, solution)
                 tree.update_node(child, solution)
+                var_view = child.problem.variable_view(child.variable)
+                self.logger.log_add_bab_node(
+                    coordinate=child.coordinate,
+                    lower_bound=solution.lower_bound,
+                    upper_bound=solution.upper_bound,
+                    branching_variables=[(child.variable.name, var_view.lower_bound(), var_view.upper_bound())],
+                )
         return current_node.solution
 
     def solve_root_problem(self, problem):

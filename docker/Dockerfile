@@ -60,3 +60,5 @@ COPY *.rst /galini/
 RUN cd /galini \
 	&& python3 setup.py build \
 	&& python3 setup.py install
+
+RUN galini -h
