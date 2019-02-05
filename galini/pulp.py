@@ -118,9 +118,6 @@ class _CplexLoggerAdapter(object):
         self._level = level
 
     def write(self, msg):
-        # strip newline
-        if msg[-1] == '\n':
-            msg = msg[:-1]
         self._logger.log(self._level, msg)
 
     def flush(self):
