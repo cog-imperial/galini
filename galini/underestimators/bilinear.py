@@ -20,10 +20,9 @@ from galini.underestimators.underestimator import Underestimator, Underestimator
 
 
 class McCormickUnderestimator(Underestimator):
-    """Underestimate bilinear terms using McCormick envelope."""
+    """Underestimate Quadratic expressions using McCormick envelope."""
     def can_underestimate(self, problem, expr, ctx):
-        poly = ctx.polynomial(expr)
-        return poly.is_quadratic() and expr.expression_type == ExpressionType.Quadratic
+        return expr.expression_type == ExpressionType.Quadratic
 
     def underestimate(self, problem, expr, ctx):
         assert expr.expression_type == ExpressionType.Quadratic

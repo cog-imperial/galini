@@ -190,11 +190,13 @@ class _ExpressionConverterHandler(ExpressionHandler):
             if isinstance(a, core.Variable) and isinstance(b, core.LinearExpression):
                 assert len(b.children) == 1
                 assert b.constant_term == 0.0
-                return a, b.children[0], b.coefficients[0]
+                vb = b.children[0]
+                return a, vb, b.coefficient(vb)
             if isinstance(a, core.LinearExpression) and isinstance(b, core.Variable):
                 assert len(a.children) == 1
                 assert a.constant_term == 0.0
-                return a.children[0], b, a.coefficients[0]
+                va = a.children[0]
+                return va, b, a.coefficient(va)
 
         if self.memo[expr] is not None:
             return self.memo[expr]
@@ -219,39 +221,46 @@ class _ExpressionConverterHandler(ExpressionHandler):
         return None
 
     def visit_sum(self, expr):
-        def _has_bilinear_terms(children):
-            for child in children:
-                if isinstance(child, core.QuadraticExpression):
-                    return True
-            return False
-
-        def _quadratic_and_other_children(children):
+        def _decompose_children(children):
             quadratic = []
+            linear = []
             other = []
             for child in children:
                 if isinstance(child, core.QuadraticExpression):
                     quadratic.append(child)
+                elif isinstance(child, core.LinearExpression):
+                    linear.append(child)
+                elif isinstance(child, core.Variable):
+                    linear.append(core.LinearExpression([child], [1.0], 0.0))
                 else:
                     other.append(child)
-            return quadratic, other
+            return quadratic, linear, other
 
         if self.memo[expr] is not None:
             return self.memo[expr]
 
         self._check_children(expr)
         children = [self.get(a) for a in expr._args]
-        if _has_bilinear_terms(children):
-            # get quadratic terms and combine them in one.
-            # Rest stays unchanged.
-            quadratic_children, other_children = _quadratic_and_other_children(children)
-            if len(other_children) == 0:
-                new_expr = core.QuadraticExpression(quadratic_children)
-            else:
-                quadratic_expr = core.QuadraticExpression(quadratic_children)
-                other_children.append(quadratic_expr)
-                new_expr = core.SumExpression(other_children)
+
+        # Decompose summation in sum of: Quadratic + Linear + Other
+        quadratic_children, linear_children, other_children = _decompose_children(children)
+
+        if len(linear_children) == 0 and len(other_children) == 0:
+            new_expr = core.QuadraticExpression(quadratic_children)
+        elif len(quadratic_children) == 0 and len(other_children) == 0:
+            new_expr = core.LinearExpression(linear_children)
         else:
-            new_expr = core.SumExpression(children)
+            new_children = other_children
+
+            if len(quadratic_children) > 0:
+                quadratic_expr = core.QuadraticExpression(quadratic_children)
+                new_children.append(quadratic_expr)
+
+            if len(linear_children) > 0:
+                linear_expr = core.LinearExpression(linear_children)
+                new_children.append(linear_expr)
+
+            new_expr = core.SumExpression(new_children)
         self.set(expr, new_expr)
         return None
 

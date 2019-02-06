@@ -102,7 +102,7 @@ def _eval_univariate_expression_at_point(expr, value):
         )
     elif et == ExpressionType.Linear:
         assert len(expr.children) == 1
-        coef = expr.coefficients[0]
+        coef = expr.coefficient(expr.children[0])
         return value * coef + expr.constant_term
     elif et == ExpressionType.Sum:
         return sum(_eval_univariate_expression_at_point(ch, value) for ch in expr.children)
