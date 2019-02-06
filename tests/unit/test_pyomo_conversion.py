@@ -193,6 +193,22 @@ class TestConvertExpression(object):
         for term in expr.terms:
             assert term.coefficient == 1.0
 
+    def test_sum_of_linear_and_other(self):
+        m = aml.ConcreteModel()
+        m.I = range(10)
+        m.x = aml.Var(m.I)
+
+        m.c = aml.Objective(expr=m.x[0] + 2.0*m.x[1] + aml.sin(m.x[2]) + m.x[1])
+
+        dag = dag_from_pyomo_model(m)
+
+        root_expr = dag.objectives[0].root_expr
+        assert isinstance(root_expr, core.SumExpression)
+        assert len(root_expr.children) == 2
+        linear_expr = [ex for ex in root_expr.children if isinstance(ex, core.LinearExpression)][0]
+        assert np.isclose(1.0, linear_expr.coefficient(dag.variable('x[0]')))
+        assert np.isclose(3.0, linear_expr.coefficient(dag.variable('x[1]')))
+
     def test_sum_of_quadratic_and_other(self):
         m = aml.ConcreteModel()
         m.I = range(10)
