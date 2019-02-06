@@ -101,7 +101,8 @@ class TestConvertExpression(object):
             assert num.num_children == 1
             num_inner = num.nth_children(0)
             assert isinstance(num_inner, core.LinearExpression)
-            assert np.array_equal(np.array(num_inner.coefficients), np.array([2.0, -1.0]))
+            assert np.isclose(2.0, num_inner.coefficient(num_inner.children[0]))
+            assert np.isclose(-1.0, num_inner.coefficient(num_inner.children[1]))
             assert isinstance(den, core.LinearExpression)
             assert den.constant_term == 1.0
             self._check_depth(root)

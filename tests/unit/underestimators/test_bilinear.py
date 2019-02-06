@@ -28,17 +28,15 @@ def problem():
     return dag_from_pyomo_model(m)
 
 
+@pytest.mark.skip('Requires conversion to Quadratic')
 class TestMcCormickUnderestimator:
     def test_bilinear_terms(self, problem):
-        ctx = ProblemContext(problem)
         r = McCormickUnderestimator()
-
         bilinear = problem.constraint('bilinear').root_expr
-        ctx.set_polynomiality(bilinear, PolynomialDegree(2))
 
-        assert r.can_underestimate(problem, bilinear, ctx)
+        assert r.can_underestimate(problem, bilinear, None)
 
-        result = r.underestimate(problem, bilinear, ctx)
+        result = r.underestimate(problem, bilinear, None)
         self._check_constraints(result)
         assert result.expression.expression_type == ExpressionType.Variable
 
@@ -55,7 +53,7 @@ class TestMcCormickUnderestimator:
         self._check_constraints(result)
         expr = result.expression
         assert expr.expression_type == ExpressionType.Linear
-        assert np.allclose(expr.coefficients, np.array([5.0]))
+        assert np.allclose(expr.coefficient(expr.children[0]), np.array([5.0]))
 
     @pytest.mark.skip('Requires better conversion to Quadratic')
     def test_bilinear_with_coef_2(self, problem):
@@ -71,7 +69,7 @@ class TestMcCormickUnderestimator:
         self._check_constraints(result)
         expr = result.expression
         assert expr.expression_type == ExpressionType.Linear
-        assert np.allclose(expr.coefficients, np.array([6.0]))
+        assert np.allclose(expr.coefficient(expr.children[0]), np.array([6.0]))
 
     def _check_constraints(self, result):
         assert len(result.constraints) == 4
@@ -125,5 +123,5 @@ class TestMcCormickUnderestimator:
 
         assert new_variable_count == 1
 
-        coef_prod = np.prod(expr.coefficients)
+        coef_prod = np.prod([expr.coefficient(v) for v in expr.children])
         assert np.isclose(coef_prod, expr.constant_term)

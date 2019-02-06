@@ -90,22 +90,24 @@ private:
 class LinearExpression : public NaryExpression {
 public:
   using ptr = std::shared_ptr<LinearExpression>;
-  using coefficients_t = std::vector<double>;
 
   LinearExpression(const std::shared_ptr<Problem>& problem,
 		   const std::vector<typename Expression::ptr>& children,
-		   const coefficients_t& coefficients,
-		   double constant)
-    : NaryExpression(problem, children), coefficients_(coefficients), constant_(constant) {}
+		   const std::vector<double>& coefficients,
+		   double constant);
 
   LinearExpression(const std::vector<typename Expression::ptr>& children,
-		   const coefficients_t& coefficients,
+		   const std::vector<double>& coefficients,
 		   double constant)
     : LinearExpression(nullptr, children, coefficients, constant) {}
 
-  pybind11::array coefficients() const {
-    return pybind11::array(coefficients_.size(), coefficients_.data());
-  }
+  LinearExpression(const std::shared_ptr<Problem>& problem,
+		   const std::vector<LinearExpression::ptr>& expressions);
+
+  LinearExpression(const std::vector<LinearExpression::ptr>& expressions)
+    : LinearExpression(nullptr, expressions) {}
+
+  double coefficient(const std::shared_ptr<Expression>& var) const;
 
   double constant() const {
     return constant_;
@@ -120,12 +122,14 @@ private:
   T eval_linear(values_ptr<T>& values) const {
     T result(constant_);
     for (index_t i = 0; i < children_.size(); ++i) {
-      result += (*values)[children_[i]] * T(coefficients_[i]);
+      const auto var = children_[i];
+      const auto coeff = coefficients_.at(var->idx());
+      result += (*values)[var] * T(coeff);
     }
     return result;
   }
 
-  coefficients_t coefficients_;
+  std::unordered_map<index_t, double> coefficients_;
   double constant_;
 };
 

@@ -225,7 +225,8 @@ _FUNC_TYPE_TO_CLS = {
 def _clone_expression(expr, children):
     type_ = expr.expression_type
     if type_ == ExpressionType.Linear:
-        return core.LinearExpression(children, expr.coefficients, expr.constant_term)
+        coefficients = [expr.coefficient(v) for v in children]
+        return core.LinearExpression(children, coefficients, expr.constant_term)
     elif type_ == ExpressionType.Quadratic:
         child_by_index = dict([(ch.idx, ch) for ch in children])
         terms = expr.terms

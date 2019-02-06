@@ -39,6 +39,50 @@ ADObject SumExpression::eval(values_ptr<ADObject>& values) const {
 }
 
 
+LinearExpression::LinearExpression(const std::shared_ptr<Problem>& problem,
+				   const std::vector<typename Expression::ptr>& children,
+				   const std::vector<double>& coefficients,
+				   double constant)
+  : NaryExpression(problem, children), constant_(constant) {
+  if (coefficients.size() != children.size()) {
+    throw std::runtime_error("children and coefficients must have the same size");
+  }
+
+  for (index_t i = 0; i < coefficients.size(); ++i) {
+    auto var = children[i];
+    coefficients_[var->idx()] = coefficients[i];
+  }
+}
+
+LinearExpression::LinearExpression(const std::shared_ptr<Problem>& problem,
+				   const std::vector<LinearExpression::ptr>& expressions)
+  : NaryExpression(problem) {
+
+  std::set<Expression::ptr, detail::ExpressionCmp> unique_children;
+
+  constant_ = 0.0;
+  for (const auto& expr : expressions) {
+    constant_ += expr->constant_;
+    for (const auto& var : expr->children_) {
+      unique_children.insert(var);
+      auto idx = var->idx();
+      if (coefficients_.find(idx) != coefficients_.end()) {
+	coefficients_[idx] += expr->coefficient(var);
+      } else {
+	coefficients_[idx] = expr->coefficient(var);
+      }
+    }
+  }
+
+  std::copy(unique_children.begin(), unique_children.end(), std::back_inserter(children_));
+  num_children_ = children_.size();
+}
+
+double LinearExpression::coefficient(const std::shared_ptr<Expression>& var) const {
+  return coefficients_.at(var->idx());
+}
+
+
 ADFloat LinearExpression::eval(values_ptr<ADFloat>& values) const {
   return eval_linear(values);
 }

@@ -164,10 +164,12 @@ void init_module(py::module& m) {
 
   py::class_<LinearExpression, NaryExpression, LinearExpression::ptr>(m, "LinearExpression")
     .def(py::init<const std::vector<typename Expression::ptr>&,
-	 const typename LinearExpression::coefficients_t&, double>())
+	 const std::vector<double>&, double>())
     .def(py::init<const Expression::problem_ptr&, const std::vector<typename Expression::ptr>&,
-	 const typename LinearExpression::coefficients_t&, double>())
-    .def_property_readonly("coefficients", &LinearExpression::coefficients)
+	 const std::vector<double>&, double>())
+    .def(py::init<const std::vector<LinearExpression::ptr>&>())
+    .def(py::init<const Expression::problem_ptr&, const std::vector<LinearExpression::ptr>&>())
+    .def("coefficient", &LinearExpression::coefficient)
     .def_property_readonly("constant_term", &LinearExpression::constant)
     .def_property_readonly("expression_type",
 			   [ExpressionType](const LinearExpression&) { return ExpressionType.attr("Linear"); });
