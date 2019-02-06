@@ -32,7 +32,7 @@ from galini.solvers import Solution, Status, OptimalObjective, OptimalVariable
 from galini.outer_approximation.milp_relaxation import MilpRelaxation
 from galini.outer_approximation.feasibility_problem import FeasibilityProblemRelaxation
 from galini.outer_approximation.continuous_relaxation import FixedIntegerContinuousRelaxation
-from galini.quantities import relative_gap
+from galini.quantities import relative_gap, absolute_gap
 
 
 class State(object):
@@ -61,9 +61,8 @@ class OuterApproximationAlgorithm(object):
         self.not_success_is_infeasible = True
 
         self.tolerance = config['tolerance']
-        self.acceptable_tolerance = config['acceptable_tolerance']
-        self.acceptable_iter = config['acceptable_iter']
-        self._maximum_iterations = config['maxiter']
+        self.relative_tolerance = config['relative_tolerance']
+        self.maximum_iterations = config['maxiter']
 
     def solve(self, problem, **kwargs):
         starting_point = kwargs.pop('starting_point', None)
@@ -84,7 +83,7 @@ class OuterApproximationAlgorithm(object):
 
         self.logger.info(
             'Starting iterations, maximum iterations = {}, tolerance = {}',
-            self._maximum_iterations, self.tolerance
+            self.maximum_iterations, self.tolerance
         )
         while not self._converged(state) and not self._iterations_exceeded(state):
             self.logger.info('Starting Iteration: {}', state)
@@ -148,17 +147,16 @@ class OuterApproximationAlgorithm(object):
         return self._build_solution_from_p_oa_t(problem, state, p_oa_t, x_k, p_oa_t_solution)
 
     def _converged(self, state):
-        gap = relative_gap(state.z_u, state.z_l)
-        if gap <= self.tolerance:
+        rel_gap = relative_gap(state.z_l, state.z_u)
+        abs_gap = absolute_gap(state.z_l, state.z_u)
+        if rel_gap <= self.relative_tolerance:
             return True
-        if gap <= self.acceptable_tolerance:
-            state.acceptable_iterations += 1
-            if state.acceptable_iterations >= self.acceptable_iter:
-                return True
+        if abs_gap <= self.tolerance:
+            return True
         return False
 
     def _iterations_exceeded(self, state):
-        return state.iteration > self._maximum_iterations
+        return state.iteration > self.maximum_iterations
 
     def _build_solution_from_p_oa_t(self, problem, state, p_oa_t, x_k, solution):
         if not self._converged(state):

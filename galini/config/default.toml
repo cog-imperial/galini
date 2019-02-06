@@ -11,8 +11,7 @@ level = 'J_ITERSUMMARY'
 [outer_approximation]
 maxiter = 50
 tolerance = 1e-8
-acceptable_tolerance = 1e-6
-acceptable_iter = 15
+relative_tolerance = 1e-8
 
 [logging]
 level = 'INFO'

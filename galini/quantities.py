@@ -18,12 +18,16 @@ import numpy as np
 _finfo = np.finfo(np.float64)
 
 
-def absolute_gap(ub, lb):
+def absolute_gap(lb, ub):
     """Compute absolute gap `ub - lb`."""
+    assert not np.isnan(ub)
+    assert not np.isnan(lb)
+    if not np.isfinite(ub) or not np.isfinite(lb):
+        return np.inf
     return ub - lb
 
 
-def relative_gap(ub, lb):
+def relative_gap(lb, ub):
     """Compute relative gap `(ub - lb) / ub`."""
     assert not np.isnan(ub)
     assert not np.isnan(lb)
