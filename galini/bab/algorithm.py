@@ -38,7 +38,8 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
         self.tolerance = 1e-5
 
     def has_converged(self, state):
-        return relative_gap(state.upper_bound, state.lower_bound) < self.tolerance
+        assert (state.upper_bound - state.lower_bound) > -1e-5
+        return relative_gap(state.lower_bound, state.upper_bound) < self.tolerance
 
     def solve(self, problem, **kwargs):
         self.logger = Logger.from_kwargs(kwargs)
@@ -51,6 +52,11 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
         root_solution = self.solve_root_problem(problem)
         tree.add_root(problem, root_solution)
         self.logger.info('Root problem solved, tree state {}', tree.state)
+        self.logger.log_add_bab_node(
+            coordinate=[0],
+            lower_bound=root_solution.lower_bound,
+            upper_bound=root_solution.upper_bound,
+        )
 
         if self.has_converged(tree.state):
             # problem is convex so it has converged already
