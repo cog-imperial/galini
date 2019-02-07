@@ -22,7 +22,7 @@ __all__ = [
     'ProductExpression', 'DivisionExpression', 'SumExpression', 'PowExpression',
     'LinearExpression', 'UnaryFunctionExpression', 'NegationExpression', 'AbsExpression',
     'SqrtExpression', 'ExpExpression', 'LogExpression', 'SinExpression', 'CosExpression',
-    'TanExpression', 'AsinExpression', 'AcosExpression', 'AtanExpression',
+    'TanExpression', 'AsinExpression', 'AcosExpression', 'AtanExpression', 'QuadraticExpression',
     'RootProblem', 'ChildProblem', 'RelaxedProblem', 'VariableView',
     'ipopt_solve', 'IpoptSolution', 'IpoptApplication', 'PythonJournal',
 ]

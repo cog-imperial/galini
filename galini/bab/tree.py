@@ -18,7 +18,7 @@ import numpy as np
 from galini.bab.node import Node, NodeSolution
 
 
-TreeState = namedtuple('TreeState', ['lower_bound', 'upper_bound'])
+TreeState = namedtuple('TreeState', ['lower_bound', 'upper_bound', 'nodes_visited'])
 
 
 class BabTree(object):
@@ -26,7 +26,7 @@ class BabTree(object):
         self.root = None
         self.branching_strategy = branching_strategy
         self.selection_strategy = selection_strategy
-        self.state = TreeState(lower_bound=-np.inf, upper_bound=np.inf)
+        self.state = TreeState(lower_bound=-np.inf, upper_bound=np.inf, nodes_visited=0)
 
     def add_root(self, problem, solution):
         self.root = Node(problem, tree=self, coordinate=[0])
@@ -62,4 +62,5 @@ class BabTree(object):
     def update_state(self, solution):
         new_lower_bound = max(solution.lower_bound, self.state.lower_bound)
         new_upper_bound = min(solution.upper_bound, self.state.upper_bound)
-        self.state = TreeState(new_lower_bound, new_upper_bound)
+        new_nodes_visited = self.state.nodes_visited
+        self.state = TreeState(new_lower_bound, new_upper_bound, new_nodes_visited)

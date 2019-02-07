@@ -50,7 +50,7 @@ LinearExpression::LinearExpression(const std::shared_ptr<Problem>& problem,
 
   for (index_t i = 0; i < coefficients.size(); ++i) {
     auto var = children[i];
-    coefficients_[var->idx()] = coefficients[i];
+    coefficients_[var->uid()] = coefficients[i];
   }
 }
 
@@ -65,11 +65,11 @@ LinearExpression::LinearExpression(const std::shared_ptr<Problem>& problem,
     constant_ += expr->constant_;
     for (const auto& var : expr->children_) {
       unique_children.insert(var);
-      auto idx = var->idx();
-      if (coefficients_.find(idx) != coefficients_.end()) {
-	coefficients_[idx] += expr->coefficient(var);
+      auto uid = var->uid();
+      if (coefficients_.find(uid) != coefficients_.end()) {
+	coefficients_[uid] += expr->coefficient(var);
       } else {
-	coefficients_[idx] = expr->coefficient(var);
+	coefficients_[uid] = expr->coefficient(var);
       }
     }
   }
@@ -79,7 +79,7 @@ LinearExpression::LinearExpression(const std::shared_ptr<Problem>& problem,
 }
 
 double LinearExpression::coefficient(const std::shared_ptr<Expression>& var) const {
-  return coefficients_.at(var->idx());
+  return coefficients_.at(var->uid());
 }
 
 
@@ -104,9 +104,9 @@ QuadraticExpression::QuadraticExpression(const std::shared_ptr<Problem>& problem
 
   for (index_t i = 0; i < vars1.size(); ++i) {
     auto var1 = vars1[i];
-    auto idx1 = var1->idx();
+    auto idx1 = var1->uid();
     auto var2 = vars2[i];
-    auto idx2 = var2->idx();
+    auto idx2 = var2->uid();
     auto coefficient = coefficients[i];
 
     unique_children.insert(var1);
@@ -153,8 +153,8 @@ QuadraticExpression::QuadraticExpression(const std::shared_ptr<Problem>& problem
 
 double QuadraticExpression::coefficient(const std::shared_ptr<Expression>& v1,
 					const std::shared_ptr<Expression>& v2) const {
-  auto idx1 = std::min(v1->idx(), v2->idx());
-  auto idx2 = std::max(v1->idx(), v2->idx());
+  auto idx1 = std::min(v1->uid(), v2->uid());
+  auto idx2 = std::max(v1->uid(), v2->uid());
   auto idx = std::make_tuple(idx1, idx2);
   auto term = terms_.at(idx);
   return term.coefficient;

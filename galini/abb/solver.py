@@ -35,5 +35,5 @@ class AlphaBBSolver(Solver):
             vv.set_lower_bound(new_bound.lower_bound)
             vv.set_upper_bound(new_bound.upper_bound)
 
-        algo = AlphaBBAlgorithm(nlp_solver, minlp_solver, self.config)
+        algo = AlphaBBAlgorithm(nlp_solver, minlp_solver, self.config.alpha_bb)
         return algo.solve(problem, logger=logger)
