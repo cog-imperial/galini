@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from suspect.interval import Interval
-from galini.core import SumExpression, ProductExpression, LinearExpression
+from galini.core import SumExpression, LinearExpression, QuadraticExpression
 from galini.underestimators import Underestimator, UnderestimatorResult
 
 
@@ -55,7 +55,9 @@ class AlphaBBUnderestimator(Underestimator):
 
     def _quadratic_sum(self, problem, expr, ctx, alpha):
         xs = self._collect_expr_variables(expr)
-        expr_children = []
+        quadratics = []
+        linears = []
+
         for x in xs:
             x_view = problem.variable_view(x)
             x_l = x_view.lower_bound()
@@ -64,12 +66,15 @@ class AlphaBBUnderestimator(Underestimator):
                 raise ValueError('Variables must be bounded: name={}, lb={}, ub={}'.format(
                     x.name, x_l, x_u
                 ))
+
             # alpha * x*x
-            q = ProductExpression([LinearExpression([x], [alpha], 0.0), x])
+            quadratic_expr = QuadraticExpression([x], [x], [alpha])
+            quadratics.append(quadratic_expr)
+
             # -alpha * (x_l + x_u) * x + alpha * x_l * x_u
-            l = LinearExpression([x], [-alpha*(x_l + x_u)], alpha*x_l*x_u)
-            expr_children.extend([q, l])
-        return expr_children
+            linear_expr = LinearExpression([x], [-alpha*(x_l + x_u)], alpha*x_l*x_u)
+            linears.append(linear_expr)
+        return [QuadraticExpression(quadratics), LinearExpression(linears)]
 
     def _collect_expr_variables(self, expr):
         xs = []

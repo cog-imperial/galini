@@ -123,7 +123,7 @@ private:
     T result(constant_);
     for (index_t i = 0; i < children_.size(); ++i) {
       const auto var = children_[i];
-      const auto coeff = coefficients_.at(var->idx());
+      const auto coeff = coefficients_.at(var->uid());
       result += (*values)[var] * T(coeff);
     }
     return result;

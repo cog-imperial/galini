@@ -39,6 +39,7 @@ class ProblemContext(object):
         self.polynomial = ExpressionDict(problem)
         self.monotonicity = ExpressionDict(problem)
         self.convexity = ExpressionDict(problem)
+        self.metadata = {}
 
     def get_bounds(self, expr):
         return self.bounds[expr]

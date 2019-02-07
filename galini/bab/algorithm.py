@@ -15,7 +15,7 @@
 import heapq
 import abc
 from galini.logging import Logger
-from galini.quantities import relative_gap
+from galini.quantities import relative_gap, absolute_gap
 from galini.bab.strategy import KSectionBranchingStrategy
 from galini.bab.tree import BabTree
 
@@ -35,11 +35,20 @@ class NodeSelectionStrategy(object):
 
 class BabAlgorithm(metaclass=abc.ABCMeta):
     def initialize(self, config):
-        self.tolerance = 1e-5
+        self.tolerance = config.get('tolerance', 1e-8)
+        self.relative_tolerance = config.get('relative_tolerance', 1e-8)
+        self.node_limit = config.get('node_limit', 10000000000000)
 
     def has_converged(self, state):
-        assert (state.upper_bound - state.lower_bound) > -1e-5
-        return relative_gap(state.lower_bound, state.upper_bound) < self.tolerance
+        rel_gap = relative_gap(state.lower_bound, state.upper_bound)
+        abs_gap = absolute_gap(state.lower_bound, state.upper_bound)
+        return (
+            rel_gap <= self.relative_tolerance or
+            abs_gap <= self.tolerance
+        )
+
+    def _node_limit_exceeded(self, state):
+        return state.nodes_visited > self.node_limit
 
     def solve(self, problem, **kwargs):
         self.logger = Logger.from_kwargs(kwargs)
@@ -62,7 +71,7 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
             # problem is convex so it has converged already
             return root_solution.solution
 
-        while not self.has_converged(tree.state):
+        while not self.has_converged(tree.state) and not self._node_limit_exceeded(tree.state):
             self.logger.info('Tree state at beginning of iteration: {}', tree.state)
             current_node = tree.next_node()
             if current_node is None:
