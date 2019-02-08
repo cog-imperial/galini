@@ -28,13 +28,13 @@ namespace problem {
 class Constraint;
 class Objective;
 class ChildProblem;
+class RelaxedProblem;
 
 class RootProblem : public Problem {
 public:
   using ptr = std::shared_ptr<RootProblem>;
 
-  RootProblem(const std::string &name) : Problem(), name_(name) {
-  }
+  RootProblem(const std::string &name) : Problem(), name_(name) {}
 
   ~RootProblem() = default;
 
@@ -174,6 +174,7 @@ public:
   VariableView variable_view(index_t idx) override;
 
   std::shared_ptr<ChildProblem> make_child();
+  std::shared_ptr<RelaxedProblem> make_relaxed(const std::string& name);
 
   std::vector<std::shared_ptr<Expression>>& vertices() override {
     return vertices_;

@@ -25,7 +25,7 @@ class RelaxedProblem : public RootProblem {
 public:
   using ptr = std::shared_ptr<RelaxedProblem>;
 
-  RelaxedProblem(const std::string &name, const Problem::ptr& parent)
+  RelaxedProblem(const Problem::ptr& parent, const std::string &name)
     : RootProblem(name), parent_(parent) {}
 
   Problem::ptr parent() {

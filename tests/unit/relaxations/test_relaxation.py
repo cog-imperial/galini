@@ -52,6 +52,13 @@ def test_relaxation_returning_original_problem(problem):
     relaxed_problem = r.relax(problem)
 
     assert len(problem.variables) == len(relaxed_problem.variables)
+    for var, rel_var in zip(problem.variables, relaxed_problem.variables):
+        assert var.name == rel_var.name
+        assert var.lower_bound == rel_var.lower_bound
+        assert var.upper_bound == rel_var.upper_bound
+        assert var.domain == rel_var.domain
+        assert var.idx == rel_var.idx
+        assert var.uid != rel_var.uid
     assert len(problem.objectives) == len(relaxed_problem.objectives)
     assert len(problem.constraints) == len(relaxed_problem.constraints)
 

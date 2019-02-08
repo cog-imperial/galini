@@ -24,8 +24,9 @@ def problem():
 def test_continuous_relaxation(problem):
     r = ContinuousRelaxation()
     relaxed = r.relax(problem)
+
     for var in relaxed.variables:
-        assert var.domain == Domain.REAL
+        assert relaxed.domain(var) == Domain.REAL
 
     assert len(problem.expression_tree_data().vertices()) == len(relaxed.expression_tree_data().vertices())
     assert len(problem.variables) == len(relaxed.variables)
