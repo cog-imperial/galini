@@ -43,14 +43,6 @@ class AlphaBBRelaxation(Relaxation):
     def after_relax(self, problem, relaxed_problem):
         self._ctx = None
 
-    def relax_variable(self, problem, variable):
-        return Variable(
-            variable.name,
-            problem.lower_bound(variable),
-            problem.upper_bound(variable),
-            problem.domain(variable)
-        )
-
     def relax_objective(self, problem, objective):
         result = self.relax_expression(problem, objective.root_expr)
         new_objective = Objective(objective.name, result.expression, objective.sense)
