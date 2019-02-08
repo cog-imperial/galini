@@ -14,6 +14,8 @@
 """Interface GALINI with Coin-OR pulp."""
 import pulp
 import logging
+from suspect.expression import ExpressionType
+from galini.core import Problem, Sense, Domain
 from galini.logging import Logger, INFO, WARNING, ERROR
 from galini.timelimit import seconds_left
 from galini.solvers import (
@@ -53,6 +55,8 @@ class MIPSolver(Solver):
     def actual_solve(self, problem, **kwargs):
         logger = Logger.from_kwargs(kwargs)
         solver = _solver(logger, self.config)
+        if isinstance(problem, Problem):
+            problem = _dag_to_pulp(problem)
         status =  problem.solve(solver)
         return Solution(
             PulpStatus(status),
@@ -110,6 +114,56 @@ def _solver(logger, config):
     if cplex.available():
         return cplex
     return pulp.PULP_CBC_CMD()
+
+
+def _dag_to_pulp(problem):
+    assert len(problem.objectives) == 1
+    objective = problem.objectives[0]
+    assert objective.sense == Sense.MINIMIZE
+    assert objective.root_expr.expression_type == ExpressionType.Linear
+
+    lp = pulp.LpProblem(problem.name, pulp.LpMinimize)
+
+    variables = [_variable_to_pulp(problem, var) for var in problem.variables]
+
+    lp += _linear_expression_to_pulp(variables, objective.root_expr)
+
+    for constraint in problem.constraints:
+        expr = _linear_expression_to_pulp(variables, constraint.root_expr)
+        if constraint.lower_bound is None:
+            lp += expr <= constraint.upper_bound
+        elif constraint.upper_bound is None:
+            lp += expr >= constraint.lower_bound
+        else:
+            lp += constraint.lower_bound <= expr <= constraint.upper_bound
+    return lp
+
+
+def _variable_to_pulp(problem, variable):
+    view = problem.variable_view(variable)
+    lower_bound = view.lower_bound()
+    upper_bound = view.upper_bound()
+    domain = pulp.LpContinuous
+    if view.domain == Domain.INTEGER:
+        domain = pulp.LpInteger
+    elif view.domain == Domain.BINARY:
+        domain = pulp.LpBinary
+    return pulp.LpVariable(
+        variable.name,
+        lower_bound,
+        upper_bound,
+        domain,
+    )
+
+
+def _linear_expression_to_pulp(variables, expr):
+    if expr.expression_type == ExpressionType.Variable:
+        return variables[expr.idx]
+    assert expr.expression_type == ExpressionType.Linear
+    result = expr.constant_term
+    for child in expr.children:
+        result += expr.coefficient(child) * variables[child.idx]
+    return result
 
 
 class _CplexLoggerAdapter(object):
