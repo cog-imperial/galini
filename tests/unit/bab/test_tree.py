@@ -13,8 +13,7 @@ class FakeSelectionStrategy:
         pass
 
 
-@pytest.fixture()
-def problem():
+def create_problem():
     m = aml.ConcreteModel()
     m.I = range(5)
     m.x = aml.Var(m.I, bounds=(-1, 2))
@@ -22,9 +21,18 @@ def problem():
     return dag_from_pyomo_model(m)
 
 
+def create_solution():
+    return NodeSolution(0.0, 1.0, None)
+
+
+@pytest.fixture()
+def problem():
+    return create_problem()
+
+
 @pytest.fixture()
 def solution():
-    return NodeSolution(0.0, 1.0, None)
+    return create_solution()
 
 
 @pytest.fixture()
@@ -51,7 +59,7 @@ def tree():
     """
     # t = BabTree(problem(), None)
     t = BabTree(KSectionBranchingStrategy(), FakeSelectionStrategy())
-    t.add_root(problem(), solution())
+    t.add_root(create_problem(), create_solution())
     root = t.root
     for _ in range(3):
         root.add_children()

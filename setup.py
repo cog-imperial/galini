@@ -193,5 +193,10 @@ setup(
         'pytimeparse>=1.1.8',
     ],
     setup_requires=['pytest-runner', 'pybind11'],
-    tests_require=['pytest', 'pytest-cov', 'hypothesis'],
+    tests_require=[
+        'pytest',
+        'pytest-cov',
+        'hypothesis',
+        'pytest-benchmark',
+    ],
 )
