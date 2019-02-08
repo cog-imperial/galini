@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "expression/expression_base.h"
 #include "problem/problem_base.h"
+#include "problem/root_problem.h"
 
 namespace galini {
 
