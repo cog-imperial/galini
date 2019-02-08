@@ -56,13 +56,28 @@ class MIPSolver(Solver):
         logger = Logger.from_kwargs(kwargs)
         solver = _solver(logger, self.config)
         if isinstance(problem, Problem):
-            problem = _dag_to_pulp(problem)
-        status =  problem.solve(solver)
-        return Solution(
-            PulpStatus(status),
-            [OptimalObjective(problem.objective.name, pulp.value(problem.objective))],
-            [OptimalVariable(var.name, pulp.value(var)) for var in problem.variables()]
-        )
+            assert len(problem.objectives) == 1
+
+            pulp_problem, variables = _dag_to_pulp(problem)
+            status =  pulp_problem.solve(solver)
+
+            optimal_variables = [
+                OptimalVariable(var.name, pulp.value(variables[var.idx]))
+                for var in problem.variables
+            ]
+            return Solution(
+                PulpStatus(status),
+                [OptimalObjective(problem.objectives[0].name, pulp.value(pulp_problem.objective))],
+                optimal_variables
+            )
+
+        else:
+            status = problem.solve(solver)
+            return Solution(
+                PulpStatus(status),
+                [OptimalObjective(problem.objective.name, pulp.value(problem.objective))],
+                [OptimalVariable(var.name, pulp.value(var)) for var in problem.variables()]
+            )
 
 
 class CplexSolver(object):
@@ -120,7 +135,6 @@ def _dag_to_pulp(problem):
     assert len(problem.objectives) == 1
     objective = problem.objectives[0]
     assert objective.sense == Sense.MINIMIZE
-    assert objective.root_expr.expression_type == ExpressionType.Linear
 
     lp = pulp.LpProblem(problem.name, pulp.LpMinimize)
 
@@ -136,7 +150,7 @@ def _dag_to_pulp(problem):
             lp += expr >= constraint.lower_bound
         else:
             lp += constraint.lower_bound <= expr <= constraint.upper_bound
-    return lp
+    return lp, variables
 
 
 def _variable_to_pulp(problem, variable):
@@ -159,10 +173,21 @@ def _variable_to_pulp(problem, variable):
 def _linear_expression_to_pulp(variables, expr):
     if expr.expression_type == ExpressionType.Variable:
         return variables[expr.idx]
-    assert expr.expression_type == ExpressionType.Linear
-    result = expr.constant_term
-    for child in expr.children:
-        result += expr.coefficient(child) * variables[child.idx]
+    result = 0.0
+    stack = [expr]
+    visited = set()
+    while len(stack) > 0:
+        expr = stack.pop()
+        visited.add(expr.uid)
+        if expr.expression_type == ExpressionType.Sum:
+            for child in expr.children:
+                if child.uid not in visited:
+                    stack.append(child)
+        elif expr.expression_type == ExpressionType.Linear:
+            for child in expr.children:
+                result += expr.coefficient(child) * variables[child.idx]
+        else:
+            assert expr.expression_type == ExpressionType.Variable
     return result
 
 
