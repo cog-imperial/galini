@@ -149,7 +149,8 @@ def _dag_to_pulp(problem):
         elif constraint.upper_bound is None:
             lp += expr >= constraint.lower_bound
         else:
-            lp += constraint.lower_bound <= expr <= constraint.upper_bound
+            lp += constraint.lower_bound <= expr
+            lp += expr <= constraint.upper_bound
     return lp, variables
 
 
@@ -184,6 +185,7 @@ def _linear_expression_to_pulp(variables, expr):
                 if child.uid not in visited:
                     stack.append(child)
         elif expr.expression_type == ExpressionType.Linear:
+            result += expr.constant_term
             for child in expr.children:
                 result += expr.coefficient(child) * variables[child.idx]
         else:
