@@ -87,14 +87,14 @@ class McCormickUnderestimator(Underestimator):
         lower_bound_0 = Constraint(
             self._format_constraint_name(w, 'lb_0'),
             LinearExpression([y_expr, x_expr, w], [-x_u, -y_l, 1], x_u*y_l),
-            0.0,
             None,
+            0.0,
         )
         lower_bound_1 = Constraint(
             self._format_constraint_name(w, 'lb_1'),
             LinearExpression([y_expr, x_expr, w], [-x_l, -y_u, 1], x_l*y_u),
-            0.0,
             None,
+            0.0,
         )
 
         new_expr = LinearExpression([w], [term.coefficient], 0.0)
