@@ -2,18 +2,22 @@
 import pytest
 import pyomo.environ as aml
 import numpy as np
-from galini.core import Problem, RootProblem, ChildProblem
+from galini.core import Problem, RootProblem, ChildProblem, LinearExpression
 from galini.pyomo import dag_from_pyomo_model
 
 
-@pytest.fixture()
-def problem():
+def create_problem():
     m = aml.ConcreteModel()
     m.I = range(10)
     m.x = aml.Var(m.I, bounds=(-1, 2))
     m.obj = aml.Objective(expr=sum(m.x[i] for i in m.I))
     m.cons = aml.Constraint(m.I[1:], rule=lambda m, i: aml.cos(m.x[0]) * aml.sin(m.x[i]) >= 0)
     return dag_from_pyomo_model(m)
+
+
+@pytest.fixture()
+def problem():
+    return create_problem()
 
 
 class TestRootProblem:
@@ -75,6 +79,30 @@ class TestRootProblem:
             assert var.is_fixed()
             assert np.isclose(var.value(), 2.0)
 
+    def test_add_constraints(self, benchmark):
+        def setup_problem():
+            return (), {
+                'problem': create_problem(),
+                'n': int(10e3)
+            }
+
+        def add_constraints(problem, n):
+            num_cons = problem.num_constraints
+            for i in range(n):
+                x, y = problem.variable(0), problem.variable(1)
+                problem.add_constraint(
+                    'c_' + str(num_cons + i),
+                    LinearExpression([x, y], [1.0, 2.0], 1.0),
+                    0.0,
+                    10.0,
+                )
+            return problem.num_constraints - num_cons
+        result = benchmark.pedantic(
+            add_constraints,
+            setup=setup_problem,
+            rounds=5,
+        )
+        assert result == int(10e3)
 
 class TestChildProblem:
     def test_has_different_variable_bounds(self, problem):
