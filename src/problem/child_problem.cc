@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "ad/expression_tree_data.h"
 #include "problem/variable_view.h"
+#include "problem/relaxed_problem.h"
 
 namespace galini {
 
@@ -37,6 +38,21 @@ VariableView ChildProblem::variable_view(const std::string& name) {
 VariableView ChildProblem::variable_view(index_t idx) {
   auto var = this->variable(idx);
   return variable_view(var);
+}
+
+std::shared_ptr<RelaxedProblem> ChildProblem::make_relaxed(const std::string& name) {
+  auto relaxed = std::make_shared<RelaxedProblem>(this->self(), name);
+
+  // Copy all variables to relaxed problem to keep variables indexes the same
+  for (index_t i = 0; i < num_variables_; ++i) {
+    auto var = variable(i);
+    auto new_var = relaxed->add_variable(var->name(), lower_bound(var), upper_bound(var), domain(var));
+    if (var->idx() != new_var->idx()) {
+      throw std::runtime_error("Index of new variable is different than original variable. This is a BUG.");
+    }
+  }
+
+  return relaxed;
 }
 
 

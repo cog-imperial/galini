@@ -43,6 +43,7 @@ class Constraint;
 class Objective;
 class VariableView;
 class ChildProblem;
+class RelaxedProblem;
 
 class Problem : public std::enable_shared_from_this<Problem> {
 public:
@@ -136,6 +137,7 @@ public:
   virtual index_t max_depth() const = 0;
   virtual index_t vertex_depth(index_t i) const = 0;
   virtual std::shared_ptr<ChildProblem> make_child() = 0;
+  virtual std::shared_ptr<RelaxedProblem> make_relaxed(const std::string& name) = 0;
   virtual std::vector<std::shared_ptr<Expression>>& vertices() = 0;
 
   virtual ~Problem() = default;

@@ -27,6 +27,7 @@ namespace galini {
 namespace problem {
 
 class VariableView;
+class RelaxedProblem;
 
 class ChildProblem : public Problem {
 public:
@@ -109,6 +110,8 @@ public:
   std::shared_ptr<ChildProblem> make_child() {
     return std::make_shared<ChildProblem>(this->self());
   }
+
+  std::shared_ptr<RelaxedProblem> make_relaxed(const std::string& name);
 
   ~ChildProblem() = default;
 private:

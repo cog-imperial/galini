@@ -59,6 +59,8 @@ class FixedIntegerContinuousRelaxation(Relaxation):
                 # compare bounds with original problem bounds
                 view = problem.variable_view(variable)
                 new_value = x_k[i]
+                if new_value is None:
+                    continue
                 lower_bound = view.lower_bound()
                 upper_bound = view.upper_bound()
 

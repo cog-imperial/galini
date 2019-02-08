@@ -84,7 +84,8 @@ void init_module(py::module& m) {
   py::class_<ChildProblem, Problem, ChildProblem::ptr>(m, "ChildProblem")
     .def(py::init<const typename Problem::ptr&>())
     .def_property_readonly("parent", &ChildProblem::parent)
-    .def("make_child", &ChildProblem::make_child);
+    .def("make_child", &ChildProblem::make_child)
+    .def("make_relaxed", &ChildProblem::make_relaxed);
 
   py::class_<RelaxedProblem, RootProblem, RelaxedProblem::ptr>(m, "RelaxedProblem")
     .def(py::init<const Problem::ptr&, const std::string&>())
