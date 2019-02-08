@@ -72,7 +72,6 @@ public:
     return false;
   }
 
-
   void set_depth(index_t depth) {
     depth_ = depth;
   }

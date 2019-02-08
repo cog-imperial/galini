@@ -36,10 +36,7 @@ class Relaxation(metaclass=ABCMeta):
         self._problem_expr = {}
         self.before_relax(problem, **kwargs)
 
-        relaxed_problem = RelaxedProblem(
-            self.relaxed_problem_name(problem),
-            problem,
-        )
+        relaxed_problem = problem.make_relaxed(self.relaxed_problem_name(problem));
 
         for var in problem.variables:
             self._relax_variable(problem, relaxed_problem, var)
@@ -123,13 +120,15 @@ class Relaxation(metaclass=ABCMeta):
         result = self.relax_variable(problem, var)
         if result is not None and not isinstance(result, Variable):
             raise ValueError('relax_variable must return object of type Variable or None')
+
+        var_relaxed = relaxed_problem.variable(var.idx)
+        self._problem_expr[var.uid] = var_relaxed
+
         if result is not None:
-            new_var = self._insert_variable(result, problem, relaxed_problem)
-            # overwrite var.uid to point to relaxed variable
-            self._problem_expr[var.uid] = new_var
-        elif result is None:
-            new_var = self._insert_variable(var, problem, relaxed_problem)
-            self._problem_expr[var.uid] = new_var
+            # overwrite bounds and domain
+            relaxed_problem.set_lower_bound(var_relaxed, result.lower_bound)
+            relaxed_problem.set_upper_bound(var_relaxed, result.upper_bound)
+            relaxed_problem.set_domain(var_relaxed, result.domain)
 
     def _relax_objective(self, problem, relaxed_problem, obj):
         result = self.relax_objective(problem, obj)

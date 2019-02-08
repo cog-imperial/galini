@@ -19,6 +19,7 @@ limitations under the License.
 #include "problem/constraint.h"
 #include "problem/objective.h"
 #include "problem/variable_view.h"
+#include "problem/relaxed_problem.h"
 
 namespace galini {
 
@@ -79,6 +80,21 @@ VariableView RootProblem::variable_view(index_t idx) {
 
 std::shared_ptr<ChildProblem> RootProblem::make_child() {
   return std::make_shared<ChildProblem>(this->self());
+}
+
+std::shared_ptr<RelaxedProblem> RootProblem::make_relaxed(const std::string& name) {
+  auto relaxed = std::make_shared<RelaxedProblem>(this->self(), name);
+
+  // Copy all variables to relaxed problem to keep variables indexes the same
+  for (index_t i = 0; i < num_variables_; ++i) {
+    auto var = variable(i);
+    auto new_var = relaxed->add_variable(var->name(), lower_bound(var), upper_bound(var), domain(var));
+    if (var->idx() != new_var->idx()) {
+      throw std::runtime_error("Index of new variable is different than original variable. This is a BUG.");
+    }
+  }
+
+  return relaxed;
 }
 
 } // namespace problem

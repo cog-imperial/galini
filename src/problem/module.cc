@@ -78,7 +78,8 @@ void init_module(py::module& m) {
     .def("add_objective", &RootProblem::add_objective)
     .def("insert_tree", &RootProblem::insert_tree)
     .def("insert_vertex", &RootProblem::insert_vertex)
-    .def("make_child", &RootProblem::make_child);
+    .def("make_child", &RootProblem::make_child)
+    .def("make_relaxed", &RootProblem::make_relaxed);
 
   py::class_<ChildProblem, Problem, ChildProblem::ptr>(m, "ChildProblem")
     .def(py::init<const typename Problem::ptr&>())
@@ -86,7 +87,7 @@ void init_module(py::module& m) {
     .def("make_child", &ChildProblem::make_child);
 
   py::class_<RelaxedProblem, RootProblem, RelaxedProblem::ptr>(m, "RelaxedProblem")
-    .def(py::init<const std::string&, const Problem::ptr&>())
+    .def(py::init<const Problem::ptr&, const std::string&>())
     .def_property_readonly("parent", &RelaxedProblem::parent);
 
   py::class_<VariableView>(m, "VariableView")
