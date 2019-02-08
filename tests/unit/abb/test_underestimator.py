@@ -26,6 +26,6 @@ def test_underestimator(problem):
     assert len(new_expr.children) == 3
     count_of_type = lambda expr, type_: \
         len([ch for ch in expr.children if ch.expression_type == type_])
-    print(new_expr.children)
-    assert count_of_type(new_expr, ExpressionType.Product) == 2
+    assert count_of_type(new_expr, ExpressionType.Product) == 1
+    assert count_of_type(new_expr, ExpressionType.Quadratic) == 1
     assert count_of_type(new_expr, ExpressionType.Linear) == 1
