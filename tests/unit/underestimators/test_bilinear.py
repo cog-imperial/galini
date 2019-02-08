@@ -7,6 +7,7 @@ from suspect.expression import ExpressionType
 from galini.pyomo import dag_from_pyomo_model
 from galini.suspect import ProblemContext
 from galini.underestimators.bilinear import McCormickUnderestimator
+from galini.suspect import ProblemContext
 
 
 @pytest.fixture
@@ -22,23 +23,25 @@ def problem():
     m.bilinear = aml.Constraint(expr=m.x*m.y >= 0)
     m.bilinear_coef = aml.Constraint(expr=5.0*m.x*m.y >= 0)
     m.bilinear_coef_2 = aml.Constraint(expr=m.x*m.y*6.0 >= 0)
+    m.bilinear_sum = aml.Constraint(expr=2*m.x*m.y + 3*m.x*m.z + 4*m.y*m.z >= 0)
     m.trilinear = aml.Constraint(expr=m.x*m.y*m.z >= 0)
     m.power = aml.Constraint(expr=m.x**2 >= 0)
 
     return dag_from_pyomo_model(m)
 
 
-@pytest.mark.skip('Requires conversion to Quadratic')
 class TestMcCormickUnderestimator:
     def test_bilinear_terms(self, problem):
         r = McCormickUnderestimator()
+        ctx = ProblemContext(problem)
         bilinear = problem.constraint('bilinear').root_expr
 
-        assert r.can_underestimate(problem, bilinear, None)
+        assert r.can_underestimate(problem, bilinear, ctx)
 
-        result = r.underestimate(problem, bilinear, None)
+        result = r.underestimate(problem, bilinear, ctx)
         self._check_constraints(result)
-        assert result.expression.expression_type == ExpressionType.Variable
+        assert result.expression.expression_type == ExpressionType.Linear
+        assert len(result.expression.children) == 1
 
     def test_bilinear_with_coef(self, problem):
         ctx = ProblemContext(problem)
@@ -54,6 +57,22 @@ class TestMcCormickUnderestimator:
         expr = result.expression
         assert expr.expression_type == ExpressionType.Linear
         assert np.allclose(expr.coefficient(expr.children[0]), np.array([5.0]))
+
+    def test_bilinear_sum(self, problem):
+        ctx = ProblemContext(problem)
+        r = McCormickUnderestimator()
+
+        bilinear = problem.constraint('bilinear_sum').root_expr
+        ctx.set_polynomiality(bilinear, PolynomialDegree(2))
+
+        assert r.can_underestimate(problem, bilinear, ctx)
+
+        result = r.underestimate(problem, bilinear, ctx)
+        assert len(result.constraints) == 12
+        expr = result.expression
+        assert expr.expression_type == ExpressionType.Linear
+        assert len(expr.children) == 3
+
 
     @pytest.mark.skip('Requires better conversion to Quadratic')
     def test_bilinear_with_coef_2(self, problem):
@@ -76,23 +95,15 @@ class TestMcCormickUnderestimator:
 
         # look for w >= x^l y + y^l x - x^l y^l
         #      and w >= x^u y + y^u x - x^U y^u
+        #      and w <= x^U y + y^L x - x^U y^L
+        #      and w <= x^L y + y^U x - x^L y^U
         upper_bound_constraints_count = 0
         for constraint in result.constraints:
             if constraint.lower_bound is None and constraint.upper_bound == 0:
                 upper_bound_constraints_count += 1
                 self._check_underestimator_expr(constraint.root_expr)
 
-        assert upper_bound_constraints_count == 2
-
-        # look for w <= x^U y + y^L x - x^U y^L
-        #      and w <= x^L y + y^U x - x^L y^U
-        lower_bound_constraints_count = 0
-        for constraint in result.constraints:
-            if constraint.upper_bound is None and constraint.lower_bound == 0:
-                lower_bound_constraints_count += 1
-                self._check_underestimator_expr(constraint.root_expr)
-
-        assert lower_bound_constraints_count == 2
+        assert upper_bound_constraints_count == 4
 
     def test_trilinear_terms(self, problem):
         ctx = ProblemContext(problem)
