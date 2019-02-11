@@ -42,14 +42,14 @@ def test_insert_objective(problem):
 
 def test_constants_minimum_depth(problem):
     problem.insert_vertex(Constant(1.234))
-    assert problem.max_depth() == 1
+    assert problem.max_depth() == 2
 
 
 def test_vertex_index_is_updated(problem):
     cs = [Constant(i) for i in range(10)]
     for c in cs:
         problem.insert_vertex(c)
-    assert problem.max_depth() == 1
+    assert problem.max_depth() == 2
     assert problem.size == 10
     for i, c in enumerate(cs):
         assert c.idx == i
@@ -68,8 +68,8 @@ def test_children_are_updated(problem):
     assert s0.idx == 3
     assert s0.nth_children(0) == c0
     assert s0.nth_children(1) == v0
-    assert problem.vertex_depth(s0.idx) == 2
-    assert problem.vertex_depth(c0.idx) == 1
+    assert problem.vertex_depth(s0.idx) == 3
+    assert problem.vertex_depth(c0.idx) == 2
     assert problem.size == 4
 
 

@@ -15,7 +15,7 @@
 """Bilinear underestimator using McCormick."""
 import numpy as np
 from suspect.expression import ExpressionType
-from galini.core import LinearExpression, Variable, Constraint, Domain
+from galini.core import LinearExpression, AuxiliaryVariable, Constraint, Domain, BilinearTermReference
 from galini.underestimators.underestimator import Underestimator, UnderestimatorResult
 
 
@@ -63,7 +63,15 @@ class McCormickUnderestimator(Underestimator):
         if x_l is None or x_u is None or y_l is None or y_u is None:
             return None, []
 
-        w = Variable(self._format_aux_name(term.var1, term.var2), None, None, Domain.REAL)
+        reference = BilinearTermReference(term.var1, term.var2)
+        w = AuxiliaryVariable(
+            self._format_aux_name(term.var1, term.var2),
+            # TODO: bounds from x y
+            None,
+            None,
+            Domain.REAL,
+            reference,
+        )
         bilinear_aux_vars[xy_tuple] = w
 
         #  y     x     w   const

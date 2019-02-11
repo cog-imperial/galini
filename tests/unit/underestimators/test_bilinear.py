@@ -42,6 +42,8 @@ class TestMcCormickUnderestimator:
         self._check_constraints(result)
         assert result.expression.expression_type == ExpressionType.Linear
         assert len(result.expression.children) == 1
+        aux_var = result.expression.children[0]
+        assert aux_var.is_auxiliary
 
     def test_bilinear_with_coef(self, problem):
         ctx = ProblemContext(problem)

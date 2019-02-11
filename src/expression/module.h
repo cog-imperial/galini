@@ -24,6 +24,7 @@ limitations under the License.
 #include "unary_function_expression.h"
 
 #include "variable.h"
+#include "auxiliary_variable.h"
 #include "constant.h"
 
 namespace galini {
