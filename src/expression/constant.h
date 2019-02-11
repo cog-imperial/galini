@@ -25,7 +25,7 @@ namespace expression {
 
 class Constant : public Expression {
 public:
-  static const index_t DEFAULT_DEPTH = 1;
+  static const index_t DEFAULT_DEPTH = 2;
   using ptr = std::shared_ptr<Constant>;
 
   Constant(const std::shared_ptr<Problem>& problem, double value)

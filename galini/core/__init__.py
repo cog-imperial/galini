@@ -18,11 +18,12 @@ from enum import Enum
 
 __all__ = [
     'Domain', 'Sense', 'Problem', 'Variable', 'Constant', 'Constraint', 'Objective',
-    'Expression', 'UnaryExpression', 'BinaryExpression', 'NaryExpression',
+    'Expression', 'UnaryExpression', 'BinaryExpression', 'NaryExpression', 'AuxiliaryVariable',
     'ProductExpression', 'DivisionExpression', 'SumExpression', 'PowExpression',
     'LinearExpression', 'UnaryFunctionExpression', 'NegationExpression', 'AbsExpression',
     'SqrtExpression', 'ExpExpression', 'LogExpression', 'SinExpression', 'CosExpression',
     'TanExpression', 'AsinExpression', 'AcosExpression', 'AtanExpression', 'QuadraticExpression',
+    'Reference', 'BilinearTermReference', 'ExpressionReference',
     'RootProblem', 'ChildProblem', 'RelaxedProblem', 'VariableView',
     'ipopt_solve', 'IpoptSolution', 'IpoptApplication', 'PythonJournal',
 ]
@@ -42,6 +43,7 @@ class Sense(Enum):
 # pylint: disable=no-name-in-module
 from galini_core import (
     Variable,
+    AuxiliaryVariable,
     Constant,
     Constraint,
     Objective,
@@ -68,6 +70,9 @@ from galini_core import (
     AcosExpression,
     AtanExpression,
     VariableView,
+    Reference,
+    BilinearTermReference,
+    ExpressionReference,
 )
 
 # pylint: disable=no-name-in-module

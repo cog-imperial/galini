@@ -14,6 +14,8 @@ limitations under the License.
 ======================================================================== */
 #include "root_problem.h"
 
+#include <queue>
+
 #include "ad/expression_tree_data.h"
 #include "problem/child_problem.h"
 #include "problem/constraint.h"
@@ -48,6 +50,133 @@ ad::ExpressionTreeData RootProblem::expression_tree_data() const {
   std::vector<Expression::const_ptr> nodes(vertices_.size());
   std::copy(vertices_.begin(), vertices_.end(), nodes.begin());
   return ad::ExpressionTreeData(nodes, ad::ExpressionTreeData::Storage::vector);
+}
+
+index_t RootProblem::size() const {
+  return vertices_.size();
+}
+
+index_t RootProblem::max_depth() const {
+  auto size = vertices_.size();
+  if (size == 0) {
+    return 0;
+  } else {
+    return vertex_depth(size-1);
+  }
+}
+
+index_t RootProblem::vertex_depth(index_t i) const {
+  auto vertex = vertices_[i];
+  return vertex->depth();
+}
+
+std::shared_ptr<Expression> RootProblem::vertex(index_t idx) const {
+  return vertices_.at(idx);
+}
+
+std::shared_ptr<Variable> RootProblem::variable(const std::string& name) const {
+  return variable(variables_map_.at(name));
+}
+
+std::shared_ptr<Variable> RootProblem::variable(index_t idx) const {
+  return variables_.at(idx);
+}
+
+std::shared_ptr<Variable> RootProblem::add_variable(const std::string& name,
+						    py::object lower_bound, py::object upper_bound,
+						    py::object domain) {
+  if (variables_map_.find(name) != variables_map_.end()) {
+    throw std::runtime_error("Duplicate variable name: " + name);
+  }
+  auto var = std::make_shared<Variable>(this->self(), name, lower_bound, upper_bound, domain);
+  this->insert_vertex(var);
+  this->variables_map_[name] = this->num_variables_;
+  this->variables_.push_back(var);
+  this->num_variables_ += 1;
+  this->domains_.push_back(domain);
+  this->lower_bounds_.push_back(lower_bound);
+  this->upper_bounds_.push_back(upper_bound);
+  this->starting_points_.push_back(0.0);
+  this->starting_points_mask_.push_back(false);
+  this->values_.push_back(0.0);
+  this->values_mask_.push_back(false);
+  this->fixed_mask_.push_back(false);
+  return var;
+}
+
+std::shared_ptr<Constraint> RootProblem::constraint(const std::string& name) const {
+  return constraint(this->constraints_map_.at(name));
+}
+
+std::shared_ptr<Constraint> RootProblem::constraint(index_t idx) const {
+  return this->constraints_.at(idx);
+}
+
+std::shared_ptr<Constraint> RootProblem::add_constraint(const std::string& name,
+							const std::shared_ptr<Expression>& expr,
+							py::object lower_bound,
+							py::object upper_bound) {
+  if (constraints_map_.find(name) != constraints_map_.end()) {
+    throw std::runtime_error("Duplicate constraint: " + name);
+  }
+  auto constraint = std::make_shared<Constraint>(this->self(), name, expr,
+						 lower_bound, upper_bound);
+  this->constraints_map_[name] = this->num_constraints_;
+  this->constraints_.push_back(constraint);
+  this->num_constraints_ += 1;
+  return constraint;
+}
+
+std::shared_ptr<Objective> RootProblem::objective(const std::string& name) const {
+  return objective(this->objectives_map_.at(name));
+}
+
+std::shared_ptr<Objective> RootProblem::objective(index_t idx) const {
+  return this->objectives_.at(idx);
+}
+
+std::shared_ptr<Objective> RootProblem::add_objective(const std::string& name,
+						      const std::shared_ptr<Expression>& expr,
+						      py::object sense) {
+  if (objectives_map_.find(name) != objectives_map_.end()) {
+    throw std::runtime_error("Duplicate objective: " + name);
+  }
+  auto objective = std::make_shared<Objective>(this->self(), name, expr, sense);
+  this->objectives_map_[name] = this->num_objectives_;
+  this->objectives_.push_back(objective);
+  this->num_objectives_ += 1;
+  return objective;
+}
+
+void RootProblem::insert_tree(const std::shared_ptr<Expression>& root_expr) {
+  std::queue<std::shared_ptr<Expression>> stack;
+  std::vector<std::shared_ptr<Expression>> expressions;
+  std::set<index_t> seen;
+  // Do BFS visit on graph, accumulating expressions. Then insert them in problem.
+  // This is required to correctly update nodes depth.
+  stack.push(root_expr);
+  while (stack.size() > 0) {
+    auto current_expr = stack.front();
+    stack.pop();
+    // avoid double insertion of vertices
+    auto expr_problem = current_expr->problem();
+    if ((expr_problem != nullptr) && (expr_problem.get() != this)) {
+      throw std::runtime_error("Cannot insert vertex in multiple problems");
+    }
+    auto already_visited = seen.find(current_expr->uid()) != seen.end();
+    if ((expr_problem == nullptr) && (!already_visited)) {
+      expressions.push_back(current_expr);
+
+      for (index_t i = 0; i < current_expr->num_children(); ++i) {
+	seen.insert(current_expr->uid());
+	stack.push(current_expr->nth_children(i));
+      }
+    }
+  }
+
+  for (auto it = expressions.rbegin(); it != expressions.rend(); ++it) {
+    this->insert_vertex(*it);
+  }
 }
 
 void RootProblem::insert_vertex(const std::shared_ptr<Expression>& expr) {

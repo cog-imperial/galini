@@ -45,7 +45,7 @@ using values_ptr = std::shared_ptr<ad::Values<AD>>;
 
 class Expression : public std::enable_shared_from_this<Expression> {
 public:
-  static const index_t DEFAULT_DEPTH = 2;
+  static const index_t DEFAULT_DEPTH = 3;
 
   using ptr = std::shared_ptr<Expression>;
   using const_ptr = std::shared_ptr<const Expression>;

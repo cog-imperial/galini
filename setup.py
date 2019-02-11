@@ -107,6 +107,7 @@ extensions = [
             'src/ad/values.cc',
             'src/ad/ad_adapter.cc',
             'src/expression/expression_base.cc',
+            'src/expression/auxiliary_variable.cc',
             'src/expression/unary_function_expression.cc',
             'src/expression/binary_expression.cc',
             'src/expression/nary_expression.cc',
