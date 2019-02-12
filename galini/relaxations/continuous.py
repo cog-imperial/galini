@@ -25,8 +25,8 @@ class ContinuousRelaxation(Relaxation):
     def relax_variable(self, problem, variable):
         return Variable(
             variable.name,
-            variable.lower_bound,
-            variable.upper_bound,
+            problem.lower_bound(variable),
+            problem.upper_bound(variable),
             Domain.REAL,
         )
 

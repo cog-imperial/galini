@@ -41,8 +41,14 @@ def detect_special_structure(problem):
     # since GALINI doesn't consider constraints as expression we have
     # to do this manually.
     for constraint in problem.constraints:
+        root_expr = constraint.root_expr
         expr_bounds = Interval(constraint.lower_bound, constraint.upper_bound)
-        ctx.set_bounds(constraint.root_expr, expr_bounds)
+        if root_expr not in ctx.bounds:
+            ctx.set_bounds(root_expr, expr_bounds)
+        else:
+            existing_bounds = ctx.get_bounds(root_expr)
+            new_bounds = existing_bounds.intersect(expr_bounds)
+            ctx.set_bounds(root_expr, new_bounds)
 
     bounds_tightener.tighten(problem, ctx)
     detect_polynomial_degree(problem, ctx.polynomial)

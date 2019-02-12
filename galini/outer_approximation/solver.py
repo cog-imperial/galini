@@ -67,7 +67,10 @@ class OuterApproximationSolver(Solver):
     def _starting_point(self, nlp_solver, problem, logger):
         continuous_relax = ContinuousRelaxation()
         relaxed = continuous_relax.relax(problem)
+        logger.info('Computing Starting point')
         solution = nlp_solver.solve(relaxed, logger=logger)
+        if not solution.status.is_success():
+            raise RuntimeError('NLP is infeasible. No starting point.')
         return np.array([v.value for v in solution.variables])
 
 

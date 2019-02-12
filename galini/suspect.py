@@ -29,6 +29,9 @@ class ExpressionDict(object):
     def __setitem__(self, key, value):
         self._dict[key.idx] = value
 
+    def __contains__(self, item):
+        return self._dict[item.idx] is not None
+
     def __len__(self):
         return len(self._dict)
 
