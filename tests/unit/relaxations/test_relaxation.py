@@ -3,7 +3,20 @@ import pytest
 import pyomo.environ as aml
 from galini.pyomo import dag_from_pyomo_model
 from galini.relaxations import Relaxation, RelaxationResult
-from galini.core import Constraint, Variable
+from galini.core import (
+    Constraint,
+    Objective,
+    Variable,
+    LinearExpression,
+    QuadraticExpression,
+    SumExpression,
+)
+from galini.special_structure import detect_special_structure
+from galini.underestimators import (
+    McCormickUnderestimator,
+    LinearUnderestimator,
+    SumOfUnderestimators,
+)
 
 
 @pytest.fixture
@@ -103,3 +116,96 @@ def test_relaxation_returning_new_expressions(problem):
     r = MockRelaxation()
     relaxed_problem = r.relax(problem)
     assert len(problem.variables) + 1 == len(relaxed_problem.variables)
+
+
+@pytest.fixture
+def bilinear_problem():
+    m = aml.ConcreteModel(name='test_relaxation')
+
+    m.I = range(5)
+    m.x = aml.Var(bounds=(-7, 7))
+    m.y = aml.Var(bounds=(-3, 3))
+
+    m.obj = aml.Objective(expr=m.x + m.y)
+    m.cons = aml.Constraint(expr=m.x*m.y + m.y**2 >= 0)
+
+    return dag_from_pyomo_model(m)
+
+
+def test_relaxation_on_free_constraint(bilinear_problem):
+    class MockRelaxation(Relaxation):
+        def __init__(self):
+            super().__init__()
+            self._ctx = None
+            self._under = SumOfUnderestimators([
+                LinearUnderestimator(),
+                McCormickUnderestimator(),
+            ])
+
+        def before_relax(self, problem):
+            if self._ctx is None:
+                ctx = detect_special_structure(problem)
+                self._ctx = ctx
+
+        def after_relax(self, problem, relaxed_problem):
+            pass
+
+        def relaxed_problem_name(self, problem):
+            return problem.name + '_relaxed'
+
+        def relax_objective(self, problem, objective):
+            result = self.relax_expression(problem, objective.root_expr)
+            new_objective = Objective(objective.name, result.expression, objective.sense)
+            return RelaxationResult(new_objective, result.constraints)
+
+        def relax_constraint(self, problem, constraint):
+            result = self.relax_expression(problem, constraint.root_expr)
+            new_constraint = Constraint(
+                constraint.name, result.expression, constraint.lower_bound, constraint.upper_bound
+            )
+            return RelaxationResult(new_constraint, result.constraints)
+
+        def relax_expression(self, problem, expr):
+            assert self._under.can_underestimate(problem, expr, self._ctx)
+            result = self._under.underestimate(problem, expr, self._ctx)
+            return result
+
+    problem = bilinear_problem
+    r = MockRelaxation()
+    relaxed_problem = r.relax(problem)
+    assert len(problem.variables) + 2 == len(relaxed_problem.variables)
+    assert len(problem.constraints) + 8 == len(relaxed_problem.constraints)
+
+    x = problem.variable(0)
+    y = problem.variable(1)
+
+    extra_cons = Constraint(
+        'aux_cons3',
+        SumExpression([
+            QuadraticExpression([x, x], [x, y], [2.0, 3.0]),
+            LinearExpression([y], [1.0], 0.0),
+        ]),
+        0.0,
+        1.0,
+    )
+
+    r._relax_constraint(problem, relaxed_problem, extra_cons)
+    assert len(problem.variables) + 3 == len(relaxed_problem.variables)
+    assert len(problem.constraints) + 13 == len(relaxed_problem.constraints)
+
+    x = problem.variable(0)
+    y = problem.variable(1)
+
+    extra_cons = Constraint(
+        'aux_cons4',
+        SumExpression([
+            QuadraticExpression([x, x], [x, y], [2.0, 3.0]),
+            LinearExpression([y], [2.0], 0.0),
+        ]),
+        0.0,
+        2.0,
+    )
+
+    r._relax_constraint(problem, relaxed_problem, extra_cons)
+    assert len(problem.variables) + 3 == len(relaxed_problem.variables)
+    assert len(problem.constraints) + 14 == len(relaxed_problem.constraints)
