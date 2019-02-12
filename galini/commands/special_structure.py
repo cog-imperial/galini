@@ -57,6 +57,8 @@ class SpecialStructureCommand(CliCommandWithProblem):
             {'id': 'domain', 'name': 'Dom.', 'type': 't'},
             {'id': 'lower_bound', 'name': 'LB', 'type': 'f'},
             {'id': 'upper_bound', 'name': 'UB', 'type': 'f'},
+            {'id': 'original_lower_bound', 'name': 'OLB', 'type': 'f'},
+            {'id': 'original_upper_bound', 'name': 'OUB', 'type': 'f'},
         ])
         for variable in problem.variables:
             var = problem.variable_view(variable)
@@ -67,6 +69,8 @@ class SpecialStructureCommand(CliCommandWithProblem):
                 'domain': var.domain,
                 'lower_bound': var_bounds.lower_bound,
                 'upper_bound': var_bounds.upper_bound,
+                'original_lower_bound': variable.lower_bound,
+                'original_upper_bound': variable.upper_bound,
             })
         return table
 
