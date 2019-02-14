@@ -17,7 +17,7 @@ import sys
 from argparse import ArgumentParser, Namespace
 from galini.config import GaliniConfig
 from galini.commands import (
-    CliCommand,
+    CliCommandWithProblem,
     OutputTable,
     print_output_table,
     add_output_format_parser_arguments,
@@ -25,16 +25,15 @@ from galini.commands import (
 from galini.logging import RootLogger
 from galini.solvers import SolversRegistry
 from galini.timelimit import timeout
-from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
 
 
 DEFAULT_SOLVER = 'oa'
 
 
-class SolveCommand(CliCommand):
+class SolveCommand(CliCommandWithProblem):
     """Command to solve an optimization problem."""
 
-    def execute(self, args):
+    def execute_with_problem(self, problem, args):
         solvers_reg = SolversRegistry()
         solver_cls = solvers_reg.get(args.solver.lower())
         if solver_cls is None:
@@ -50,12 +49,9 @@ class SolveCommand(CliCommand):
         root_logger = RootLogger(config.logging)
         solver = solver_cls(config, solvers_reg)
 
-        pyomo_model = read_pyomo_model(args.problem)
-        dag = dag_from_pyomo_model(pyomo_model)
-
         timelimit = config.get('timelimit')
         with timeout(timelimit):
-            solution = solver.solve(dag, logger=root_logger)
+            solution = solver.solve(problem, logger=root_logger)
 
         if solution is None:
             raise RuntimeError('Solver did not return a solution')
@@ -86,8 +82,7 @@ class SolveCommand(CliCommand):
     def help_message(self):
         return "Solve a MINLP"
 
-    def add_parser_arguments(self, parser):
-        parser.add_argument('problem')
+    def add_extra_parser_arguments(self, parser):
         parser.add_argument('--solver', help='Specify the solver to use', default=DEFAULT_SOLVER)
         parser.add_argument('--config', help='Specify the configuration file')
 
