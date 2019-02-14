@@ -38,7 +38,10 @@ class CliCommandWithProblem(CliCommand):
     """A CLI Command that receives a problem as first argument"""
     def execute(self, args):
         assert args.problem
-        pyomo_model = read_pyomo_model(args.problem)
+        pyomo_model = read_pyomo_model(
+            args.problem,
+            objective_prefix=args.objective_prefix,
+        )
         problem = dag_from_pyomo_model(pyomo_model)
         return self.execute_with_problem(problem, args)
 
@@ -49,6 +52,7 @@ class CliCommandWithProblem(CliCommand):
 
     def add_parser_arguments(self, parser):
         parser.add_argument('problem')
+        parser.add_argument('--objective-prefix')
         self.add_extra_parser_arguments(parser)
 
     @abc.abstractmethod
