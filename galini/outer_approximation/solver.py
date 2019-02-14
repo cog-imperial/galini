@@ -57,6 +57,7 @@ class OuterApproximationSolver(Solver):
             new_bound = ctx.bounds[v]
             vv.set_lower_bound(_safe_lb(new_bound.lower_bound, vv.lower_bound()))
             vv.set_upper_bound(_safe_ub(new_bound.upper_bound, vv.upper_bound()))
+            print(v.name, vv.lower_bound(), vv.upper_bound())
 
         starting_point = self._starting_point(nlp_solver, problem, logger)
         return algo.solve(
@@ -69,6 +70,7 @@ class OuterApproximationSolver(Solver):
         relaxed = continuous_relax.relax(problem)
         logger.info('Computing Starting point')
         solution = nlp_solver.solve(relaxed, logger=logger)
+        print(solution)
         if not solution.status.is_success():
             raise RuntimeError('NLP is infeasible. No starting point.')
         return np.array([v.value for v in solution.variables])

@@ -23,7 +23,7 @@ from galini.solvers import (
 )
 from galini.core import (
     ipopt_solve,
-    IpoptSolution,
+    IpoptSolution as CoreIpoptSolution,
     IpoptApplication,
     EJournalLevel,
     PythonJournal,
@@ -35,16 +35,26 @@ class IpoptStatus(Status):
         self._status = status
 
     def is_success(self):
-        return self._status == IpoptSolution.StatusType.success
+        return self._status == CoreIpoptSolution.StatusType.success
 
     def is_infeasible(self):
-        return self._status == IpoptSolution.StatusType.local_infeasibility
+        return self._status == CoreIpoptSolution.StatusType.local_infeasibility
 
     def is_unbounded(self):
         return False
 
     def description(self):
         return str(self._status)
+
+
+class IpoptSolution(Solution):
+    def __init__(self, status, optimal_obj=None, optimal_vars=None,
+                 zl=None, zu=None, g=None, lambda_=None):
+        super().__init__(status, optimal_obj, optimal_vars)
+        self.zl = zl
+        self.zu = zu
+        self.g = g
+        self.lambda_ = lambda_
 
 
 class IpoptNLPSolver(Solver):
@@ -105,7 +115,15 @@ class IpoptNLPSolver(Solver):
             OptimalVariable(name=variable.name, value=solution.x[i])
             for i, variable in enumerate(problem.variables)
         ]
-        return Solution(status, optimal_obj=opt_obj, optimal_vars=opt_vars)
+        return IpoptSolution(
+            status,
+            optimal_obj=opt_obj,
+            optimal_vars=opt_vars,
+            zl=np.array(solution.zl),
+            zu=np.array(solution.zu),
+            g=np.array(solution.g),
+            lambda_=np.array(solution.lambda_)
+        )
 
     def _build_optimal_variable(self, i, variable, solution):
         OptimalVariable(name=variable.name, value=solution.x[i])

@@ -37,7 +37,7 @@ void init_module(py::module& m) {
     .def_readonly("zl", &IpoptSolution::zl)
     .def_readonly("zu", &IpoptSolution::zu)
     .def_readonly("g", &IpoptSolution::g)
-    .def_readonly("lambda", &IpoptSolution::lambda)
+    .def_readonly("lambda_", &IpoptSolution::lambda)
     .def_readonly("objective_value", &IpoptSolution::objective_value);
 
   py::enum_<IpoptSolution::status_type>(solution, "StatusType")
