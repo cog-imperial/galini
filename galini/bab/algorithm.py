@@ -14,6 +14,7 @@
 """Base class for B&B algorithms."""
 import heapq
 import abc
+import numpy as np
 from galini.logging import Logger
 from galini.quantities import relative_gap, absolute_gap
 from galini.bab.strategy import KSectionBranchingStrategy
@@ -114,6 +115,23 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
             self.logger.info('Branched at point {}', branching_point)
             for child in node_children:
                 solution = self.solve_problem(child.problem)
+                group_name = '_'.join([str(c) for c in child.coordinate])
+                self.logger.tensor(
+                    group=group_name,
+                    dataset='lower_bounds',
+                    data=np.array(child.problem.lower_bounds)
+                )
+                self.logger.tensor(
+                    group=group_name,
+                    dataset='upper_bounds',
+                    data=np.array(child.problem.upper_bounds)
+                )
+                if solution.solution.status.is_success():
+                    self.logger.tensor(
+                        group=group_name,
+                        dataset='solution',
+                        data=np.array([v.value for v in solution.solution.variables]),
+                    )
                 self.logger.info('Child {} has solution {}', child.coordinate, solution)
                 tree.update_node(child, solution)
                 self.logger.info('New tree state {}', tree.state)
