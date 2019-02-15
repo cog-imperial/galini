@@ -14,6 +14,7 @@
 
 """Bilinear underestimator using McCormick."""
 import numpy as np
+from suspect.interval import Interval
 from suspect.expression import ExpressionType
 from galini.core import LinearExpression, AuxiliaryVariable, Constraint, Domain, BilinearTermReference
 from galini.underestimators.underestimator import Underestimator, UnderestimatorResult
@@ -63,12 +64,17 @@ class McCormickUnderestimator(Underestimator):
         if x_l is None or x_u is None or y_l is None or y_u is None:
             return None, []
 
+        if term.var1 == term.var2:
+            assert np.isclose(x_l, y_l) and np.isclose(x_u, y_u)
+            w_bounds = Interval(x_l, x_u) ** 2
+        else:
+            w_bounds = Interval(x_l, x_u) * Interval(y_l, y_u)
+
         reference = BilinearTermReference(term.var1, term.var2)
         w = AuxiliaryVariable(
             self._format_aux_name(term.var1, term.var2),
-            # TODO: bounds from x y
-            None,
-            None,
+            w_bounds.lower_bound,
+            w_bounds.upper_bound,
             Domain.REAL,
             reference,
         )
@@ -80,33 +86,56 @@ class McCormickUnderestimator(Underestimator):
         # -x^U  -y^L  +1  +x^U y^L <= 0
         # -x^L  -y^U  +1  +x^L y^U <= 0
 
-        upper_bound_0 = Constraint(
-            self._format_constraint_name(w, 'ub_0'),
-            LinearExpression([y_expr, x_expr, w], [x_l, y_l, -1], -x_l*y_l),
-            None,
-            0.0,
-        )
-        upper_bound_1 = Constraint(
-            self._format_constraint_name(w, 'ub_1'),
-            LinearExpression([y_expr, x_expr, w], [x_u, y_u, -1], -x_u*y_u),
-            None,
-            0.0,
-        )
-        lower_bound_0 = Constraint(
-            self._format_constraint_name(w, 'lb_0'),
-            LinearExpression([y_expr, x_expr, w], [-x_u, -y_l, 1], x_u*y_l),
-            None,
-            0.0,
-        )
-        lower_bound_1 = Constraint(
-            self._format_constraint_name(w, 'lb_1'),
-            LinearExpression([y_expr, x_expr, w], [-x_l, -y_u, 1], x_l*y_u),
-            None,
-            0.0,
-        )
-
         new_expr = LinearExpression([w], [term.coefficient], 0.0)
-        return new_expr, [upper_bound_0, upper_bound_1, lower_bound_0, lower_bound_1]
+
+        if term.var1 == term.var2:
+            upper_bound_0 = Constraint(
+                self._format_constraint_name(w, 'ub_0'),
+                LinearExpression([x_expr, w], [2.0*x_l, -1], -x_l*x_l),
+                None,
+                0.0,
+            )
+            upper_bound_1 = Constraint(
+                self._format_constraint_name(w, 'ub_1'),
+                LinearExpression([x_expr, w], [2.0*x_u, -1], -x_u*x_u),
+                None,
+                0.0,
+            )
+            lower_bound_0 = Constraint(
+                self._format_constraint_name(w, 'lb_0'),
+                LinearExpression([x_expr, w], [-(x_u + x_l), 1], x_u*x_l),
+                None,
+                0.0,
+            )
+
+            return new_expr, [upper_bound_0, upper_bound_1, lower_bound_0]
+        else:
+            upper_bound_0 = Constraint(
+                self._format_constraint_name(w, 'ub_0'),
+                LinearExpression([y_expr, x_expr, w], [x_l, y_l, -1], -x_l*y_l),
+                None,
+                0.0,
+            )
+            upper_bound_1 = Constraint(
+                self._format_constraint_name(w, 'ub_1'),
+                LinearExpression([y_expr, x_expr, w], [x_u, y_u, -1], -x_u*y_u),
+                None,
+                0.0,
+            )
+            lower_bound_0 = Constraint(
+                self._format_constraint_name(w, 'lb_0'),
+                LinearExpression([y_expr, x_expr, w], [-x_u, -y_l, 1], x_u*y_l),
+                None,
+                0.0,
+            )
+            lower_bound_1 = Constraint(
+                self._format_constraint_name(w, 'lb_1'),
+                LinearExpression([y_expr, x_expr, w], [-x_l, -y_u, 1], x_l*y_u),
+                None,
+                0.0,
+            )
+
+            return new_expr, [upper_bound_0, upper_bound_1, lower_bound_0, lower_bound_1]
 
     def _format_aux_name(self, x, y):
         return '_aux_bilinear_{}_{}'.format(x.name, y.name)
