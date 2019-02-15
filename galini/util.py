@@ -48,5 +48,7 @@ def print_expr(expr):
     elif et == ExpressionType.Linear:
         return (' + '.join(['{} {}'.format(expr.coefficient(ch), ch.name) for ch in expr.children])
                 + ' + ' + str(expr.constant_term))
+    elif et == ExpressionType.Quadratic:
+        return ' + '.join(['{} {} {}'.format(t.coefficient, t.var1.name, t.var2.name) for t in expr.terms])
     else:
         raise ValueError('Unhandled expression_type {}'.format(et))
