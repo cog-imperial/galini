@@ -45,6 +45,7 @@ class AlphaBBAlgorithm(BabAlgorithm):
 
         sol = self._minlp_solver.solve(problem)
         obj_value = sol.objectives[0].value
+        # assert np.isclose(relaxed_obj_value, obj_value) and relaxed_obj_value <= obj_value
         return NodeSolution(
             relaxed_obj_value,
             obj_value,
