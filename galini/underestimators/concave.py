@@ -95,7 +95,7 @@ def _eval_univariate_expression_at_point(expr, value):
             _eval_univariate_expression_at_point(den, value)
         )
     elif et == ExpressionType.Product:
-        lhs, rhs = et.children
+        lhs, rhs = expr.children
         return (
             _eval_univariate_expression_at_point(lhs, value) *
             _eval_univariate_expression_at_point(rhs, value)
@@ -104,6 +104,11 @@ def _eval_univariate_expression_at_point(expr, value):
         assert len(expr.children) == 1
         coef = expr.coefficient(expr.children[0])
         return value * coef + expr.constant_term
+    elif et == ExpressionType.Quadratic:
+        assert len(expr.terms) == 1
+        term = expr.terms[0]
+        assert term.var1 == term.var2
+        return value * value * term.coefficient
     elif et == ExpressionType.Sum:
         return sum(_eval_univariate_expression_at_point(ch, value) for ch in expr.children)
     elif et == ExpressionType.Power:

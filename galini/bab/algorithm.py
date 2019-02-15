@@ -21,16 +21,27 @@ from galini.bab.tree import BabTree
 
 
 class NodeSelectionStrategy(object):
+    class _Node(object):
+        def __init__(self, node):
+            self.inner = node
+
+        def __lt__(self, other):
+            return self.inner.state.lower_bound < other.inner.state.lower_bound
+
     def __init__(self):
         self.nodes = []
 
     def insert_node(self, node):
-        lower_bound = node.state.lower_bound
-        heapq.heappush(self.nodes, (lower_bound, node))
+        heapq.heappush(self.nodes, self._Node(node))
+
+    def has_nodes(self):
+        return len(self.nodes) > 0
 
     def next_node(self):
-        _, node = heapq.heappop(self.nodes)
-        return node
+        if len(self.nodes) == 0:
+            return None
+        node = heapq.heappop(self.nodes)
+        return node.inner
 
 
 class BabAlgorithm(metaclass=abc.ABCMeta):
@@ -40,6 +51,7 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
         self.node_limit = config.get('node_limit', 10000000000000)
 
     def has_converged(self, state):
+        return False
         rel_gap = relative_gap(state.lower_bound, state.upper_bound)
         abs_gap = absolute_gap(state.lower_bound, state.upper_bound)
         return (
@@ -73,9 +85,9 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
 
         while not self.has_converged(tree.state) and not self._node_limit_exceeded(tree.state):
             self.logger.info('Tree state at beginning of iteration: {}', tree.state)
+            if not tree.has_nodes():
+                return tree.best_solution.solution
             current_node = tree.next_node()
-            if current_node is None:
-                raise RuntimeError('No more nodes to visit')
 
             self.logger.info(
                 'Visiting node {}: state={}, solution={}',
@@ -93,12 +105,18 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
                 self.logger.log_prune_bab_node(current_node.coordinate)
                 continue
 
+            if not current_node.solution.status.is_success():
+                self.logger.info("Skip node because it was not feasible")
+                self.logger.log_prune_bab_node(current_node.coordinate)
+                continue
+
             node_children, branching_point = current_node.branch()
             self.logger.info('Branched at point {}', branching_point)
             for child in node_children:
                 solution = self.solve_problem(child.problem)
                 self.logger.info('Child {} has solution {}', child.coordinate, solution)
                 tree.update_node(child, solution)
+                self.logger.info('New tree state {}', tree.state)
                 var_view = child.problem.variable_view(child.variable)
                 self.logger.log_add_bab_node(
                     coordinate=child.coordinate,

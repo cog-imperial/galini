@@ -20,7 +20,6 @@ from galini.solvers import Solver
 from galini.special_structure import detect_special_structure
 from galini.relaxations import ContinuousRelaxation
 from galini.outer_approximation.algorithm import OuterApproximationAlgorithm
-from galini.util import print_problem
 
 
 # TODO(fra): add options to check convexity of problem before solve
@@ -60,7 +59,9 @@ class OuterApproximationSolver(Solver):
             vv.set_lower_bound(_safe_lb(new_bound.lower_bound, vv.lower_bound()))
             vv.set_upper_bound(_safe_ub(new_bound.upper_bound, vv.upper_bound()))
 
-        starting_point = self._starting_point(nlp_solver, problem, logger)
+        is_feasible, starting_point = self._starting_point(nlp_solver, problem, logger)
+        if not is_feasible:
+            return starting_point
         return algo.solve(
             problem,
             starting_point=starting_point,
@@ -72,8 +73,8 @@ class OuterApproximationSolver(Solver):
         logger.info('Computing Starting point')
         solution = nlp_solver.solve(relaxed, logger=logger)
         if not solution.status.is_success():
-            raise RuntimeError('NLP is infeasible. No starting point.')
-        return np.array([v.value for v in solution.variables])
+            return False, solution
+        return True, np.array([v.value for v in solution.variables])
 
 
 def _safe_lb(a, b):

@@ -27,10 +27,14 @@ class BabTree(object):
         self.branching_strategy = branching_strategy
         self.selection_strategy = selection_strategy
         self.state = TreeState(lower_bound=-np.inf, upper_bound=np.inf, nodes_visited=0)
+        self.best_solution = None
 
     def add_root(self, problem, solution):
         self.root = Node(problem, tree=self, coordinate=[0])
         self.update_node(self.root, solution)
+
+    def has_nodes(self):
+        return self.selection_strategy.has_nodes()
 
     def next_node(self):
         return self.selection_strategy.next_node()
@@ -60,7 +64,10 @@ class BabTree(object):
         return current
 
     def update_state(self, solution):
-        new_lower_bound = max(solution.lower_bound, self.state.lower_bound)
+        # new_lower_bound = max(solution.lower_bound, self.state.lower_bound)
+        new_lower_bound = self.state.lower_bound
+        if solution.upper_bound < self.state.upper_bound:
+            self.best_solution = solution
         new_upper_bound = min(solution.upper_bound, self.state.upper_bound)
-        new_nodes_visited = self.state.nodes_visited
+        new_nodes_visited = self.state.nodes_visited + 1
         self.state = TreeState(new_lower_bound, new_upper_bound, new_nodes_visited)

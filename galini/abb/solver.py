@@ -16,6 +16,7 @@ from galini.logging import Logger
 from galini.special_structure import detect_special_structure
 from galini.solvers import Solver, SolversRegistry
 from galini.abb.algorithm import AlphaBBAlgorithm
+import numpy as np
 
 
 class AlphaBBSolver(Solver):
@@ -32,8 +33,15 @@ class AlphaBBSolver(Solver):
         for v in problem.variables:
             vv = problem.variable_view(v)
             new_bound = ctx.bounds[v]
-            vv.set_lower_bound(new_bound.lower_bound)
-            vv.set_upper_bound(new_bound.upper_bound)
+            lower_bound = new_bound.lower_bound
+            if not np.isfinite(lower_bound):
+                lower_bound = -1e20
+            upper_bound = new_bound.upper_bound
+            if not np.isfinite(upper_bound):
+                upper_bound = 1e20
+
+            vv.set_lower_bound(lower_bound)
+            vv.set_upper_bound(upper_bound)
 
         algo = AlphaBBAlgorithm(nlp_solver, minlp_solver, self.config.alpha_bb)
         return algo.solve(problem, logger=logger)
