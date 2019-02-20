@@ -47,6 +47,13 @@ class PulpStatus(Status):
         return pulp.LpStatus[self._inner]
 
 
+class MIPSolution(Solution):
+    def __init__(self, status, optimal_obj=None, optimal_vars=None,
+                 dual_values=None):
+        super().__init__(status, optimal_obj, optimal_vars)
+        self.dual_values = dual_values
+
+
 class MIPSolver(Solver):
     name = 'mip'
 
@@ -60,23 +67,36 @@ class MIPSolver(Solver):
 
             pulp_problem, variables = _dag_to_pulp(problem)
             status =  pulp_problem.solve(solver)
+            pulp_cons_name = [cons for cons in pulp_problem.constraints]
 
             optimal_variables = [
                 OptimalVariable(var.name, pulp.value(variables[var.idx]))
                 for var in problem.variables
             ]
-            return Solution(
+
+            dual_values = [cons.pi for cons in pulp_problem.constraints.values()]
+            if all(dv is None for dv in dual_values):
+                dual_values = None
+
+            return MIPSolution(
                 PulpStatus(status),
                 [OptimalObjective(problem.objectives[0].name, pulp.value(pulp_problem.objective))],
-                optimal_variables
+                optimal_variables,
+                dual_values,
             )
 
         else:
             status = problem.solve(solver)
-            return Solution(
+
+            dual_values = [cons.pi for cons in problem.constraints.values()]
+            if all(dv is None for dv in dual_values):
+                dual_values = None
+
+            return MIPSolution(
                 PulpStatus(status),
                 [OptimalObjective(problem.objective.name, pulp.value(problem.objective))],
-                [OptimalVariable(var.name, pulp.value(var)) for var in problem.variables()]
+                [OptimalVariable(var.name, pulp.value(var)) for var in problem.variables()],
+                dual_values,
             )
 
 
@@ -91,10 +111,23 @@ class CplexSolver(object):
         return self._inner.available()
 
     def actualSolve(self, lp):
+        import cplex
         # Same as CPLEX_PY.actualSolve, but overrides log settings
+        # and fixes some bugs
         self._inner.buildSolverModel(lp)
 
         self._setup_logs()
+
+        model = lp.solverModel
+        # set problem as mip if all continuous variables
+        is_mip = True
+        for var_type in model.variables.get_types():
+            if var_type != 'C':
+                is_mip = False
+                break
+
+        if is_mip:
+            model.set_problem_type(cplex.Cplex.problem_type.LP)
 
         self._inner.callSolver(lp)
         solutionStatus = self._inner.findSolutionValues(lp)
@@ -102,6 +135,13 @@ class CplexSolver(object):
             var.modified = False
         for constraint in lp.constraints.values():
             constraint.modified = False
+
+        # because of a bug in pulp, need to assign dual values here
+        if model.get_problem_type() == cplex.Cplex.problem_type.LP:
+            cons_name = [cons for cons in lp.constraints]
+            constraintpivalues = dict(zip(cons_name,
+                                          lp.solverModel.solution.get_dual_values(cons_name)))
+            lp.assignConsPi(constraintpivalues)
         return solutionStatus
 
     def _setup_logs(self):
