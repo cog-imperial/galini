@@ -137,11 +137,14 @@ class CplexSolver(object):
             constraint.modified = False
 
         # because of a bug in pulp, need to assign dual values here
-        if model.get_problem_type() == cplex.Cplex.problem_type.LP:
-            cons_name = [cons for cons in lp.constraints]
-            constraintpivalues = dict(zip(cons_name,
-                                          lp.solverModel.solution.get_dual_values(cons_name)))
-            lp.assignConsPi(constraintpivalues)
+        try:
+            if model.get_problem_type() == cplex.Cplex.problem_type.LP:
+                cons_name = [cons for cons in lp.constraints]
+                constraintpivalues = dict(zip(cons_name,
+                                              lp.solverModel.solution.get_dual_values(cons_name)))
+                lp.assignConsPi(constraintpivalues)
+        except cplex.exceptions.CplexSolverError:
+            pass
         return solutionStatus
 
     def _setup_logs(self):
