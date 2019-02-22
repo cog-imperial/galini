@@ -22,7 +22,7 @@ from .options import (
     SolverOptions,
     OptionsGroup,
     Option,
-    NumberOption,
+    NumericOption,
     IntegerOption,
     BoolOption,
     StringOption,
