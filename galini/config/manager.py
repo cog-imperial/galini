@@ -29,7 +29,7 @@ class ConfigurationManager(object):
         self._initialized = False
         self._configuration = None
 
-    def initialize(self, solvers_reg, user_config_path):
+    def initialize(self, solvers_reg, user_config_path=None):
         config = GaliniConfig()
 
         # add default sections
