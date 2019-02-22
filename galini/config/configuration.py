@@ -84,7 +84,6 @@ class _ConfigGroup(object):
                 raise ValueError('Invalid configuration key/group "{}"'.format(sub_path))
 
             own_value = self._items.get(key, None)
-            print(key, own_value, value)
             if isinstance(own_value, _ConfigGroup):
                 own_value.update(value, path=sub_path)
             else:
