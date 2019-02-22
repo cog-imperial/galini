@@ -14,6 +14,12 @@
 """Solve NLP using Ipopt."""
 import numpy as np
 from galini.logging import Logger, INFO, WARNING
+from galini.config.options import (
+    SolverOptions,
+    ExternalSolverOptions,
+    OptionsGroup,
+    StringOption,
+)
 from galini.solvers import (
     Solver,
     Solution,
@@ -62,6 +68,15 @@ class IpoptNLPSolver(Solver):
     name = 'ipopt'
 
     description = 'NLP solver.'
+
+    @staticmethod
+    def solver_options():
+        return SolverOptions(IpoptNLPSolver.name, [
+            ExternalSolverOptions('ipopt'),
+            OptionsGroup('logging', [
+                StringOption('level', default='J_ITERSUMMARY'),
+            ]),
+        ])
 
     def actual_solve(self, problem, **kwargs):
         if len(problem.objectives) != 1:

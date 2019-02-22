@@ -13,13 +13,16 @@
 # limitations under the License.
 
 """GALINI Configuration module."""
-import pkg_resources
-import toml
+
 
 
 class _ConfigGroup(object):
-    def __init__(self, items):
+    def __init__(self, name, items=None, strict=True):
+        self.name = name
+        if items is None:
+            items = {}
         self._items = items
+        self._strict = strict
 
     @classmethod
     def from_dict(cls, dict_):
@@ -58,65 +61,51 @@ class _ConfigGroup(object):
     def __getattr__(self, attr):
         return self._items[attr]
 
-    def update(self, other):
+    def __contains__(self, name):
+        return name in self._items
+
+    def add_group(self, name, strict=True):
+        """Add a new configuration group."""
+        if name is self._items:
+            raise ValueError('Group {} already present.'.format(name))
+        group = _ConfigGroup(name, strict=strict)
+        self._items[name] = group
+        return group
+
+    def update(self, other, path=None):
         """Update self with values from other."""
         for key, value in other.items():
-            if isinstance(value, _ConfigGroup):
-                grp = self._items[key]
-                if not isinstance(grp, _ConfigGroup):
-                    self._items[key] = value
-                else:
-                    grp.update(value)
+            if path is None:
+                sub_path = key
             else:
-                current_value = self._items.get(key)
-                if current_value and isinstance(current_value, _ConfigGroup):
-                    current_value.update(value)
-                else:
-                    self._items[key] = value
+                sub_path = path + '.' + key
 
+            if key not in self._items and self._strict:
+                raise ValueError('Invalid configuration key/group "{}"'.format(sub_path))
 
-class _Config(object):
-    def __init__(self, path):
-        self._root = _ConfigGroup.from_dict(toml.load(path))
+            own_value = self._items.get(key, None)
+            print(key, own_value, value)
+            if isinstance(own_value, _ConfigGroup):
+                own_value.update(value, path=sub_path)
+            else:
+                self._items[key] = value
 
-    def keys(self):
-        """Return config keys."""
-        return self._root.keys()
+    def __str__(self):
+        key_values = ['{}: {}'.format(k, str(v)) for k, v in self._items.items()]
+        return '{{{}}}'.format(', '.join(key_values))
 
-    def items(self):
-        """Return config items."""
-        return self._root.items()
-
-    def get(self, key):
-        """Get config key."""
-        return self._root.get(key)
-
-    def __getitem__(self, key):
-        return self._root[key]
-
-    def __getattr__(self, attr):
-        return getattr(self._root, attr)
-
-    def update(self, other):
-        """Update config with other."""
-        # pylint: disable=protected-access
-        if isinstance(other, dict):
-            self._root.update(other)
-        else:
-            self._root.update(other._root)
+    def __repr__(self):
+        return '<{} at {}>'.format(str(self), hex(id(self)))
 
 
 class GaliniConfig(object):
     """GALINI Configuration object."""
+    def __init__(self):
+        self._config = _ConfigGroup('root')
 
-    def __init__(self, user_config_path=None):
-        default_config_path = 'default.toml'
-        template = pkg_resources.resource_filename(__name__, default_config_path)
-        default_config = _Config(template)
-        if user_config_path:
-            user_config = _Config(str(user_config_path))
-            default_config.update(user_config)
-        self._config = default_config
+    def add_group(self, name, **kwargs):
+        """Add a new configuration group."""
+        return self._config.add_group(name, **kwargs)
 
     def get(self, key):
         """Get configuration value or group for key. Returns None if not present."""
@@ -133,3 +122,12 @@ class GaliniConfig(object):
     def update(self, other):
         """Update config with other."""
         self._config.update(other)
+
+    def __contains__(self, key):
+        return key in self._config
+
+    def __str__(self):
+        return 'GaliniConfig({})'.format(str(self._config))
+
+    def __repr__(self):
+        return '<{} at {}>'.format(str(self), hex(id(self)))

@@ -17,6 +17,7 @@ import numpy as np
 from suspect.interval import Interval
 from galini.logging import Logger
 from galini.solvers import Solver
+from galini.config import SolverOptions, NumberOption, IntegerOption
 from galini.special_structure import detect_special_structure
 from galini.relaxations import ContinuousRelaxation
 from galini.outer_approximation.algorithm import OuterApproximationAlgorithm
@@ -40,6 +41,14 @@ class OuterApproximationSolver(Solver):
     """
     name = 'outer_approximation'
     description = 'Outer-Approximation for convex MINLP.'
+
+    @staticmethod
+    def solver_options():
+        return SolverOptions(OuterApproximationSolver.name, [
+            NumberOption('tolerance', default=1e-8),
+            NumberOption('relative_tolerance', default=1e-8),
+            IntegerOption('maxiter', default=100),
+        ])
 
     def actual_solve(self, problem, **kwargs):
         logger = Logger.from_kwargs(kwargs)
