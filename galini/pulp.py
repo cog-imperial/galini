@@ -25,6 +25,10 @@ from galini.solvers import (
     Status,
     Solution,
 )
+from galini.config import (
+    SolverOptions,
+    ExternalSolverOptions,
+)
 
 log = logging.getLogger(pulp.__name__)
 log.setLevel(9001) # silence pulp
@@ -59,9 +63,15 @@ class MIPSolver(Solver):
 
     description = 'MIP Solver that delegates to Cplex or CBC.'
 
+    @staticmethod
+    def solver_options():
+        return SolverOptions(MIPSolver.name, [
+            ExternalSolverOptions('cplex'),
+        ])
+
     def actual_solve(self, problem, **kwargs):
         logger = Logger.from_kwargs(kwargs)
-        solver = _solver(logger, self.config)
+        solver = _solver(logger, self.config.mip)
         if isinstance(problem, Problem):
             assert len(problem.objectives) == 1
 
@@ -166,6 +176,7 @@ class CplexSolver(object):
             for p in key.split('.'):
                 attr = getattr(attr, p)
             attr.set(value)
+
 
 def _solver(logger, config):
     cplex = CplexSolver(logger, config)

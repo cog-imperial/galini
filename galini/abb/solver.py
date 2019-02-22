@@ -14,7 +14,16 @@
 """AlphaBB Solver."""
 from galini.logging import Logger
 from galini.special_structure import detect_special_structure
-from galini.solvers import Solver, SolversRegistry
+from galini.config import (
+    SolverOptions,
+    NumberOption,
+    IntegerOption,
+    EnumOption,
+)
+from galini.solvers import (
+    Solver,
+    SolversRegistry,
+)
 from galini.abb.algorithm import AlphaBBAlgorithm
 import numpy as np
 
@@ -23,6 +32,14 @@ class AlphaBBSolver(Solver):
     name = 'alpha_bb'
 
     description = 'AlphaBB for nonconvex MINLP.'
+
+    @staticmethod
+    def solver_options():
+        return SolverOptions(AlphaBBSolver.name, [
+            NumberOption('tolerance', default=1e-8),
+            NumberOption('relative_tolerance', default=1e-8),
+            IntegerOption('node_limit', default=100000000),
+        ])
 
     def actual_solve(self, problem, **kwargs):
         logger = Logger.from_kwargs(kwargs)
