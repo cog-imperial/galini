@@ -51,7 +51,7 @@ class Option(metaclass=abc.ABCMeta):
         pass
 
 
-class NumberOption(Option):
+class NumericOption(Option):
     def __init__(self, name, min_value=None, max_value=None, default=None):
         super().__init__(name, default)
 

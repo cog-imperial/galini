@@ -16,7 +16,7 @@ from galini.logging import Logger
 from galini.special_structure import detect_special_structure
 from galini.config import (
     SolverOptions,
-    NumberOption,
+    NumericOption,
     IntegerOption,
     EnumOption,
 )
@@ -36,8 +36,8 @@ class AlphaBBSolver(Solver):
     @staticmethod
     def solver_options():
         return SolverOptions(AlphaBBSolver.name, [
-            NumberOption('tolerance', default=1e-8),
-            NumberOption('relative_tolerance', default=1e-8),
+            NumericOption('tolerance', default=1e-8),
+            NumericOption('relative_tolerance', default=1e-8),
             IntegerOption('node_limit', default=100000000),
         ])
 

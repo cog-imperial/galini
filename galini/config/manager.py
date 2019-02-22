@@ -18,7 +18,7 @@ from galini.config.options import (
     OptionsGroup,
     ExternalSolverOptions,
     EnumOption,
-    NumberOption,
+    NumericOption,
     StringOption,
     BoolOption,
 )
@@ -69,7 +69,7 @@ def _logging_group():
 
 def _galini_group():
     return OptionsGroup('galini', [
-        NumberOption('timelimit', min_value=0, default=86400),
+        NumericOption('timelimit', min_value=0, default=86400),
     ])
 
 
