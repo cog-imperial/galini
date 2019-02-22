@@ -2,7 +2,8 @@
 import pytest
 import pathlib
 import numpy as np
-from galini import GaliniConfig
+from galini.solvers import SolversRegistry
+from galini.config import ConfigurationManager
 from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
 from galini.ipopt import IpoptNLPSolver
 
@@ -16,8 +17,10 @@ def test_ipopt_solver(model_name):
     pyomo_model = read_pyomo_model(osil_file)
     problem = dag_from_pyomo_model(pyomo_model)
 
-    config = GaliniConfig()
-    solver = IpoptNLPSolver(config, None)
+    solvers_reg = SolversRegistry()
+    config_manager = ConfigurationManager()
+    config_manager.initialize(solvers_reg)
+    solver = IpoptNLPSolver(config_manager.configuration, None)
     solution = solver.solve(problem)
 
     assert solution.status.is_success()
