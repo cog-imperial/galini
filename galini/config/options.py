@@ -52,8 +52,9 @@ class Option(metaclass=abc.ABCMeta):
 
 
 class NumericOption(Option):
-    def __init__(self, name, min_value=None, max_value=None, default=None):
-        super().__init__(name, default)
+    def __init__(self, name, min_value=None, max_value=None,
+                 default=None, description=None):
+        super().__init__(name, default, description)
 
     def is_valid(self):
         if self.min_value is not None:
@@ -66,8 +67,9 @@ class NumericOption(Option):
 
 
 class IntegerOption(Option):
-    def __init__(self, name, min_value=None, max_value=None, default=None):
-        super().__init__(name, default)
+    def __init__(self, name, min_value=None, max_value=None,
+                 default=None, description=None):
+        super().__init__(name, default, description)
 
     def is_valid(self):
         if self.min_value is not None:
@@ -90,8 +92,9 @@ class StringOption(Option):
 
 
 class EnumOption(Option):
-    def __init__(self, name, values=None, default=None):
-        super().__init__(name, default)
+    def __init__(self, name, values=None,
+                 default=None, description=None):
+        super().__init__(name, default, description)
         self.values = values
 
     def is_valid(self):
