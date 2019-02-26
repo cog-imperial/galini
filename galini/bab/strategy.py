@@ -31,7 +31,9 @@ def range_ratio(problem, root_problem):
     root_upper_bounds = np.array(root_problem.upper_bounds)
     denominator = np.abs(root_upper_bounds - root_lower_bounds) + 1e-5
     numerator = upper_bounds - lower_bounds
-    return (np.ones(problem.num_variables) * (numerator <= 1e19) * numerator) / denominator
+    finite_numerator = np.ones(problem.num_variables) * (numerator <= 1e19) * numerator
+    finite_denominator = np.ones(problem.num_variables) * (denominator <= 1e19) * denominator
+    return np.nan_to_num(finite_numerator / finite_denominator)
 
 
 def least_reduced_variable(problem, root_problem):
@@ -57,4 +59,5 @@ class KSectionBranchingStrategy(BranchingStrategy):
         upper_bound = var.upper_bound()
         step = (upper_bound - lower_bound) / self.k
         points = step * (np.arange(self.k-1) + 1.0) + lower_bound
+        assert np.all(np.isfinite(points))
         return BranchingPoint(var, points.tolist())

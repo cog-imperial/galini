@@ -34,7 +34,7 @@ def detect_special_structure(problem):
     bounds_tightener = BoundsTightener(
         ProblemForwardIterator(),
         ProblemBackwardIterator(),
-        FBBTStopCriterion(),
+        FBBTStopCriterion(max_iter=1),
     )
 
     # set bounds of root_expr to constraints bounds

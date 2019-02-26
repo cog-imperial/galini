@@ -14,6 +14,7 @@
 """Interface GALINI with Coin-OR pulp."""
 import pulp
 import logging
+import numpy as np
 from suspect.expression import ExpressionType
 from galini.core import Problem, Sense, Domain
 from galini.logging import Logger, INFO, WARNING, ERROR
@@ -49,6 +50,12 @@ class PulpStatus(Status):
 
     def description(self):
         return pulp.LpStatus[self._inner]
+
+    def __str__(self):
+        return 'PulpStatus({})'.format(self.description())
+
+    def __repr__(self):
+        return '<{} at {}>'.format(str(self), hex(id(self)))
 
 
 class MIPSolution(Solution):
@@ -212,6 +219,7 @@ def _variable_to_pulp(problem, variable):
     view = problem.variable_view(variable)
     lower_bound = view.lower_bound()
     upper_bound = view.upper_bound()
+    # print(variable.name, lower_bound, upper_bound)
     domain = pulp.LpContinuous
     if view.domain == Domain.INTEGER:
         domain = pulp.LpInteger
