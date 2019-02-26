@@ -27,6 +27,10 @@ class NodeSelectionStrategy(object):
             self.inner = node
 
         def __lt__(self, other):
+            if not self.inner.solution.status.is_success():
+                return False
+            if not other.inner.solution.status.is_success():
+                return True
             return self.inner.state.lower_bound < other.inner.state.lower_bound
 
     def __init__(self):

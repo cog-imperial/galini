@@ -64,6 +64,8 @@ class BabTree(object):
         return current
 
     def update_state(self, solution):
+        if not solution.solution.status.is_success():
+            return
         # new_lower_bound = max(solution.lower_bound, self.state.lower_bound)
         new_lower_bound = self.state.lower_bound
         if solution.upper_bound < self.state.upper_bound:
