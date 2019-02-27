@@ -171,10 +171,12 @@ setup(
         ],
         'galini.solvers': [
             'mip=galini.pulp:MIPSolver',
-            'oa=galini.outer_approximation.solver:OuterApproximationSolver',
             'ipopt=galini.ipopt:IpoptNLPSolver',
-            'abb=galini.abb.solver:AlphaBBSolver',
+            'bab=galini.bab:BranchAndBoundSolver',
         ],
+        'galini.cuts_generators': [
+            'triangle=galini.triangle_cuts:TriangleCutsGenerator',
+        ]
     },
     ext_modules=extensions,
     cmdclass={

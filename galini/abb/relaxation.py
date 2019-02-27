@@ -41,7 +41,8 @@ class AlphaBBRelaxation(Relaxation):
         self._ctx = ctx
 
     def after_relax(self, problem, relaxed_problem):
-        self._ctx = None
+        # self._ctx = None
+        pass
 
     def relax_objective(self, problem, objective):
         result = self.relax_expression(problem, objective.root_expr)

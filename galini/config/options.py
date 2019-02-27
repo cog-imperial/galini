@@ -15,7 +15,6 @@
 import abc
 
 
-
 class OptionsGroup(object):
     def __init__(self, name, options=None):
         if options is None:

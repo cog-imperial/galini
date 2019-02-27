@@ -22,15 +22,14 @@ TreeState = namedtuple('TreeState', ['lower_bound', 'upper_bound', 'nodes_visite
 
 
 class BabTree(object):
-    def __init__(self, branching_strategy, selection_strategy):
-        self.root = None
+    def __init__(self, problem, branching_strategy, selection_strategy):
+        self.root = Node(problem, tree=self, coordinate=[0])
         self.branching_strategy = branching_strategy
         self.selection_strategy = selection_strategy
         self.state = TreeState(lower_bound=-np.inf, upper_bound=np.inf, nodes_visited=0)
         self.best_solution = None
 
-    def add_root(self, problem, solution):
-        self.root = Node(problem, tree=self, coordinate=[0])
+    def update_root(self, solution):
         self.update_node(self.root, solution)
 
     def has_nodes(self):
@@ -44,6 +43,10 @@ class BabTree(object):
         node.update(solution)
         self.update_state(solution)
         self.selection_strategy.insert_node(node)
+
+    @property
+    def upper_bound(self):
+        return self.state.upper_bound
 
     def node(self, coord):
         if not isinstance(coord, list):
@@ -66,10 +69,12 @@ class BabTree(object):
     def update_state(self, solution):
         if not solution.solution.status.is_success():
             return
-        # new_lower_bound = max(solution.lower_bound, self.state.lower_bound)
+
         new_lower_bound = self.state.lower_bound
         if solution.upper_bound < self.state.upper_bound:
+            new_lower_bound = solution.lower_bound
             self.best_solution = solution
+
         new_upper_bound = min(solution.upper_bound, self.state.upper_bound)
         new_nodes_visited = self.state.nodes_visited + 1
         self.state = TreeState(new_lower_bound, new_upper_bound, new_nodes_visited)

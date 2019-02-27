@@ -27,7 +27,7 @@ from galini.solvers import SolversRegistry
 from galini.timelimit import timeout
 
 
-DEFAULT_SOLVER = 'oa'
+DEFAULT_SOLVER = 'bab'
 
 
 class SolveCommand(CliCommandWithProblem):

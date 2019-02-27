@@ -29,12 +29,12 @@ def detect_polynomial_degree(problem, ctx=None):
     return ctx
 
 
-def detect_special_structure(problem):
+def detect_special_structure(problem, max_iter=10):
     ctx = ProblemContext(problem)
     bounds_tightener = BoundsTightener(
         ProblemForwardIterator(),
         ProblemBackwardIterator(),
-        FBBTStopCriterion(max_iter=1),
+        FBBTStopCriterion(max_iter=max_iter),
     )
 
     # set bounds of root_expr to constraints bounds
