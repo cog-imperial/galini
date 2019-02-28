@@ -154,8 +154,10 @@ class IpoptNLPSolver(Solver):
         for i in range(nx):
             var = problem.variable(i)
             v = problem.variable_view(i)
-            if v.has_starting_point():
-                xi[i] = v.starting_point()
+            if v.is_fixed():
+                xl[i] = v.value()
+                xu[i] = v.value()
+                xi[i] = v.value()
             else:
                 lb = v.lower_bound()
                 lb = lb if lb is not None else -2e19
@@ -163,14 +165,17 @@ class IpoptNLPSolver(Solver):
                 ub = v.upper_bound()
                 ub = ub if ub is not None else 2e19
 
-                xi[i] = max(lb, min(ub, 0))
                 xl[i] = lb
                 xu[i] = ub
 
-                self.logger.debug(
-                    'Variable: {} <= {} <= {}, starting {}',
-                    xl[i], var.name, xu[i], xi[i]
-                )
+                if v.has_starting_point():
+                    xi[i] = v.starting_point()
+                else:
+
+                    xi[i] = max(lb, min(ub, 0))
+            self.logger.debug(
+                'Variable: {} <= {} <= {}, starting {}',
+                xl[i], var.name, xu[i], xi[i])
         return xi, xl, xu
 
     def get_constraints_bounds(self, problem):

@@ -219,7 +219,6 @@ def _variable_to_pulp(problem, variable):
     view = problem.variable_view(variable)
     lower_bound = view.lower_bound()
     upper_bound = view.upper_bound()
-    # print(variable.name, lower_bound, upper_bound)
     domain = pulp.LpContinuous
     if view.domain == Domain.INTEGER:
         domain = pulp.LpInteger

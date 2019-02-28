@@ -15,6 +15,7 @@
 import heapq
 import abc
 import numpy as np
+from suspect.interval import Interval
 from galini.logging import Logger
 from galini.quantities import relative_gap, absolute_gap
 from galini.bab.strategy import KSectionBranchingStrategy
@@ -159,6 +160,8 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
         for v in problem.variables:
             vv = problem.variable_view(v)
             new_bound = ctx.bounds[v]
+            if new_bound is None:
+                new_bound = Interval(None, None)
             vv.set_lower_bound(_safe_lb(new_bound.lower_bound, vv.lower_bound()))
             vv.set_upper_bound(_safe_ub(new_bound.upper_bound, vv.upper_bound()))
 

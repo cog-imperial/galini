@@ -121,6 +121,10 @@ class BranchAndCutAlgorithm(BabAlgorithm):
             )
 
         # Solve original problem
+        # Use mip solution as starting point
+        for v, sv in zip(problem.variables, mip_solution.variables):
+            problem.set_starting_point(v, sv.value)
+
         nlp_solution = self._nlp_solver.solve(problem, logger=self.logger)
         if nlp_solution.status.is_success():
             upper_bound = nlp_solution.objectives[0].value
@@ -162,7 +166,7 @@ class BranchAndCutAlgorithm(BabAlgorithm):
 
         improvement = state.latest_solution - state.previous_solution
         lower_bound_improvement = state.latest_solution - state.first_solution
-        return (improvement / lower_bound_improvement) <= state.cuts_relative_tolerance
+        return (improvement / lower_bound_improvement) <= self.cuts_relative_tolerance
 
     def _cuts_iterations_exceeded(self, state):
         return state.round > self.cuts_maxiter

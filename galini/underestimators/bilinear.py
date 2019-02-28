@@ -61,8 +61,10 @@ class McCormickUnderestimator(Underestimator):
         y_l = y.lower_bound()
         y_u = y.upper_bound()
 
-        if x_l is None or x_u is None or y_l is None or y_u is None:
-            return None, []
+        assert not _is_inf(x_l)
+        assert not _is_inf(x_u)
+        assert not _is_inf(y_l)
+        assert not _is_inf(y_u)
 
         if term.var1 == term.var2:
             assert np.isclose(x_l, y_l) and np.isclose(x_u, y_u)
@@ -147,3 +149,7 @@ class McCormickUnderestimator(Underestimator):
         x_uid = x.uid
         y_uid = y.uid
         return min(x_uid, y_uid), max(x_uid, y_uid)
+
+
+def _is_inf(n):
+    return n is None or np.isinf(n)
