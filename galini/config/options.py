@@ -33,6 +33,10 @@ class SolverOptions(OptionsGroup):
     pass
 
 
+class CutsGeneratorOptions(OptionsGroup):
+    pass
+
+
 class ExternalSolverOptions(OptionsGroup):
     def __init__(self, name):
         super().__init__(name, None)
@@ -88,6 +92,11 @@ class BoolOption(Option):
 class StringOption(Option):
     def is_valid(self):
         return isinstance(self.value, str)
+
+
+class StringListOption(Option):
+    def is_valid(self):
+        return isinstance(self.value, list)
 
 
 class EnumOption(Option):

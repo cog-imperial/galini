@@ -16,6 +16,7 @@ import numpy as np
 from re import findall
 from networkx import enumerate_all_cliques, from_numpy_matrix
 from suspect.expression import ExpressionType
+from galini.config import CutsGeneratorOptions, NumericOption
 from galini.core import LinearExpression, SumExpression, QuadraticExpression
 from galini.cuts import CutType, Cut, CutsGenerator
 
@@ -28,12 +29,14 @@ class TriangleCutsGenerator(CutsGenerator):
     Bonami, Pierre and Gunluk, Oktay and Linderoth, Jeff,
     Mathematical Programming Computation, 1-50, 2018, Springer).
     """
+    name = 'triangle'
+
     def __init__(self, config):
-        self._domain_eps = 1e-3 # config['domain_eps']
-        self._sel_size = 0.1 # config['selection_size']
-        self._thres_tri_viol = 1e-7 # config['thres_triangle_viol']
-        self._min_tri_cuts = 5e3 # config['min_tri_cuts_per_round']
-        self._max_tri_cuts = 10e3 # config['max_tri_cuts_per_round']
+        self._domain_eps = config['domain_eps']
+        self._sel_size = config['selection_size']
+        self._thres_tri_viol = config['thres_triangle_viol']
+        self._min_tri_cuts = config['min_tri_cuts_per_round']
+        self._max_tri_cuts = config['max_tri_cuts_per_round']
 
         # Problem info related to triangle cuts associated with every node of BabAlgorithm
         self.__problem_info_triangle = None
@@ -42,6 +45,26 @@ class TriangleCutsGenerator(CutsGenerator):
         self._lbs = None    # lower bounds
         self._ubs = None    # upper bounds
         self._dbs = None # difference in bounds
+
+    @staticmethod
+    def cuts_generator_options():
+        return CutsGeneratorOptions(TriangleCutsGenerator.name, [
+            NumericOption('domain_eps',
+                          default=1e-3,
+                          description='Minimum domain length for each variable to consider cut on'),
+            NumericOption('selection_size',
+                          default=0.1,
+                          description='Cut selection size as a % of all cuts or as absolute number of cuts'),
+            NumericOption('thres_triangle_viol',
+                          default=1e-7,
+                          description='Violation threshold for separation of triangle inequalities'),
+            NumericOption('min_tri_cuts_per_round',
+                          default=5e3,
+                          description='Min number of triangle cuts to be added to relaxation at each cut round'),
+            NumericOption('max_tri_cuts_per_round',
+                          default=10e3,
+                          description='Max number of triangle cuts to be added to relaxation at each cut round'),
+        ])
 
     def before_start_at_root(self, problem):
         self._nb_vars = problem.num_variables
@@ -61,10 +84,6 @@ class TriangleCutsGenerator(CutsGenerator):
         self._lbs = None
         self._ubs = None
         self._dbs = None
-
-    @property
-    def name(self):
-        return 'triangle'
 
     def generate(self, problem, solution, tree, node):
         cuts = list(self._generate(problem, solution, tree, node))

@@ -56,10 +56,6 @@ class CutsGenerator(metaclass=abc.ABCMeta):
     def after_end_at_node(self, problem, solution):
         pass
 
-    @abc.abstractproperty
-    def name(self):
-        pass
-
     @abc.abstractmethod
     def generate(self, problem, mip_solution, tree, node):
         pass

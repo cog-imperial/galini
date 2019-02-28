@@ -176,7 +176,7 @@ setup(
         ],
         'galini.cuts_generators': [
             'triangle=galini.triangle_cuts:TriangleCutsGenerator',
-        ]
+        ],
     },
     ext_modules=extensions,
     cmdclass={

@@ -14,6 +14,7 @@
 """Configuration Manager."""
 import toml
 from galini.config.configuration import GaliniConfig
+from galini.cuts import CutsGeneratorsManager
 from galini.config.options import (
     OptionsGroup,
     ExternalSolverOptions,
@@ -29,7 +30,7 @@ class ConfigurationManager(object):
         self._initialized = False
         self._configuration = None
 
-    def initialize(self, solvers_reg, user_config_path=None):
+    def initialize(self, solvers_reg, cuts_gen_reg, user_config_path=None):
         config = GaliniConfig()
 
         # add default sections
@@ -44,6 +45,17 @@ class ConfigurationManager(object):
             solver_options = solver.solver_options()
             group = config.add_group(solver_options.name)
             _assign_options_to_group(solver_options, group)
+
+        # initialize configuration from cut manager and generators
+        cuts_generator_group = config.add_group('cuts_generator')
+        _assign_options_to_group(
+            CutsGeneratorsManager.cuts_generators_manager_options(),
+            cuts_generator_group,
+        )
+        for _, generator in cuts_gen_reg.items():
+            cuts_gen_options = generator.cuts_generator_options()
+            group = cuts_generator_group.add_group(cuts_gen_options.name)
+            _assign_options_to_group(cuts_gen_options, group)
 
         if user_config_path:
             # overwrite config from user config

@@ -43,7 +43,9 @@ class BranchAndBoundSolver(Solver):
         logger = Logger.from_kwargs(kwargs)
         nlp_solver = self.instantiate_solver('ipopt')
         mip_solver = self.instantiate_solver('mip')
-        cuts_gen_registry = CutsGeneratorsRegistry()
+
+        assert self.cuts_manager is not None
+
         algo = BranchAndCutAlgorithm(
-            nlp_solver, mip_solver, cuts_gen_registry, self.config)
+            nlp_solver, mip_solver, self.cuts_manager, self.config)
         return algo.solve(problem, logger=logger)

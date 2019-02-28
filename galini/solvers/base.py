@@ -16,6 +16,7 @@ import datetime
 import abc
 from galini.timelimit import seconds_left
 from galini.logging import Logger
+from galini.cuts import CutsGeneratorsManager
 from galini.core import Problem
 
 
@@ -35,9 +36,13 @@ class Solver(metaclass=abc.ABCMeta):
     solver_registry : SolverRegistry
         Registry of available solvers
     """
-    def __init__(self, config, solver_registry):
+    def __init__(self, config, solver_registry, cuts_gen_registry=None):
         self.config = config
         self.solver_registry = solver_registry
+        if cuts_gen_registry is not None:
+            self.cuts_manager = CutsGeneratorsManager(cuts_gen_registry, config)
+        else:
+            self.cuts_manager = None
 
     def get_solver(self, solver_name):
         """Get solver from the registry."""

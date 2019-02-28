@@ -13,6 +13,7 @@
 # limitations under the License.
 """Cuts generators manager."""
 from galini.registry import Registry
+from galini.config.options import OptionsGroup, StringListOption
 
 
 class CutsGeneratorsRegistry(Registry):
@@ -27,9 +28,25 @@ class CutsGeneratorsManager(object):
 
     def _initialize_generators(self, registry, config):
         generators = []
-        for _, generator_cls in registry.items():
-            generators.append(generator_cls(config))
+        cuts_gen_config = config.cuts_generator
+
+        for cut_gen_name in cuts_gen_config.generators:
+            generator_cls = registry.get(cut_gen_name)
+            if generator_cls is None:
+                raise ValueError(
+                    'Invalid cuts generator "{}", available cuts generators: {}'.format(
+                        cut_gen_name,
+                        ', '.join(registry.keys())
+                    ))
+            generator_config = cuts_gen_config[generator_cls.name]
+            generators.append(generator_cls(generator_config))
         return generators
+
+    @staticmethod
+    def cuts_generators_manager_options():
+        return OptionsGroup('cuts_generator', [
+            StringListOption('generators', default=[]),
+        ])
 
     @property
     def generators(self):

@@ -48,13 +48,12 @@ class CutsState(object):
 
 
 class BranchAndCutAlgorithm(BabAlgorithm):
-    def __init__(self, nlp_solver, mip_solver, cuts_generators_reg, config):
+    def __init__(self, nlp_solver, mip_solver, cuts_manager, config):
         self.initialize(config.bab)
         self._nlp_solver = nlp_solver
         self._mip_solver = mip_solver
 
-        self._cuts_generators_manager = \
-            CutsGeneratorsManager(cuts_generators_reg, config)
+        self._cuts_generators_manager = cuts_manager
 
         bac_config = config.bab.branch_and_cut
         self.cuts_maxiter = bac_config['maxiter']

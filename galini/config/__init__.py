@@ -20,12 +20,14 @@ from .configuration import GaliniConfig
 from .manager import ConfigurationManager
 from .options import (
     SolverOptions,
+    CutsGeneratorOptions,
     OptionsGroup,
     Option,
     NumericOption,
     IntegerOption,
     BoolOption,
     StringOption,
+    StringListOption,
     ExternalSolverOptions,
     EnumOption,
 )

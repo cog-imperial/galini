@@ -16,6 +16,7 @@
 import sys
 from argparse import ArgumentParser, Namespace
 from galini.config import ConfigurationManager
+from galini.cuts import CutsGeneratorsRegistry
 from galini.commands import (
     CliCommandWithProblem,
     OutputTable,
@@ -44,13 +45,14 @@ class SolveCommand(CliCommandWithProblem):
             )
             sys.exit(1)
 
-        config_manager = ConfigurationManager()
+        cuts_gen_reg = CutsGeneratorsRegistry()
 
-        config_manager.initialize(solvers_reg, args.config)
+        config_manager = ConfigurationManager()
+        config_manager.initialize(solvers_reg, cuts_gen_reg, args.config)
         config = config_manager.configuration
 
         root_logger = RootLogger(config.logging)
-        solver = solver_cls(config, solvers_reg)
+        solver = solver_cls(config, solvers_reg, cuts_gen_reg)
 
         galini_group = config.get('galini')
         timelimit = galini_group.get('timelimit')
