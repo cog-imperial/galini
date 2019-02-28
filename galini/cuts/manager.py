@@ -68,10 +68,10 @@ class CutsGeneratorsManager(object):
         for gen in self._generators:
             gen.after_end_at_node(problem, solution)
 
-    def generate(self, problem, mip_solution, tree, node):
+    def generate(self, problem, linear_problem, mip_solution, tree, node):
         all_cuts = []
         for gen in self._generators:
-            cuts = gen.generate(problem, mip_solution, tree, node)
+            cuts = gen.generate(problem, linear_problem, mip_solution, tree, node)
             if cuts is None:
                 cuts = []
             if not isinstance(cuts, list):

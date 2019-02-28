@@ -68,6 +68,8 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
     def has_converged(self, state):
         rel_gap = relative_gap(state.lower_bound, state.upper_bound)
         abs_gap = absolute_gap(state.lower_bound, state.upper_bound)
+        assert (state.lower_bound <= state.upper_bound or
+                np.isclose(state.lower_bound, state.upper_bound))
         return (
             rel_gap <= self.relative_tolerance or
             abs_gap <= self.tolerance

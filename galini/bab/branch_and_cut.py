@@ -101,7 +101,8 @@ class BranchAndCutAlgorithm(BabAlgorithm):
             assert mip_solution.status.is_success()
 
             # Generate new cuts
-            new_cuts = self._cuts_generators_manager.generate(problem, mip_solution, tree, node)
+            new_cuts = self._cuts_generators_manager.generate(
+                problem, relaxed_problem, mip_solution, tree, node)
             self.logger.info('Round {}. Adding {} cuts.', cuts_state.round, len(new_cuts))
 
             # Add cuts as constraints

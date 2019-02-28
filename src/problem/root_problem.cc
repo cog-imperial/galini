@@ -85,17 +85,32 @@ std::shared_ptr<Variable> RootProblem::variable(index_t idx) const {
 std::shared_ptr<Variable> RootProblem::add_variable(const std::string& name,
 						    py::object lower_bound, py::object upper_bound,
 						    py::object domain) {
+  auto var = std::make_shared<Variable>(this->self(), name, lower_bound, upper_bound, domain);
+  return do_add_variable(var);
+}
+
+std::shared_ptr<Variable> RootProblem::add_aux_variable(const std::string& name,
+							py::object lower_bound,
+							py::object upper_bound,
+							py::object domain,
+							py::object reference) {
+  auto var = std::make_shared<galini::expression::AuxiliaryVariable>(this->self(), name, lower_bound, upper_bound,
+						 domain, reference);
+  return do_add_variable(var);
+}
+
+std::shared_ptr<Variable> RootProblem::do_add_variable(const std::shared_ptr<Variable>& var) {
+  auto name = var->name();
   if (variables_map_.find(name) != variables_map_.end()) {
     throw std::runtime_error("Duplicate variable name: " + name);
   }
-  auto var = std::make_shared<Variable>(this->self(), name, lower_bound, upper_bound, domain);
   this->insert_vertex(var);
   this->variables_map_[name] = this->num_variables_;
   this->variables_.push_back(var);
   this->num_variables_ += 1;
-  this->domains_.push_back(domain);
-  this->lower_bounds_.push_back(lower_bound);
-  this->upper_bounds_.push_back(upper_bound);
+  this->domains_.push_back(var->domain());
+  this->lower_bounds_.push_back(var->lower_bound());
+  this->upper_bounds_.push_back(var->upper_bound());
   this->starting_points_.push_back(0.0);
   this->starting_points_mask_.push_back(false);
   this->values_.push_back(0.0);

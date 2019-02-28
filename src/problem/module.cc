@@ -74,6 +74,7 @@ void init_module(py::module& m) {
     .def(py::init<const std::string&>())
     .def("max_depth", &RootProblem::max_depth)
     .def("add_variable", &RootProblem::add_variable)
+    .def("add_aux_variable", &RootProblem::add_aux_variable)
     .def("add_constraint", &RootProblem::add_constraint)
     .def("add_objective", &RootProblem::add_objective)
     .def("insert_tree", &RootProblem::insert_tree)

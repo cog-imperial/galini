@@ -14,6 +14,7 @@
 
 """Galini Core module."""
 from enum import Enum
+from collections import namedtuple
 
 
 __all__ = [
@@ -38,6 +39,9 @@ class Domain(Enum):
 class Sense(Enum):
     MINIMIZE = 0
     MAXIMIZE = 1
+
+
+BilinearTermReference = namedtuple('BilinearTermReference', ['var1', 'var2'])
 
 
 # pylint: disable=no-name-in-module
@@ -70,9 +74,6 @@ from galini_core import (
     AcosExpression,
     AtanExpression,
     VariableView,
-    Reference,
-    BilinearTermReference,
-    ExpressionReference,
 )
 
 # pylint: disable=no-name-in-module

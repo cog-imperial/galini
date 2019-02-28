@@ -13,7 +13,6 @@
 # limitations under the License.
 """Triangle Cuts generator."""
 import numpy as np
-from re import findall
 from networkx import enumerate_all_cliques, from_numpy_matrix
 from suspect.expression import ExpressionType
 from galini.config import CutsGeneratorOptions, NumericOption
@@ -85,14 +84,14 @@ class TriangleCutsGenerator(CutsGenerator):
         self._ubs = None
         self._dbs = None
 
-    def generate(self, problem, solution, tree, node):
-        cuts = list(self._generate(problem, solution, tree, node))
+    def generate(self, problem, linear_problem, solution, tree, node):
+        cuts = list(self._generate(problem, linear_problem, solution, tree, node))
         self._cut_round += 1
         return cuts
 
-    def _generate(self, problem, solution, tree, node):
+    def _generate(self, problem, linear_problem, solution, tree, node):
         triple_cliques = self.__problem_info_triangle[1]
-        rank_list_tri = self._get_triangle_violations(solution)
+        rank_list_tri = self._get_triangle_violations(linear_problem, solution)
         # Remove non-violated constraints and sort by density first and then violation second as in manuscript
         rank_list_tri_viol = [el for el in rank_list_tri if el[2] >= self._thres_tri_viol]
         rank_list_tri_viol.sort(key=lambda tup: tup[2], reverse=True)
@@ -105,7 +104,6 @@ class TriangleCutsGenerator(CutsGenerator):
         l = self._lbs
         u = self._ubs
         d = self._dbs
-
 
         # Add all triangle cuts (ranked by violation) within selection size
         for ix in range(0, max_tri_cuts):
@@ -209,9 +207,9 @@ class TriangleCutsGenerator(CutsGenerator):
                         adj_mat[vars_dict[term.var2.name], vars_dict[term.var1.name]] = 1
         return adj_mat
 
-    def _get_triangle_violations(self, solution):
+    def _get_triangle_violations(self, problem, solution):
         rank_list_tri, triple_cliques = self.__problem_info_triangle
-        lifted_mat = self._get_lifted_mat_values(solution)
+        lifted_mat = self._get_lifted_mat_values(problem, solution)
         # Evaluate violations for all valid triangle cliques and cut types
         x_vals = [0] * 3
         x_vals_scaled = [0] * 3
@@ -237,12 +235,14 @@ class TriangleCutsGenerator(CutsGenerator):
             rank_list_tri[idx_clique * 4 + 3][2] = -x01 - x02 - x12 + sum(x_vals_scaled) - 1
         return rank_list_tri
 
-    def _get_lifted_mat_values(self, solution):
+    def _get_lifted_mat_values(self, problem, solution):
         # Build matrix of lifted X values
         nb_vars = self._nb_vars
         lifted_mat = np.zeros((nb_vars, nb_vars))
-        for var in solution.variables[nb_vars:]:
-            mat_idxs = [int(s) for s in findall(r'\d+', var.name)]
-            lifted_mat[mat_idxs[0], mat_idxs[1]] = var.value
-            lifted_mat[mat_idxs[1], mat_idxs[0]] = var.value
+        for var_sol in solution.variables[nb_vars:]:
+            var = problem.variable(var_sol.name)
+            var1 = var.reference.var1
+            var2 = var.reference.var2
+            lifted_mat[var1.idx, var2.idx] = var_sol.value
+            lifted_mat[var2.idx, var1.idx] = var_sol.value
         return lifted_mat

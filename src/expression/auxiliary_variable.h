@@ -22,29 +22,6 @@ namespace galini {
 
 namespace expression {
 
-class Reference {
-public:
-  using ptr = std::shared_ptr<Reference>;
-};
-
-class BilinearTermReference : public Reference {
-public:
-  using ptr = std::shared_ptr<BilinearTermReference>;
-
-  BilinearTermReference(const std::shared_ptr<Variable>& var1, const std::shared_ptr<Variable>& var2);
-
-  std::shared_ptr<Variable> var1;
-  std::shared_ptr<Variable> var2;
-};
-
-class ExpressionReference : public Reference {
-public:
-  using ptr = std::shared_ptr<ExpressionReference>;
-
-  ExpressionReference(const std::shared_ptr<Expression>& expr);
-
-  std::shared_ptr<Expression> expr;
-};
 
 class AuxiliaryVariable : public Variable {
 public:
@@ -56,17 +33,17 @@ public:
 		    py::object lower_bound,
 		    py::object upper_bound,
 		    py::object domain,
-		    const std::shared_ptr<Reference>& reference);
+		    py::object reference);
 
   AuxiliaryVariable(const std::string& name,
 		    py::object lower_bound,
 		    py::object upper_bound,
 		    py::object domain,
-		    const std::shared_ptr<Reference>& reference);
+		    py::object reference);
 
-  std::shared_ptr<Reference> reference() const { return reference_; }
+  py::object reference() const { return reference_; }
 private:
-  std::shared_ptr<Reference> reference_;
+  py::object reference_;
 };
 
 }  // namespace expression

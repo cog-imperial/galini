@@ -60,9 +60,9 @@ void init_module(py::module& m) {
 			   [ExpressionType](const Variable&) { return ExpressionType.attr("Variable"); });
 
   py::class_<AuxiliaryVariable, Variable, AuxiliaryVariable::ptr>(m, "AuxiliaryVariable")
-    .def(py::init<const std::string&, py::object, py::object, py::object, const Reference::ptr&>())
+    .def(py::init<const std::string&, py::object, py::object, py::object, py::object>())
     .def(py::init<const Expression::problem_ptr&, const std::string&, py::object, py::object,
-	 py::object, const Reference::ptr&>())
+	 py::object, py::object>())
     .def_property_readonly("reference", &AuxiliaryVariable::reference)
     .def_property_readonly("is_auxiliary", [](const Variable&) { return true; })
     .def_property_readonly("expression_type",
@@ -200,17 +200,6 @@ void init_module(py::module& m) {
     .def_readonly("var1", &BilinearTerm::var1)
     .def_readonly("var2", &BilinearTerm::var2)
     .def_readonly("coefficient", &BilinearTerm::coefficient);
-
-  py::class_<Reference, Reference::ptr>(m, "Reference");
-
-  py::class_<BilinearTermReference, Reference, BilinearTermReference::ptr>(m, "BilinearTermReference")
-    .def(py::init<const std::shared_ptr<Variable>&, const std::shared_ptr<Variable>&>())
-    .def_readonly("var1", &BilinearTermReference::var1)
-    .def_readonly("var2", &BilinearTermReference::var2);
-
-  py::class_<ExpressionReference, Reference, ExpressionReference::ptr>(m, "ExpressionReference")
-    .def(py::init<const std::shared_ptr<Expression>&>())
-    .def_readonly("expr", &ExpressionReference::expr);
 }
 
 } // namespace expression

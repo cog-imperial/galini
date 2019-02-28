@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "expression/expression_base.h"
 #include "expression/variable.h"
+#include "expression/auxiliary_variable.h"
 #include "problem/problem_base.h"
 #include "types.h"
 
@@ -48,6 +49,10 @@ public:
   std::shared_ptr<Variable> add_variable(const std::string& name,
 					 py::object lower_bound, py::object upper_bound,
 					 py::object domain);
+
+  std::shared_ptr<Variable> add_aux_variable(const std::string& name,
+					     py::object lower_bound, py::object upper_bound,
+					     py::object domain, py::object reference);
 
   std::shared_ptr<Constraint> constraint(const std::string& name) const override;
   std::shared_ptr<Constraint> constraint(index_t idx) const override;
@@ -92,6 +97,7 @@ public:
     return name_;
   }
 private:
+  std::shared_ptr<Variable> do_add_variable(const std::shared_ptr<Variable>& var);
 
   std::string name_;
   std::vector<std::shared_ptr<Expression>> vertices_;
