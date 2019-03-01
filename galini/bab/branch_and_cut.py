@@ -16,7 +16,7 @@ from collections import namedtuple
 import numpy as np
 from galini.bab import BabAlgorithm, NodeSolution
 from galini.abb.relaxation import AlphaBBRelaxation
-from galini.core import Constraint
+from galini.core import Constraint, Domain
 from galini.cuts import CutsGeneratorsManager
 from galini.config import (
     OptionsGroup,
@@ -111,20 +111,17 @@ class BranchAndCutAlgorithm(BabAlgorithm):
                 mip_solution,
             )
 
-        # Solve original problem
-        # Use mip solution as starting point
-        for v, sv in zip(problem.variables, mip_solution.variables):
-            problem.set_starting_point(v, sv.value)
+        primal_solution = self._solve_primal(problem, mip_solution)
 
-        nlp_solution = self._nlp_solver.solve(problem, logger=self.logger)
-        if nlp_solution.status.is_success():
-            upper_bound = nlp_solution.objectives[0].value
+        if primal_solution.status.is_success():
+            upper_bound = primal_solution.objectives[0].value
         else:
             upper_bound = np.inf
+
         return NodeSolution(
             cuts_state.lower_bound,
             upper_bound,
-            nlp_solution,
+            primal_solution,
         )
 
     def _solve_problem_at_root(self, problem, tree, node):
@@ -161,6 +158,19 @@ class BranchAndCutAlgorithm(BabAlgorithm):
             problem, relaxed_problem, mip_solution, tree, node, logger=self.logger)
         self.logger.info('Round {}. Adding {} cuts.', cuts_state.round, len(new_cuts))
         return new_cuts, mip_solution
+
+    def _solve_primal(self, problem, mip_solution):
+        # Solve original problem
+        # Use mip solution as starting point
+        for v, sv in zip(problem.variables, mip_solution.variables):
+            domain = problem.domain(v)
+            if domain != Domain.REAL:
+                problem.fix(v, sv.value)
+            else:
+                problem.set_starting_point(v, sv.value)
+
+        return self._nlp_solver.solve(problem, logger=self.logger)
+
 
     def _cuts_converged(self, state):
         """Termination criteria for cut generation loop.
