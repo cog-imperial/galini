@@ -79,8 +79,7 @@ class BranchAndCutAlgorithm(BabAlgorithm):
         ])
 
     def solve_problem_at_node(self, problem, tree, node):
-        relaxation = AlphaBBRelaxation()
-        relaxed_problem = relaxation.relax(problem)
+        relaxation, relaxed_problem = self._relax_problem(problem)
 
         self.logger.info(
             'Starting Cut generation iterations. Maximum iterations={}, relative tolerance={}',
@@ -93,17 +92,8 @@ class BranchAndCutAlgorithm(BabAlgorithm):
         cuts_state = CutsState()
         while (not self._cuts_converged(cuts_state) and
                not self._cuts_iterations_exceeded(cuts_state)):
-            self.logger.info('Round {}. Solving linearized problem.', cuts_state.round)
-            mip_solution = self._mip_solver.solve(relaxed_problem, logger=self.logger)
-            self.logger.info(
-                'Round {}. Linearized problem solution is {}',
-                cuts_state.round, mip_solution.status.description())
-            assert mip_solution.status.is_success()
-
-            # Generate new cuts
-            new_cuts = self._cuts_generators_manager.generate(
-                problem, relaxed_problem, mip_solution, tree, node)
-            self.logger.info('Round {}. Adding {} cuts.', cuts_state.round, len(new_cuts))
+            new_cuts, mip_solution = \
+                self._perform_cut_round(problem, relaxed_problem, cuts_state, tree, node)
 
             # Add cuts as constraints
             # TODO(fra): use problem global and local cuts
@@ -150,6 +140,27 @@ class BranchAndCutAlgorithm(BabAlgorithm):
         solution = self.solve_problem_at_node(problem, tree, node)
         self._cuts_generators_manager.after_end_at_node(problem, solution)
         return solution
+
+    def _relax_problem(self, problem):
+        relaxation = AlphaBBRelaxation()
+        relaxed_problem = relaxation.relax(problem)
+        return relaxation, relaxed_problem
+
+    def _perform_cut_round(self, problem, relaxed_problem, cuts_state, tree, node):
+        self.logger.info('Round {}. Solving linearized problem.', cuts_state.round)
+
+        mip_solution = self._mip_solver.solve(relaxed_problem, logger=self.logger)
+
+        self.logger.info(
+            'Round {}. Linearized problem solution is {}',
+            cuts_state.round, mip_solution.status.description())
+        assert mip_solution.status.is_success()
+
+        # Generate new cuts
+        new_cuts = self._cuts_generators_manager.generate(
+            problem, relaxed_problem, mip_solution, tree, node)
+        self.logger.info('Round {}. Adding {} cuts.', cuts_state.round, len(new_cuts))
+        return new_cuts, mip_solution
 
     def _cuts_converged(self, state):
         """Termination criteria for cut generation loop.
