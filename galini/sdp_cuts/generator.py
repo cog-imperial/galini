@@ -26,8 +26,7 @@ import itertools
 import os
 import platform
 import ctypes
-import warnings
-warnings.filterwarnings("error")
+
 
 
 class SdpCutsGenerator(CutsGenerator):
