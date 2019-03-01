@@ -22,11 +22,10 @@ from galini.cuts import CutType, Cut, CutsGenerator
 from galini.abb.relaxation import AlphaBBRelaxation
 from galini.core import Constraint
 from operator import itemgetter, mul
-import itertools
-import os
+from itertools import combinations_with_replacement, chain
+from os import path
 import platform
-import ctypes
-
+from ctypes import cdll, c_double
 
 
 class SdpCutsGenerator(CutsGenerator):
@@ -77,41 +76,40 @@ class SdpCutsGenerator(CutsGenerator):
     @staticmethod
     def cuts_generator_options():
         return CutsGeneratorOptions(SdpCutsGenerator.name, [
-            NumericOption('domain_eps', default=1e-3,
+            NumericOption('domain_eps',
+                          default=1e-3,
                           description="Minimum domain length for each variable to consider cut on"),
-            NumericOption('selection_size', default=0.1,
+            NumericOption('selection_size',
+                          default=0.1,
                           description="Cut selection size as a % of all cuts or as absolute number of cuts"),
-            NumericOption('thres_sdp_viol', default=1e-15,
+            NumericOption('thres_sdp_viol',
+                          default=1e-15,
                           description="Violation (negative eigenvalue) threshold for separation of SDP cuts"),
-            NumericOption('max_sdp_cuts_per_round', default=5e3,
+            NumericOption('max_sdp_cuts_per_round',
+                          default=5e3,
                           description="Max number of SDP cuts to be added to relaxation at each cut round"),
-            NumericOption('dim', default=3,
+            NumericOption('dim',
+                          default=3,
                           description="Dimension of SDP decomposition/cuts"),
-            EnumOption('cut_sel_strategy', default="COMB_ONE_CON",
+            EnumOption('cut_sel_strategy',
+                       default="COMB_ONE_CON",
                        values=["OPT", "FEAS", "RANDOM", "COMB_ONE_CON", "COMB_ALL_CON"]),
-            NumericOption('big_m', default=10e3,
+            NumericOption('big_m',
+                          default=10e3,
                           description="Big M constant value for combined optimality/feasibility cut selection strategy"),
-            NumericOption('thres_min_opt', default=0,
+            NumericOption('thres_min_opt',
+                          default=0,
                           description="Threshold of minimum optimality measure to select cut in "
                                       "combined optimality/feasibility cut selection strategy")
         ])
 
     def before_start_at_root(self, problem):
         self._nb_vars = problem.num_variables
-
-        # Add Xii>=0 constraints to introduce the variables Xii where the coefficient is 0
-        relaxation = AlphaBBRelaxation()
-        relaxed_problem = relaxation.relax(problem)
-        for var_nb in range(self._nb_vars):
-            xi = problem.variables[var_nb]
-            sq_cut = Constraint('sq_' + str(var_nb),
-                                QuadraticExpression([xi], [xi], [1.0]), 0, None)
-            relaxation._relax_constraint(problem, relaxed_problem, sq_cut)
-
-        self._nns = self._load_neural_nets()
+        self._add_missing_squares(problem)
+        if self._cut_sel not in ["FEAS", "RANDOM"]:
+            self._nns = self._load_neural_nets()
         if self._agg_list is None:
             self._agg_list = self._get_sdp_decomposition(problem)
-
         self.before_start_at_node(problem)
 
     def after_end_at_root(self, problem, solution):
@@ -143,10 +141,9 @@ class SdpCutsGenerator(CutsGenerator):
         nb_sdp_cuts = 0
 
         # Interpret selection size ar % or absolute number and threshold the maximum number of SDP cuts per round
-        sel_size = min(int(np.floor(self._sel_size * nb_subprobs)) if self._sel_size < 1
-                       else min(self._sel_size, nb_subprobs),
-                       self._max_sdp_cuts)
-        sel_size = min(sel_size, len(rank_list))  # extra condition for feasibility selection
+        sel_size = int(np.floor(self._sel_size * nb_subprobs)) \
+            if self._sel_size <= 1 else int(np.floor(self._sel_size))
+        sel_size = min(sel_size, min(self._max_sdp_cuts, nb_subprobs))
         # Generate and add selected cuts up to (sel_size) in number
         for ix in range(0, sel_size):
             (idx, obj_improve, x_vals, X_slice, dim_act) = rank_list[ix]
@@ -161,10 +158,10 @@ class SdpCutsGenerator(CutsGenerator):
                 x_vars = [problem.variables[i] for i in clique]
                 sum_expr = SumExpression([
                     QuadraticExpression(
-                        list(itertools.chain.from_iterable(
+                        list(chain.from_iterable(
                             [[x_var for _ in range(dim_act - x_idx)] for x_idx, x_var in enumerate(x_vars)]
                         )),
-                        list(itertools.chain.from_iterable(
+                        list(chain.from_iterable(
                             [x_vars[i:] for i in range(dim_act)]
                         )),
                         evect_arr[dim_act:]),
@@ -173,6 +170,16 @@ class SdpCutsGenerator(CutsGenerator):
                 nb_sdp_cuts += 1
                 cut_name = 'sdp_cut_{}_{}'.format(self._cut_round, nb_sdp_cuts)
                 yield Cut(CutType.LOCAL, cut_name, sum_expr, 0, None)
+
+    def _add_missing_squares(self, problem):
+        # Add Xii>=0 constraints to introduce the variables Xii where the coefficient is 0
+        relaxation = AlphaBBRelaxation()
+        relaxed_problem = relaxation.relax(problem)
+        for var_nb in range(self._nb_vars):
+            xi = problem.variables[var_nb]
+            sq_cut = Constraint('sq_' + str(var_nb),
+                                QuadraticExpression([xi], [xi], [1.0]), 0, None)
+            relaxation._relax_constraint(problem, relaxed_problem, sq_cut)
 
     def _get_lifted_mat_values(self, problem, solution):
         # Build matrix of lifted X values
@@ -199,7 +206,7 @@ class SdpCutsGenerator(CutsGenerator):
         for idx, (clique, inputNNs) in enumerate(agg_list):
             dim_act = len(clique)
             x_vals = [solution.variables[var_idx].value for var_idx in clique]
-            cl_idxs = list(itertools.combinations_with_replacement(clique, 2))
+            cl_idxs = list(combinations_with_replacement(clique, 2))
             X_slice = itemgetter(*cl_idxs)(lifted_mat)
             # Including constant relating to rescaling
             if isNNused:
@@ -208,7 +215,6 @@ class SdpCutsGenerator(CutsGenerator):
                     (l[i]*solution.variables[j].value + l[j]*solution.variables[i].value - l[i]*l[j]) / d[i] / d[j]
                     for ix, (i, j) in enumerate(cl_idxs)]
                 x_vals_rs = [(x_vals[x_idx]-l[i])/d[i] for x_idx, i in enumerate(clique)]
-
             obj_improve = 0
 
             # Optimality-only selection (with neural net estimation) - works only for one objective, no constraints
@@ -217,15 +223,18 @@ class SdpCutsGenerator(CutsGenerator):
                 obj_improve += - sum(map(mul, input_nn, X_slice_rs)) * max_elem
                 # Estimate objective improvement using neural network (after casting input to right ctype)
                 obj_improve += nns[dim_act - 2][0](nns[dim_act - 2][1](*x_vals_rs, *input_nn)) * max_elem
+
             # Feasibility selection
             if self._cut_sel == "FEAS":
                 eigvals = self._get_eigendecomp(dim_act, x_vals, X_slice, False)
                 obj_improve = -eigvals[0]
+
             # Random selection
             elif self._cut_sel == "RANDOM":
                 obj_improve = np.random.random_sample()
             # Flag indicating whether a cut can be selected by the optimality measure
             sel_by_opt = False
+
             # Combined selection with optimality measures on one constraint at a time all added up
             if self._cut_sel == "COMB_ONE_CON":
                 eigvals = self._get_eigendecomp(dim_act, x_vals, X_slice, False)
@@ -245,6 +254,7 @@ class SdpCutsGenerator(CutsGenerator):
                     obj_improve += self._big_m
                 else:  # If cut not strong but valid
                     obj_improve = -eigvals[0]
+
             # Combined selection with one optimality measure on all constraints aggregated
             if self._cut_sel == "COMB_ALL_CON":
                 eigvals = self._get_eigendecomp(dim_act, x_vals, X_slice, False)
@@ -271,7 +281,9 @@ class SdpCutsGenerator(CutsGenerator):
                     obj_improve += self._big_m
                 else:  # If cut not strong but valid
                     obj_improve = -eigvals[0]
+
             rank_list.append((idx, obj_improve, x_vals, X_slice, dim_act))
+
         # Sort sub-problems rho by measure
         rank_list.sort(key=lambda tup: tup[1], reverse=True)
         return rank_list
@@ -282,7 +294,7 @@ class SdpCutsGenerator(CutsGenerator):
         d = self._dbs
         for idx, (clique, inputNNs) in enumerate(agg_list):
             clique_size = len(clique)
-            cl_idxs = list(itertools.combinations_with_replacement(clique, 2))
+            cl_idxs = list(combinations_with_replacement(clique, 2))
             for idx2, (input_nn, max_elem, con_idx) in enumerate(inputNNs):
                 # Rescale coefficients depending on bounds
                 input_nn = [coeff/(d[cl_idxs[idx][0]])/(d[cl_idxs[idx][1]]) for idx, coeff in enumerate(input_nn)]
@@ -298,20 +310,20 @@ class SdpCutsGenerator(CutsGenerator):
         current solution point.
         """
         self._nns = []
-        dirname = os.path.dirname(__file__)
+        dirname = path.dirname(__file__)
         if platform.uname()[0] == "Windows":
-            nn_library = os.path.join(dirname, 'NNs.dll')
+            nn_library = path.join(dirname, 'NNs.dll')
         elif platform.uname()[0] == "Linux":
-            nn_library = os.path.join(dirname, 'NNs.so')
+            nn_library = path.join(dirname, 'NNs.so')
         else:  # Mac OSX
             raise ValueError('The neural net library is compiled only for Windows/Linux! (OSX needs compiling)')
             #   nn_library = 'neural_nets/NNs.dylib' - Not compiled for OSX, will throw error
-        nn_library = ctypes.cdll.LoadLibrary(nn_library)
+        nn_library = cdll.LoadLibrary(nn_library)
         for d in range(2, self._dim + 1):  # (d=|rho|) - each subproblem rho has a neural net depending on its size
             func_dim = getattr(nn_library, "neural_net_%dD" % d)  # load each neural net
-            func_dim.restype = ctypes.c_double  # return type from each neural net is a c_double
+            func_dim.restype = c_double  # return type from each neural net is a c_double
             # c_double array input: x_rho (the current point) and Q_rho (upper triangular part since symmetric)
-            type_dim = (ctypes.c_double * (d * (d + 3) // 2))
+            type_dim = (c_double * (d * (d + 3) // 2))
             self._nns.append((func_dim, type_dim))
         return self._nns
 
@@ -395,7 +407,7 @@ class SdpCutsGenerator(CutsGenerator):
                 for agg_idx, el in enumerate(agg_list):
                     for clique_con in agg_list_con:
                         if clique_con <= el[0] and len(clique_con.intersection(el[0])) > 1:
-                            mat_idxs = list(itertools.combinations_with_replacement(sorted(el[0]), 2))
+                            mat_idxs = list(combinations_with_replacement(sorted(el[0]), 2))
                             input_nn = itemgetter(*mat_idxs)(coeff_mat_con)
                             agg_list[agg_idx][1].append((input_nn, 1, con_idx))
         # Sort clique elements (since neural networks are not invariant on order)
