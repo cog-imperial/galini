@@ -158,7 +158,7 @@ class BranchAndCutAlgorithm(BabAlgorithm):
 
         # Generate new cuts
         new_cuts = self._cuts_generators_manager.generate(
-            problem, relaxed_problem, mip_solution, tree, node)
+            problem, relaxed_problem, mip_solution, tree, node, logger=self.logger)
         self.logger.info('Round {}. Adding {} cuts.', cuts_state.round, len(new_cuts))
         return new_cuts, mip_solution
 

@@ -68,14 +68,18 @@ class CutsGeneratorsManager(object):
         for gen in self._generators:
             gen.after_end_at_node(problem, solution)
 
-    def generate(self, problem, linear_problem, mip_solution, tree, node):
+    def generate(self, problem, linear_problem, mip_solution, tree, node, logger=None):
         all_cuts = []
+        if logger is not None:
+            logger.info('Generating cuts')
         for gen in self._generators:
             cuts = gen.generate(problem, linear_problem, mip_solution, tree, node)
             if cuts is None:
                 cuts = []
             if not isinstance(cuts, list):
                 raise ValueError('CutsGenerator.generate must return a list of cuts.')
+            if logger is not None:
+                logger.info('  * {} generated {} cuts.', gen.name, len(cuts))
             for cut in cuts:
                 all_cuts.append(cut)
         return all_cuts
