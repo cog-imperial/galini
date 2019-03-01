@@ -176,6 +176,7 @@ setup(
         ],
         'galini.cuts_generators': [
             'triangle=galini.triangle_cuts:TriangleCutsGenerator',
+            'sdp=galini.sdp_cuts:SdpCutsGenerator',
         ],
     },
     ext_modules=extensions,

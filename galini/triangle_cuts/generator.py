@@ -1,4 +1,4 @@
-# Copyright 2019 Radu
+# Copyright 2019 Radu Baltean-Lugojan
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -90,6 +90,7 @@ class TriangleCutsGenerator(CutsGenerator):
         return cuts
 
     def _generate(self, problem, linear_problem, solution, tree, node):
+        # print(solution.objectives[0].value)
         triple_cliques = self.__problem_info_triangle[1]
         rank_list_tri = self._get_triangle_violations(linear_problem, solution)
         # Remove non-violated constraints and sort by density first and then violation second as in manuscript
@@ -97,12 +98,12 @@ class TriangleCutsGenerator(CutsGenerator):
         rank_list_tri_viol.sort(key=lambda tup: tup[2], reverse=True)
 
         # Determine thresholded (upper & lower) number of triangle cuts to add (proportional to selection size of SDP)
-        max_tri_cuts = max(
-            min(self._min_tri_cuts, int(np.floor(self._sel_size * len(rank_list_tri_viol)))),
+        nb_cuts = int(np.floor(self._sel_size * len(rank_list_tri_viol))) \
+            if self._sel_size <= 1 else int(np.floor(self._sel_size))
+        max_tri_cuts = min(
+            max(self._min_tri_cuts, nb_cuts),
             min(self._max_tri_cuts, len(rank_list_tri_viol)))
-        nb_tri_cuts = 0
         l = self._lbs
-        u = self._ubs
         d = self._dbs
 
         # Add all triangle cuts (ranked by violation) within selection size
@@ -162,7 +163,7 @@ class TriangleCutsGenerator(CutsGenerator):
                                             1.0/d[k] +l[i]/d[i]/d[k] +l[j]/d[j]/d[k]
                                          ],
                                         +l[i]*l[j]/d[i]/d[j] -l[i]*l[k]/d[i]/d[k] - l[j]*l[k]/d[j]/d[k] - l[k]/d[k])
-])
+                    ])
 
             cut_name = 'triangle_cut_{}_{}_{}'.format(self._cut_round, ix, ineq_type)
             yield Cut(CutType.LOCAL, cut_name, sum_expr, cut_lb, None)

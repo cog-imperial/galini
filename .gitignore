@@ -16,6 +16,7 @@ htmlcov
 venv
 docs/_build
 *.so
+!galini/sdp_cuts/NNs.so
 galini/core/*.c
 galini/core/*.html
 .cquery_cached_index
