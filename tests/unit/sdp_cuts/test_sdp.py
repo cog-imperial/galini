@@ -78,6 +78,13 @@ def test_sdp_cuts(problem):
         config.update({
             'cuts_generator': {
                 'sdp': {
+                    'domain_eps': 1e-3,
+                    'thres_sdp_viol': -1e-15,
+                    'min_sdp_cuts_per_round': 0,
+                    'max_sdp_cuts_per_round': 5e3,
+                    'dim': 3,
+                    'big_m': 10e3,
+                    'thres_min_opt_sel': 0,
                     'selection_size': 4,
                     'cut_sel_strategy': cut_sel_strategy
                 },
@@ -110,6 +117,13 @@ def test_sdp_cuts(problem):
     config.update({
         'cuts_generator': {
             'sdp': {
+                'domain_eps': 1e-3,
+                'thres_sdp_viol': -1e-15,
+                'min_sdp_cuts_per_round': 0,
+                'max_sdp_cuts_per_round': 5e3,
+                'dim': 3,
+                'big_m': 10e3,
+                'thres_min_opt_sel': 0,
                 'selection_size': 4,
                 'cut_sel_strategy': "COMB_ONE_CON"
             },

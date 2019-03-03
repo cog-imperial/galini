@@ -48,6 +48,7 @@ class SdpCutsGenerator(CutsGenerator):
         self._sel_size = config['selection_size']
         self._thres_sdp_viol = config['thres_sdp_viol']
         self._max_sdp_cuts = config['max_sdp_cuts_per_round']
+        self._min_sdp_cuts = config['min_sdp_cuts_per_round']
         self._dim = config['dim']
         self._thres_min_opt_sel = config['thres_min_opt_sel']
         self._cut_sel = config['cut_sel_strategy']
@@ -86,11 +87,14 @@ class SdpCutsGenerator(CutsGenerator):
                           default=1e-3,
                           description="Minimum domain length for each variable to consider cut on"),
             NumericOption('selection_size',
-                          default=4,
+                          default=0.1,
                           description="Cut selection size as a % of all cuts or as absolute number of cuts"),
             NumericOption('thres_sdp_viol',
                           default=-1e-15,
                           description="Violation (negative eigenvalue) threshold for separation of SDP cuts"),
+            NumericOption('min_sdp_cuts_per_round',
+                          default=1e1,
+                          description="Min number of SDP cuts to be added to relaxation at each cut round"),
             NumericOption('max_sdp_cuts_per_round',
                           default=5e3,
                           description="Max number of SDP cuts to be added to relaxation at each cut round"),
@@ -156,12 +160,14 @@ class SdpCutsGenerator(CutsGenerator):
         nb_sdp_cuts = 0
 
         # Interpret selection size as % or absolute number and threshold the maximum number of SDP cuts per round
-        sel_size = int(np.floor(self._sel_size * len(rank_list))) \
+        nb_cuts = int(np.floor(self._sel_size * len(rank_list))) \
             if self._sel_size <= 1 else int(np.floor(self._sel_size))
-        sel_size = min(sel_size, min(self._max_sdp_cuts, len(rank_list)))
+        max_sdp_cuts = min(
+            max(self._min_sdp_cuts, nb_cuts),
+            min(self._max_sdp_cuts, len(rank_list)))
 
         # Generate and add selected cuts up to (sel_size) in number
-        for ix in range(0, sel_size):
+        for ix in range(0, max_sdp_cuts):
             (idx, obj_improve, x_vals, X_slice, dim_act) = rank_list[ix]
             dim_act = len(x_vals)
             eigvals, evecs = self._get_eigendecomp(dim_act, x_vals, X_slice, True)
