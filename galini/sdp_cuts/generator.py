@@ -151,7 +151,6 @@ class SdpCutsGenerator(CutsGenerator):
         return cuts
 
     def _generate(self, problem, linear_problem, solution, tree, node):
-        print(solution.objectives[0].value)
         rank_list = self._get_sdp_selection(linear_problem, solution)
         agg_list = self._agg_list_rescaled
         nb_sdp_cuts = 0

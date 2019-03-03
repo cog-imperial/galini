@@ -102,7 +102,6 @@ def test_sdp_cuts(problem):
             for cut in new_cuts:
                 new_cons = Constraint(cut.name, cut.expr, cut.lower_bound, cut.upper_bound)
                 relaxation._relax_constraint(problem, relaxed_problem, new_cons)
-        print(mip_sols)
         assert (np.allclose(mip_sols, mip_sols_to_match[idx]))
 
     # Test when branched on x0 in [0.5, 1]
