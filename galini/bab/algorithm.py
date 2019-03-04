@@ -151,7 +151,7 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
 
     def _solve_problem_at_root(self, problem, tree, node):
         self._perform_fbbt(problem)
-        return self.solve_problem_at_node(problem, tree, node)
+        return self.solve_problem_at_root(problem, tree, node)
 
     def _solve_problem_at_node(self, problem, tree, node):
         self._perform_fbbt(problem)
