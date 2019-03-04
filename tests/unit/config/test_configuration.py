@@ -1,6 +1,7 @@
 # pylint: skip-file
 import pytest
 from pathlib import Path
+from galini.cuts import CutsGeneratorsRegistry
 from galini.config import GaliniConfig, ConfigurationManager
 from galini.solvers import SolversRegistry
 
@@ -10,7 +11,8 @@ def user_config():
     user_config_path = Path(__file__).parent / 'user_config.toml'
     manager = ConfigurationManager()
     solvers_reg = SolversRegistry()
-    manager.initialize(solvers_reg, str(user_config_path))
+    cuts_gen_reg = CutsGeneratorsRegistry()
+    manager.initialize(solvers_reg, cuts_gen_reg, str(user_config_path))
     return manager.configuration
 
 

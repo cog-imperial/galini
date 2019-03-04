@@ -29,8 +29,7 @@ def solution():
 class TestKFoldBranchingStrategy:
     def test_bisect(self, problem, solution):
         bisect_strat = KSectionBranchingStrategy()
-        tree = BabTree(bisect_strat, FakeSelectionStrategy())
-        tree.add_root(problem, solution)
+        tree = BabTree(problem, bisect_strat, FakeSelectionStrategy())
         node = tree.root
         for i in range(5):
             children, _ = node.branch(bisect_strat)
@@ -41,8 +40,7 @@ class TestKFoldBranchingStrategy:
 
     def test_ksection(self, problem, solution):
         ksection_strat = KSectionBranchingStrategy(7)
-        tree = BabTree(ksection_strat, FakeSelectionStrategy())
-        tree.add_root(problem, solution)
+        tree = BabTree(problem, ksection_strat, FakeSelectionStrategy())
         node = tree.root
         for i in range(5):
             children, _ = node.branch(ksection_strat)

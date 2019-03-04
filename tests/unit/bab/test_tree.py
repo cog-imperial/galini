@@ -13,6 +13,15 @@ class FakeSelectionStrategy:
         pass
 
 
+class FakeStatus(object):
+    def is_success(self):
+        return True
+
+
+class FakeSolution(object):
+    status = FakeStatus()
+
+
 def create_problem():
     m = aml.ConcreteModel()
     m.I = range(5)
@@ -22,7 +31,7 @@ def create_problem():
 
 
 def create_solution():
-    return NodeSolution(0.0, 1.0, None)
+    return NodeSolution(0.0, 1.0, FakeSolution())
 
 
 @pytest.fixture()
@@ -57,9 +66,8 @@ def tree():
      5 : [0, 2, 1]
 
     """
-    # t = BabTree(problem(), None)
-    t = BabTree(KSectionBranchingStrategy(), FakeSelectionStrategy())
-    t.add_root(create_problem(), create_solution())
+    t = BabTree(create_problem(), KSectionBranchingStrategy(), FakeSelectionStrategy())
+    t.update_root(create_solution())
     root = t.root
     for _ in range(3):
         root.add_children()
@@ -90,19 +98,19 @@ class TestBabTreeCoordinates:
 
 class TestBabTreeState:
     def test_update_with_new_lower_bound(self, tree):
-        sol = NodeSolution(0.5, 2.0, None)
+        sol = NodeSolution(0.5, 2.0, FakeSolution())
         tree.update_state(sol)
         # assert np.isclose(0.5, tree.state.lower_bound)
         assert np.isclose(1.0, tree.state.upper_bound)
 
     def test_update_with_new_upper_bound(self, tree):
-        sol = NodeSolution(-10.0, 0.5, None)
+        sol = NodeSolution(-10.0, 0.5, FakeSolution())
         tree.update_state(sol)
         # assert np.isclose(0.0, tree.state.lower_bound)
         assert np.isclose(0.5, tree.state.upper_bound)
 
     def test_update_with_both_new_bounds(self, tree):
-        sol = NodeSolution(0.5, 0.5, None)
+        sol = NodeSolution(0.5, 0.5, FakeSolution())
         tree.update_state(sol)
         # assert np.isclose(0.5, tree.state.lower_bound)
         assert np.isclose(0.5, tree.state.upper_bound)
