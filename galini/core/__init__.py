@@ -24,7 +24,7 @@ __all__ = [
     'LinearExpression', 'UnaryFunctionExpression', 'NegationExpression', 'AbsExpression',
     'SqrtExpression', 'ExpExpression', 'LogExpression', 'SinExpression', 'CosExpression',
     'TanExpression', 'AsinExpression', 'AcosExpression', 'AtanExpression', 'QuadraticExpression',
-    'Reference', 'BilinearTermReference', 'ExpressionReference',
+    'BilinearTermReference', 'ExpressionReference',
     'RootProblem', 'ChildProblem', 'RelaxedProblem', 'VariableView',
     'ipopt_solve', 'IpoptSolution', 'IpoptApplication', 'PythonJournal',
 ]
@@ -42,6 +42,7 @@ class Sense(Enum):
 
 
 BilinearTermReference = namedtuple('BilinearTermReference', ['var1', 'var2'])
+ExpressionReference = namedtuple('ExpressionReference', ['expression'])
 
 
 # pylint: disable=no-name-in-module
