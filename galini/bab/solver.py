@@ -39,13 +39,6 @@ class BranchAndBoundSolver(Solver):
             BranchAndCutAlgorithm.algorithm_options(),
         ])
 
-    def actual_solve(self, problem, **kwargs):
-        logger = Logger.from_kwargs(kwargs)
-        nlp_solver = self.instantiate_solver('ipopt')
-        mip_solver = self.instantiate_solver('mip')
-
-        assert self.cuts_manager is not None
-
-        algo = BranchAndCutAlgorithm(
-            nlp_solver, mip_solver, self.cuts_manager, self.config)
-        return algo.solve(problem, logger=logger)
+    def actual_solve(self, problem, run_id, **kwargs):
+        algo = BranchAndCutAlgorithm(self.galini)
+        return algo.solve(problem, run_id=run_id)

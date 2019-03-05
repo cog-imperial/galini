@@ -36,25 +36,8 @@ class Solver(metaclass=abc.ABCMeta):
     solver_registry : SolverRegistry
         Registry of available solvers
     """
-    def __init__(self, config, solver_registry, cuts_gen_registry=None):
-        self.config = config
-        self.solver_registry = solver_registry
-        if cuts_gen_registry is not None:
-            self.cuts_manager = CutsGeneratorsManager(cuts_gen_registry, config)
-        else:
-            self.cuts_manager = None
-
-    def get_solver(self, solver_name):
-        """Get solver from the registry."""
-        solver_cls = self.solver_registry.get(solver_name, None)
-        if solver_cls is None:
-            raise ValueError('No solver "{}"'.format(solver_name))
-        return solver_cls
-
-    def instantiate_solver(self, solver_name):
-        """Get and instantiate solver from the registry."""
-        solver_cls = self.get_solver(solver_name)
-        return solver_cls(self.config, self.solver_registry)
+    def __init__(self, galini):
+        self.galini = galini
 
     def solve(self, problem, **kwargs):
         """Solve the optimization problem.
@@ -72,17 +55,17 @@ class Solver(metaclass=abc.ABCMeta):
         """
         if seconds_left() <= 0:
             raise TimeoutError('Timelimit reached.')
-        logger = Logger.from_kwargs(kwargs)
         run_id = _create_run_id(self.name)
-        with logger.child_logger(solver=self.name, run_id=run_id) as child_logger:
-            child_logger.log_solve_start()
-            solution = self.actual_solve(problem, logger=child_logger, **kwargs)
-            child_logger.log_solve_end()
-            return solution
+        # logger = self.galini.get_logger(self.name, run_id)
+        # logger.log_solve_start()
+        solution = self.actual_solve(problem, run_id=run_id, **kwargs)
+        # logger.log_solve_end()
+        return solution
 
     @abc.abstractmethod
-    def actual_solve(self, problem, **kwargs):
+    def actual_solve(self, problem, run_id, **kwargs):
         pass
+
 
 
 class MINLPSolver(Solver):

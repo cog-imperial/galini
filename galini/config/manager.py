@@ -26,11 +26,12 @@ from galini.config.options import (
 
 
 class ConfigurationManager(object):
-    def __init__(self):
+    def __init__(self, solvers_reg, cuts_gen_reg):
         self._initialized = False
         self._configuration = None
+        self._initialize(solvers_reg, cuts_gen_reg)
 
-    def initialize(self, solvers_reg, cuts_gen_reg, user_config_path=None):
+    def _initialize(self, solvers_reg, cuts_gen_reg):
         config = GaliniConfig()
 
         # add default sections
@@ -57,12 +58,13 @@ class ConfigurationManager(object):
             group = cuts_generator_group.add_group(cuts_gen_options.name)
             _assign_options_to_group(cuts_gen_options, group)
 
-        if user_config_path:
-            # overwrite config from user config
-            user_config = toml.load(user_config_path)
-            config.update(user_config)
         self._configuration = config
         self._initialized = True
+
+    def update_configuration(self, user_config):
+        if not isinstance(user_config, dict):
+            user_config = toml.load(user_config)
+        self._configuration.update(user_config)
 
     @property
     def configuration(self):

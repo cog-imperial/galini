@@ -15,16 +15,13 @@
 
 import sys
 from argparse import ArgumentParser, Namespace
-from galini.config import ConfigurationManager
-from galini.cuts import CutsGeneratorsRegistry
+from galini.galini import Galini
 from galini.commands import (
     CliCommandWithProblem,
     OutputTable,
     print_output_table,
     add_output_format_parser_arguments,
 )
-from galini.logging import RootLogger
-from galini.solvers import SolversRegistry
 from galini.timelimit import timeout
 
 
@@ -35,8 +32,12 @@ class SolveCommand(CliCommandWithProblem):
     """Command to solve an optimization problem."""
 
     def execute_with_problem(self, problem, args):
-        solvers_reg = SolversRegistry()
-        solver_cls = solvers_reg.get(args.solver.lower())
+        galini = Galini()
+        if args.config:
+            galini.update_configuration(args.config)
+
+        solver_cls = galini.get_solver(args.solver.lower())
+
         if solver_cls is None:
             available = ', '.join(solvers_reg.keys())
             print(
@@ -45,19 +46,12 @@ class SolveCommand(CliCommandWithProblem):
             )
             sys.exit(1)
 
-        cuts_gen_reg = CutsGeneratorsRegistry()
+        solver = solver_cls(galini)
 
-        config_manager = ConfigurationManager()
-        config_manager.initialize(solvers_reg, cuts_gen_reg, args.config)
-        config = config_manager.configuration
-
-        root_logger = RootLogger(config.logging)
-        solver = solver_cls(config, solvers_reg, cuts_gen_reg)
-
-        galini_group = config.get('galini')
+        galini_group = galini.get_configuration_group('galini')
         timelimit = galini_group.get('timelimit')
         with timeout(timelimit):
-            solution = solver.solve(problem, logger=root_logger)
+            solution = solver.solve(problem)
 
         if solution is None:
             raise RuntimeError('Solver did not return a solution')

@@ -13,7 +13,7 @@
 # limitations under the License.
 """Solve NLP using Ipopt."""
 import numpy as np
-from galini.logging import Logger, INFO, WARNING
+from galini.logging import Logger, INFO, WARNING, NullLogger
 from galini.config.options import (
     SolverOptions,
     ExternalSolverOptions,
@@ -78,18 +78,20 @@ class IpoptNLPSolver(Solver):
             ]),
         ])
 
-    def actual_solve(self, problem, **kwargs):
+    def actual_solve(self, problem, run_id, **kwargs):
         if len(problem.objectives) != 1:
             raise ValueError('Problem must have exactly 1 objective function.')
 
-        self.logger = Logger.from_kwargs(kwargs)
+        self.logger = NullLogger()
+
         if 'ipopt_application' in kwargs:
             app = kwargs.pop('ipopt_application')
             print('Using app = ', app)
         else:
             app = IpoptApplication()
-            self._configure_ipopt_application(app, self.config.ipopt)
-            self._configure_ipopt_logger(app, self.config.ipopt)
+            config = self.galini.get_configuration_group('ipopt')
+            self._configure_ipopt_application(app, config)
+            self._configure_ipopt_logger(app, config)
 
         xi, xl, xu = self.get_starting_point_and_bounds(problem)
         gl, gu = self.get_constraints_bounds(problem)

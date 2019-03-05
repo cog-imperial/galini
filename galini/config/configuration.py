@@ -106,9 +106,9 @@ class GaliniConfig(object):
         """Add a new configuration group."""
         return self._config.add_group(name, **kwargs)
 
-    def get(self, key):
+    def get(self, key, default=None):
         """Get configuration value or group for key. Returns None if not present."""
-        return self._config.get(key)
+        return self._config.get(key, default=default)
 
     def __getitem__(self, key):
         """Get configuration value or group for key. Raise KeyError if not present."""

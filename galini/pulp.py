@@ -17,7 +17,7 @@ import logging
 import numpy as np
 from suspect.expression import ExpressionType
 from galini.core import Problem, Sense, Domain
-from galini.logging import Logger, INFO, WARNING, ERROR
+from galini.logging import Logger, INFO, WARNING, ERROR, NullLogger
 from galini.timelimit import seconds_left
 from galini.solvers import (
     Solver,
@@ -76,9 +76,9 @@ class MIPSolver(Solver):
             ExternalSolverOptions('cplex'),
         ])
 
-    def actual_solve(self, problem, **kwargs):
-        logger = Logger.from_kwargs(kwargs)
-        solver = _solver(logger, self.config.mip)
+    def actual_solve(self, problem, run_id, **kwargs):
+        logger = NullLogger()
+        solver = _solver(logger, self.galini)
         if isinstance(problem, Problem):
             assert len(problem.objectives) == 1
 
@@ -119,10 +119,10 @@ class MIPSolver(Solver):
 
 class CplexSolver(object):
     """Wrapper around pulp.CPLEX_PY to integrate with GALINI."""
-    def __init__(self, logger, config):
+    def __init__(self, logger, galini):
         self._inner = pulp.CPLEX_PY()
         self._logger = logger
-        self._config = config.cplex
+        self._config = galini.get_configuration_group('mip.cplex')
 
     def available(self):
         return self._inner.available()
@@ -185,8 +185,8 @@ class CplexSolver(object):
             attr.set(value)
 
 
-def _solver(logger, config):
-    cplex = CplexSolver(logger, config)
+def _solver(logger, galini):
+    cplex = CplexSolver(logger, galini)
     if cplex.available():
         return cplex
     return pulp.PULP_CBC_CMD()

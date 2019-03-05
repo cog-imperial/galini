@@ -48,14 +48,16 @@ class CutsState(object):
 
 
 class BranchAndCutAlgorithm(BabAlgorithm):
-    def __init__(self, nlp_solver, mip_solver, cuts_manager, config):
-        self.initialize(config.bab)
-        self._nlp_solver = nlp_solver
-        self._mip_solver = mip_solver
+    name = 'branch_and_cut'
 
-        self._cuts_generators_manager = cuts_manager
+    def __init__(self, galini):
+        self.galini = galini
+        self._nlp_solver = galini.instantiate_solver('ipopt')
+        self._mip_solver = galini.instantiate_solver('mip')
+        self._cuts_generators_manager = galini.cuts_generators_manager
+        self.initialize(galini.get_configuration_group('bab'))
 
-        bac_config = config.bab.branch_and_cut
+        bac_config = galini.get_configuration_group('bab.branch_and_cut')
         self.cuts_maxiter = bac_config['maxiter']
         self.cuts_relative_tolerance = bac_config['relative_tolerance']
         self.cuts_domain_eps = bac_config['domain_eps']

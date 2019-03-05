@@ -15,6 +15,7 @@
 from galini_io import (
     Logger,
     RootLogger,
+    NullLogger,
 
     NOTSET,
     DEBUG,

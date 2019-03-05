@@ -16,7 +16,7 @@ import heapq
 import abc
 import numpy as np
 from suspect.interval import Interval
-from galini.logging import Logger
+from galini.logging import Logger, NullLogger
 from galini.quantities import relative_gap, absolute_gap
 from galini.bab.strategy import KSectionBranchingStrategy
 from galini.bab.tree import BabTree
@@ -52,6 +52,8 @@ class NodeSelectionStrategy(object):
 
 
 class BabAlgorithm(metaclass=abc.ABCMeta):
+    name = 'bab'
+
     def initialize(self, config):
         self.tolerance = config['tolerance']
         self.relative_tolerance = config['relative_tolerance']
@@ -78,8 +80,8 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
     def _node_limit_exceeded(self, state):
         return state.nodes_visited > self.node_limit
 
-    def solve(self, problem, **kwargs):
-        self.logger = Logger.from_kwargs(kwargs)
+    def solve(self, problem, run_id, **kwargs):
+        self.logger = NullLogger()
 
         branching_strategy = KSectionBranchingStrategy(2)
         node_selection_strategy = NodeSelectionStrategy()
