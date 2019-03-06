@@ -16,6 +16,7 @@ from collections import namedtuple
 import numpy as np
 from galini.bab import BabAlgorithm, NodeSolution
 from galini.abb.relaxation import AlphaBBRelaxation
+from galini.logging import get_logger
 from galini.core import Constraint, Domain
 from galini.cuts import CutsGeneratorsManager
 from galini.config import (
@@ -24,6 +25,9 @@ from galini.config import (
     IntegerOption,
     EnumOption,
 )
+
+
+logger = get_logger(__name__)
 
 
 class CutsState(object):
@@ -80,14 +84,16 @@ class BranchAndCutAlgorithm(BabAlgorithm):
                           description='Cut selection size as a % of all cuts or as absolute number of cuts'),
         ])
 
-    def solve_problem_at_node(self, problem, tree, node):
+    def solve_problem_at_node(self, run_id, problem, tree, node):
         relaxation, relaxed_problem = self._relax_problem(problem)
 
-        self.logger.info(
+        logger.info(
+            run_id,
             'Starting Cut generation iterations. Maximum iterations={}, relative tolerance={}',
             self.cuts_maxiter,
             self.cuts_relative_tolerance)
-        self.logger.info(
+        logger.info(
+            run_id,
             'Using cuts generators: {}',
             ', '.join([g.name for g in self._cuts_generators_manager.generators]))
 
@@ -95,7 +101,7 @@ class BranchAndCutAlgorithm(BabAlgorithm):
         while (not self._cuts_converged(cuts_state) and
                not self._cuts_iterations_exceeded(cuts_state)):
             new_cuts, mip_solution = \
-                self._perform_cut_round(problem, relaxed_problem, cuts_state, tree, node)
+                self._perform_cut_round(run_id, problem, relaxed_problem, cuts_state, tree, node)
 
             # Add cuts as constraints
             # TODO(fra): use problem global and local cuts
@@ -126,18 +132,18 @@ class BranchAndCutAlgorithm(BabAlgorithm):
             primal_solution,
         )
 
-    def _solve_problem_at_root(self, problem, tree, node):
+    def _solve_problem_at_root(self, run_id, problem, tree, node):
         self._perform_fbbt(problem)
-        self._cuts_generators_manager.before_start_at_root(problem)
-        solution = self.solve_problem_at_node(problem, tree, node)
-        self._cuts_generators_manager.after_end_at_root(problem, solution)
+        self._cuts_generators_manager.before_start_at_root(run_id, problem)
+        solution = self.solve_problem_at_node(run_id, problem, tree, node)
+        self._cuts_generators_manager.after_end_at_root(run_id, problem, solution)
         return solution
 
-    def _solve_problem_at_node(self, problem, tree, node):
+    def _solve_problem_at_node(self, run_id, problem, tree, node):
         self._perform_fbbt(problem)
-        self._cuts_generators_manager.before_start_at_node(problem)
-        solution = self.solve_problem_at_node(problem, tree, node)
-        self._cuts_generators_manager.after_end_at_node(problem, solution)
+        self._cuts_generators_manager.before_start_at_node(run_id, problem)
+        solution = self.solve_problem_at_node(run_id, problem, tree, node)
+        self._cuts_generators_manager.after_end_at_node(run_id, problem, solution)
         return solution
 
     def _relax_problem(self, problem):
@@ -145,20 +151,21 @@ class BranchAndCutAlgorithm(BabAlgorithm):
         relaxed_problem = relaxation.relax(problem)
         return relaxation, relaxed_problem
 
-    def _perform_cut_round(self, problem, relaxed_problem, cuts_state, tree, node):
-        self.logger.info('Round {}. Solving linearized problem.', cuts_state.round)
+    def _perform_cut_round(self, run_id, problem, relaxed_problem, cuts_state, tree, node):
+        logger.info(run_id, 'Round {}. Solving linearized problem.', cuts_state.round)
 
-        mip_solution = self._mip_solver.solve(relaxed_problem, logger=self.logger)
+        mip_solution = self._mip_solver.solve(relaxed_problem)
 
-        self.logger.info(
+        logger.info(
+            run_id,
             'Round {}. Linearized problem solution is {}',
             cuts_state.round, mip_solution.status.description())
         assert mip_solution.status.is_success()
 
         # Generate new cuts
         new_cuts = self._cuts_generators_manager.generate(
-            problem, relaxed_problem, mip_solution, tree, node, logger=self.logger)
-        self.logger.info('Round {}. Adding {} cuts.', cuts_state.round, len(new_cuts))
+            run_id, problem, relaxed_problem, mip_solution, tree, node)
+        logger.info(run_id, 'Round {}. Adding {} cuts.', cuts_state.round, len(new_cuts))
         return new_cuts, mip_solution
 
     def _solve_primal(self, problem, mip_solution):
@@ -171,7 +178,7 @@ class BranchAndCutAlgorithm(BabAlgorithm):
             else:
                 problem.set_starting_point(v, sv.value)
 
-        return self._nlp_solver.solve(problem, logger=self.logger)
+        return self._nlp_solver.solve(problem)
 
 
     def _cuts_converged(self, state):

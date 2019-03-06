@@ -3,17 +3,16 @@ import pytest
 from pathlib import Path
 from galini.cuts import CutsGeneratorsRegistry
 from galini.config import GaliniConfig, ConfigurationManager
+from galini.galini import Galini
 from galini.solvers import SolversRegistry
 
 
 @pytest.fixture
 def user_config():
     user_config_path = Path(__file__).parent / 'user_config.toml'
-    manager = ConfigurationManager()
-    solvers_reg = SolversRegistry()
-    cuts_gen_reg = CutsGeneratorsRegistry()
-    manager.initialize(solvers_reg, cuts_gen_reg, str(user_config_path))
-    return manager.configuration
+    galini = Galini()
+    galini.update_configuration(str(user_config_path))
+    return galini._config
 
 
 def test_default_config(user_config):

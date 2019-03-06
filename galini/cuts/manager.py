@@ -13,7 +13,11 @@
 # limitations under the License.
 """Cuts generators manager."""
 from galini.registry import Registry
+from galini.logging import get_logger
 from galini.config.options import OptionsGroup, StringListOption
+
+
+logger = get_logger(__name__)
 
 
 class CutsGeneratorsRegistry(Registry):
@@ -52,34 +56,33 @@ class CutsGeneratorsManager(object):
     def generators(self):
         return self._generators
 
-    def before_start_at_root(self, problem):
+    def before_start_at_root(self, run_id, problem):
         for gen in self._generators:
-            gen.before_start_at_root(problem)
+            gen.before_start_at_root(run_id, problem)
 
-    def after_end_at_root(self, problem, solution):
+    def after_end_at_root(self, run_id, problem, solution):
         for gen in self._generators:
-            gen.after_end_at_root(problem, solution)
+            gen.after_end_at_root(run_id, problem, solution)
 
-    def before_start_at_node(self, problem):
+    def before_start_at_node(self, run_id, problem):
         for gen in self._generators:
-            gen.before_start_at_node(problem)
+            gen.before_start_at_node(run_id, problem)
 
-    def after_end_at_node(self, problem, solution):
+    def after_end_at_node(self, run_id, problem, solution):
         for gen in self._generators:
-            gen.after_end_at_node(problem, solution)
+            gen.after_end_at_node(run_id, problem, solution)
 
-    def generate(self, problem, linear_problem, mip_solution, tree, node, logger=None):
+    def generate(self, run_id, problem, linear_problem, mip_solution, tree, node):
         all_cuts = []
-        if logger is not None:
-            logger.info('Generating cuts')
+        logger.info(run_id, 'Generating cuts')
+
         for gen in self._generators:
-            cuts = gen.generate(problem, linear_problem, mip_solution, tree, node)
+            cuts = gen.generate(run_id, problem, linear_problem, mip_solution, tree, node)
             if cuts is None:
                 cuts = []
             if not isinstance(cuts, list):
                 raise ValueError('CutsGenerator.generate must return a list of cuts.')
-            if logger is not None:
-                logger.info('  * {} generated {} cuts.', gen.name, len(cuts))
+            logger.info(run_id, '  * {} generated {} cuts.', gen.name, len(cuts))
             for cut in cuts:
                 all_cuts.append(cut)
         return all_cuts

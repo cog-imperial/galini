@@ -16,12 +16,14 @@ import heapq
 import abc
 import numpy as np
 from suspect.interval import Interval
-from galini.logging import Logger, NullLogger
+from galini.logging import get_logger
 from galini.quantities import relative_gap, absolute_gap
 from galini.bab.strategy import KSectionBranchingStrategy
 from galini.bab.tree import BabTree
 from galini.special_structure import detect_special_structure
 
+
+logger = get_logger(__name__)
 
 class NodeSelectionStrategy(object):
     class _Node(object):
@@ -60,11 +62,11 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
         self.node_limit = config['node_limit']
         self.fbbt_maxiter = config['fbbt_maxiter']
 
-    def solve_problem_at_root(self, problem, tree, node):
-        return self.solve_problem_at_node(problem, tree, node)
+    def solve_problem_at_root(self, run_id, problem, tree, node):
+        return self.solve_problem_at_node(run_id, problem, tree, node)
 
     @abc.abstractmethod
-    def solve_problem_at_node(self, problem, tree, node):
+    def solve_problem_at_node(self, run_id, problem, tree, node):
         raise NotImplementedError()
 
     def has_converged(self, state):
@@ -81,18 +83,17 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
         return state.nodes_visited > self.node_limit
 
     def solve(self, problem, run_id, **kwargs):
-        self.logger = NullLogger()
-
         branching_strategy = KSectionBranchingStrategy(2)
         node_selection_strategy = NodeSelectionStrategy()
         tree = BabTree(problem, branching_strategy, node_selection_strategy)
 
-        self.logger.info('Solving root problem')
-        root_solution = self._solve_problem_at_root(problem, tree, tree.root)
+        logger.info(run_id, 'Solving root problem')
+        root_solution = self._solve_problem_at_root(run_id, problem, tree, tree.root)
         tree.update_root(root_solution)
 
-        self.logger.info('Root problem solved, tree state {}', tree.state)
-        self.logger.log_add_bab_node(
+        logger.info(run_id, 'Root problem solved, tree state {}', tree.state)
+        logger.log_add_bab_node(
+            run_id,
             coordinate=[0],
             lower_bound=root_solution.lower_bound,
             upper_bound=root_solution.upper_bound,
@@ -103,12 +104,13 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
             return root_solution.solution
 
         while not self.has_converged(tree.state) and not self._node_limit_exceeded(tree.state):
-            self.logger.info('Tree state at beginning of iteration: {}', tree.state)
+            logger.info(run_id, 'Tree state at beginning of iteration: {}', tree.state)
             if not tree.has_nodes():
                 return tree.best_solution.solution
             current_node = tree.next_node()
 
-            self.logger.info(
+            logger.info(
+                run_id,
                 'Visiting node {}: state={}, solution={}',
                 current_node.coordinate,
                 current_node.state,
@@ -116,30 +118,32 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
             )
 
             if current_node.state.lower_bound >= tree.state.upper_bound:
-                self.logger.info(
+                logger.info(
+                    run_id,
                     "Skip node because it won't improve bound: node.lower_bound={}, tree.upper_bound={}",
                     current_node.state.lower_bound,
                     tree.state.upper_bound,
                 )
-                self.logger.log_prune_bab_node(current_node.coordinate)
+                logger.log_prune_bab_node(run_id, current_node.coordinate)
                 continue
 
             if not current_node.solution.status.is_success():
-                self.logger.info("Skip node because it was not feasible")
-                self.logger.log_prune_bab_node(current_node.coordinate)
+                logger.info(run_id, "Skip node because it was not feasible")
+                logger.log_prune_bab_node(run_id, current_node.coordinate)
                 continue
 
             node_children, branching_point = current_node.branch()
-            self.logger.info('Branched at point {}', branching_point)
+            logger.info(run_id, 'Branched at point {}', branching_point)
             for child in node_children:
-                solution = self._solve_problem_at_node(child.problem, tree, child)
+                solution = self._solve_problem_at_node(run_id, child.problem, tree, child)
                 tree.update_node(child, solution)
 
-                self._log_problem_information_at_node(child.problem, solution, child)
-                self.logger.info('Child {} has solution {}', child.coordinate, solution)
-                self.logger.info('New tree state {}', tree.state)
+                self._log_problem_information_at_node(run_id, child.problem, solution, child)
+                logger.info(run_id, 'Child {} has solution {}', child.coordinate, solution)
+                logger.info(run_id, 'New tree state {}', tree.state)
                 var_view = child.problem.variable_view(child.variable)
-                self.logger.log_add_bab_node(
+                logger.log_add_bab_node(
+                    run_id,
                     coordinate=child.coordinate,
                     lower_bound=solution.lower_bound,
                     upper_bound=solution.upper_bound,
@@ -151,13 +155,13 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
         else:
             return None
 
-    def _solve_problem_at_root(self, problem, tree, node):
+    def _solve_problem_at_root(self, run_id, problem, tree, node):
         self._perform_fbbt(problem)
-        return self.solve_problem_at_root(problem, tree, node)
+        return self.solve_problem_at_root(run_id, problem, tree, node)
 
-    def _solve_problem_at_node(self, problem, tree, node):
+    def _solve_problem_at_node(self, run_id, problem, tree, node):
         self._perform_fbbt(problem)
-        return self.solve_problem_at_node(problem, tree, node)
+        return self.solve_problem_at_node(run_id, problem, tree, node)
 
     def _perform_fbbt(self, problem):
         ctx = detect_special_structure(problem, max_iter=self.fbbt_maxiter)
@@ -169,20 +173,23 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
             vv.set_lower_bound(_safe_lb(new_bound.lower_bound, vv.lower_bound()))
             vv.set_upper_bound(_safe_ub(new_bound.upper_bound, vv.upper_bound()))
 
-    def _log_problem_information_at_node(self, problem, solution, node):
+    def _log_problem_information_at_node(self, run_id, problem, solution, node):
         group_name = '_'.join([str(c) for c in node.coordinate])
-        self.logger.tensor(
+        logger.tensor(
+            run_id,
             group=group_name,
             dataset='lower_bounds',
             data=np.array(problem.lower_bounds)
         )
-        self.logger.tensor(
+        logger.tensor(
+            run_id,
             group=group_name,
             dataset='upper_bounds',
             data=np.array(problem.upper_bounds)
         )
         if solution.solution.status.is_success():
-            self.logger.tensor(
+            logger.tensor(
+                run_id,
                 group=group_name,
                 dataset='solution',
                 data=np.array([v.value for v in solution.solution.variables]),

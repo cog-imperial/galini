@@ -23,6 +23,7 @@ from galini.commands import (
     add_output_format_parser_arguments,
 )
 from galini.timelimit import timeout
+from galini.logging import apply_config as apply_logging_config
 
 
 DEFAULT_SOLVER = 'bab'
@@ -46,6 +47,7 @@ class SolveCommand(CliCommandWithProblem):
             )
             sys.exit(1)
 
+        apply_logging_config(galini.get_configuration_group('logging'))
         solver = solver_cls(galini)
 
         galini_group = galini.get_configuration_group('galini')

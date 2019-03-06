@@ -15,7 +15,6 @@
 import datetime
 import abc
 from galini.timelimit import seconds_left
-from galini.logging import Logger
 from galini.cuts import CutsGeneratorsManager
 from galini.core import Problem
 
@@ -56,10 +55,9 @@ class Solver(metaclass=abc.ABCMeta):
         if seconds_left() <= 0:
             raise TimeoutError('Timelimit reached.')
         run_id = _create_run_id(self.name)
-        # logger = self.galini.get_logger(self.name, run_id)
-        # logger.log_solve_start()
+        self.galini.logger.log_solve_start(run_id)
         solution = self.actual_solve(problem, run_id=run_id, **kwargs)
-        # logger.log_solve_end()
+        self.galini.logger.log_solve_end(run_id)
         return solution
 
     @abc.abstractmethod

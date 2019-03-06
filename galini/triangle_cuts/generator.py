@@ -18,6 +18,10 @@ from suspect.expression import ExpressionType
 from galini.config import CutsGeneratorOptions, NumericOption
 from galini.core import LinearExpression, SumExpression, QuadraticExpression
 from galini.cuts import CutType, Cut, CutsGenerator
+from galini.logging import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class TriangleCutsGenerator(CutsGenerator):
@@ -65,32 +69,31 @@ class TriangleCutsGenerator(CutsGenerator):
                           description='Max number of triangle cuts to be added to relaxation at each cut round'),
         ])
 
-    def before_start_at_root(self, problem):
+    def before_start_at_root(self, run_id, problem):
         self._nb_vars = problem.num_variables
         self._get_triangle_info(problem)
-        self.before_start_at_node(problem)
+        self.before_start_at_node(run_id, problem)
 
-    def after_end_at_root(self, problem, solution):
-        self.after_end_at_node(problem, solution)
+    def after_end_at_root(self, run_id, problem, solution):
+        self.after_end_at_node(run_id, problem, solution)
 
-    def before_start_at_node(self, problem):
+    def before_start_at_node(self, run_id, problem):
         self._lbs = problem.lower_bounds
         self._ubs = problem.upper_bounds
         self._dbs = [u - l for l, u in zip(self._lbs, self._ubs)]
         self._cut_round = 0
 
-    def after_end_at_node(self, problem, solution):
+    def after_end_at_node(self, run_id, problem, solution):
         self._lbs = None
         self._ubs = None
         self._dbs = None
 
-    def generate(self, problem, linear_problem, solution, tree, node):
-        cuts = list(self._generate(problem, linear_problem, solution, tree, node))
+    def generate(self, run_id, problem, linear_problem, solution, tree, node):
+        cuts = list(self._generate(run_id, problem, linear_problem, solution, tree, node))
         self._cut_round += 1
         return cuts
 
-    def _generate(self, problem, linear_problem, solution, tree, node):
-        # print(solution.objectives[0].value)
+    def _generate(self, run_id, problem, linear_problem, solution, tree, node):
         triple_cliques = self.__problem_info_triangle[1]
         rank_list_tri = self._get_triangle_violations(linear_problem, solution)
         # Remove non-violated constraints and sort by density first and then violation second as in manuscript
@@ -107,12 +110,14 @@ class TriangleCutsGenerator(CutsGenerator):
         d = self._dbs
 
         # Add all triangle cuts (ranked by violation) within selection size
+        logger.info(run_id, 'Adding {} cuts', max_tri_cuts)
         for ix in range(0, max_tri_cuts):
             ineq_type = rank_list_tri_viol[ix][1]
             i,j,k = triple_cliques[rank_list_tri_viol[ix][0]]
             xi, xj, xk = problem.variables[i], problem.variables[j], problem.variables[k]
             # Generate constraints for the 4 different triangle inequality types
             cut_lb = 0
+            logger.info(run_id, 'Cut {} is of type {}', ix, ineq_type)
             if ineq_type == 3:
                 sum_expr = SumExpression([
                     QuadraticExpression([xi, xj, xk], [xj, xk, xi],

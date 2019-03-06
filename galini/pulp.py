@@ -17,7 +17,7 @@ import logging
 import numpy as np
 from suspect.expression import ExpressionType
 from galini.core import Problem, Sense, Domain
-from galini.logging import Logger, INFO, WARNING, ERROR, NullLogger
+from galini.logging import get_logger, INFO, WARNING, ERROR
 from galini.timelimit import seconds_left
 from galini.solvers import (
     Solver,
@@ -33,6 +33,9 @@ from galini.config import (
 
 log = logging.getLogger(pulp.__name__)
 log.setLevel(9001) # silence pulp
+
+
+logger = get_logger(__name__)
 
 
 class PulpStatus(Status):
@@ -77,8 +80,7 @@ class MIPSolver(Solver):
         ])
 
     def actual_solve(self, problem, run_id, **kwargs):
-        logger = NullLogger()
-        solver = _solver(logger, self.galini)
+        solver = _solver(logger, run_id, self.galini)
         if isinstance(problem, Problem):
             assert len(problem.objectives) == 1
 
@@ -119,9 +121,10 @@ class MIPSolver(Solver):
 
 class CplexSolver(object):
     """Wrapper around pulp.CPLEX_PY to integrate with GALINI."""
-    def __init__(self, logger, galini):
+    def __init__(self, logger, run_id, galini):
         self._inner = pulp.CPLEX_PY()
         self._logger = logger
+        self._run_id = run_id
         self._config = galini.get_configuration_group('mip.cplex')
 
     def available(self):
@@ -168,10 +171,10 @@ class CplexSolver(object):
         if not self.available():
             return
         model = self._inner.solverModel
-        model.set_warning_stream(_CplexLoggerAdapter(self._logger, WARNING))
-        model.set_error_stream(_CplexLoggerAdapter(self._logger, ERROR))
-        model.set_log_stream(_CplexLoggerAdapter(self._logger, INFO))
-        model.set_results_stream(_CplexLoggerAdapter(self._logger, INFO))
+        model.set_warning_stream(_CplexLoggerAdapter(self._logger, self._run_id, WARNING))
+        model.set_error_stream(_CplexLoggerAdapter(self._logger, self._run_id, ERROR))
+        model.set_log_stream(_CplexLoggerAdapter(self._logger, self._run_id, INFO))
+        model.set_results_stream(_CplexLoggerAdapter(self._logger, self._run_id, INFO))
 
         for key, value in self._config.items():
             # Parameters are specified as a path (mip.tolerances.mipgap)
@@ -185,8 +188,8 @@ class CplexSolver(object):
             attr.set(value)
 
 
-def _solver(logger, galini):
-    cplex = CplexSolver(logger, galini)
+def _solver(logger, run_id, galini):
+    cplex = CplexSolver(logger, run_id, galini)
     if cplex.available():
         return cplex
     return pulp.PULP_CBC_CMD()
@@ -255,12 +258,13 @@ def _linear_expression_to_pulp(variables, expr):
 
 
 class _CplexLoggerAdapter(object):
-    def __init__(self, logger, level):
+    def __init__(self, logger, run_id, level):
         self._logger = logger
+        self._run_id = run_id
         self._level = level
 
     def write(self, msg):
-        self._logger.log(self._level, msg)
+        self._logger.log(self._run_id, self._level, msg)
 
     def flush(self):
         pass

@@ -13,7 +13,7 @@
 # limitations under the License.
 """Solve NLP using Ipopt."""
 import numpy as np
-from galini.logging import Logger, INFO, WARNING, NullLogger
+from galini.logging import get_logger, INFO, WARNING
 from galini.config.options import (
     SolverOptions,
     ExternalSolverOptions,
@@ -34,6 +34,9 @@ from galini.core import (
     EJournalLevel,
     PythonJournal,
 )
+
+
+logger = get_logger(__name__)
 
 
 class IpoptStatus(Status):
@@ -82,8 +85,6 @@ class IpoptNLPSolver(Solver):
         if len(problem.objectives) != 1:
             raise ValueError('Problem must have exactly 1 objective function.')
 
-        self.logger = NullLogger()
-
         if 'ipopt_application' in kwargs:
             app = kwargs.pop('ipopt_application')
             print('Using app = ', app)
@@ -91,17 +92,17 @@ class IpoptNLPSolver(Solver):
             app = IpoptApplication()
             config = self.galini.get_configuration_group('ipopt')
             self._configure_ipopt_application(app, config)
-            self._configure_ipopt_logger(app, config)
+            self._configure_ipopt_logger(app, config, run_id)
 
-        xi, xl, xu = self.get_starting_point_and_bounds(problem)
-        gl, gu = self.get_constraints_bounds(problem)
-        self.logger.debug('Calling in IPOPT')
+        xi, xl, xu = self.get_starting_point_and_bounds(run_id, problem)
+        gl, gu = self.get_constraints_bounds(run_id, problem)
+        logger.debug(run_id, 'Calling in IPOPT')
 
         ipopt_solution = ipopt_solve(
-            app, problem, xi, xl, xu, gl, gu, _IpoptLoggerAdapter(self.logger, INFO)
+            app, problem, xi, xl, xu, gl, gu, _IpoptLoggerAdapter(logger, run_id, INFO)
         )
         solution = self._build_solution(problem, ipopt_solution)
-        self.logger.debug('IPOPT returned {}', solution)
+        logger.debug(run_id, 'IPOPT returned {}', solution)
         return solution
 
     def _configure_ipopt_application(self, app, config):
@@ -114,11 +115,11 @@ class IpoptNLPSolver(Solver):
             elif isinstance(value, float):
                 options.set_numeric_value(key, value, True, False)
 
-    def _configure_ipopt_logger(self, app, config):
+    def _configure_ipopt_logger(self, app, config, run_id):
         logging_config = config['logging']
         level_name = logging_config.get('level', 'J_ITERSUMMARY')
         level = getattr(EJournalLevel, level_name)
-        journal = PythonJournal('Default', level, _IpoptLoggerAdapter(self.logger, INFO))
+        journal = PythonJournal('Default', level, _IpoptLoggerAdapter(logger, run_id, INFO))
         journalist = app.journalist()
         journalist.delete_all_journals()
         journalist.add_journal(journal)
@@ -145,10 +146,10 @@ class IpoptNLPSolver(Solver):
     def _build_optimal_variable(self, i, variable, solution):
         OptimalVariable(name=variable.name, value=solution.x[i])
 
-    def get_starting_point_and_bounds(self, problem):
+    def get_starting_point_and_bounds(self, run_id, problem):
         nx = problem.num_variables
 
-        self.logger.debug('Problem has {} variables', nx)
+        logger.debug(run_id, 'Problem has {} variables', nx)
 
         xi = np.zeros(nx)
         xl = np.zeros(nx)
@@ -175,15 +176,16 @@ class IpoptNLPSolver(Solver):
                 else:
 
                     xi[i] = max(lb, min(ub, 0))
-            self.logger.debug(
+            logger.debug(
+                run_id,
                 'Variable: {} <= {} <= {}, starting {}',
                 xl[i], var.name, xu[i], xi[i])
         return xi, xl, xu
 
-    def get_constraints_bounds(self, problem):
+    def get_constraints_bounds(self, run_id, problem):
         ng = problem.num_constraints
 
-        self.logger.debug('Problem has {} constraints', ng)
+        logger.debug(run_id, 'Problem has {} constraints', ng)
 
         gl = np.zeros(ng)
         gu = np.zeros(ng)
@@ -191,18 +193,19 @@ class IpoptNLPSolver(Solver):
             c = problem.constraint(i)
             gl[i] = c.lower_bound if c.lower_bound is not None else -2e19
             gu[i] = c.upper_bound if c.upper_bound is not None else 2e19
-            self.logger.debug('Constraint: {} <= {} <= {}', gl[i], c.name, gu[i])
+            logger.debug(run_id, 'Constraint: {} <= {} <= {}', gl[i], c.name, gu[i])
 
         return gl, gu
 
 
 class _IpoptLoggerAdapter(object):
-    def __init__(self, logger, level):
+    def __init__(self, logger, run_id, level):
         self._logger = logger
+        self._run_id = run_id
         self._level = level
 
     def write(self, msg):
-        self._logger.log(self._level, msg)
+        self._logger.log(self._run_id, self._level, msg)
 
     def flush(self):
         pass
