@@ -47,7 +47,7 @@ class TriangleCutsGenerator(CutsGenerator):
         self._cut_round = 0
         self._lbs = None    # lower bounds
         self._ubs = None    # upper bounds
-        self._dbs = None # difference in bounds
+        self._dbs = None    # difference in bounds
 
     @staticmethod
     def cuts_generator_options():
@@ -93,6 +93,7 @@ class TriangleCutsGenerator(CutsGenerator):
         self._cut_round += 1
         return cuts
 
+
     def _generate(self, run_id, problem, linear_problem, solution, tree, node):
         triple_cliques = self.__problem_info_triangle[1]
         rank_list_tri = self._get_triangle_violations(linear_problem, solution)
@@ -100,7 +101,7 @@ class TriangleCutsGenerator(CutsGenerator):
         rank_list_tri_viol = [el for el in rank_list_tri if el[2] >= self._thres_tri_viol]
         rank_list_tri_viol.sort(key=lambda tup: tup[2], reverse=True)
 
-        # Determine thresholded (upper & lower) number of triangle cuts to add (proportional to selection size of SDP)
+        # Determine number of triangle cuts to add (proportion/absolute with upper & lower thresholds)
         nb_cuts = int(np.floor(self._sel_size * len(rank_list_tri_viol))) \
             if self._sel_size <= 1 else int(np.floor(self._sel_size))
         max_tri_cuts = min(
@@ -113,7 +114,7 @@ class TriangleCutsGenerator(CutsGenerator):
         logger.info(run_id, 'Adding {} cuts', max_tri_cuts)
         for ix in range(0, max_tri_cuts):
             ineq_type = rank_list_tri_viol[ix][1]
-            i,j,k = triple_cliques[rank_list_tri_viol[ix][0]]
+            i, j, k = triple_cliques[rank_list_tri_viol[ix][0]]
             xi, xj, xk = problem.variables[i], problem.variables[j], problem.variables[k]
             # Generate constraints for the 4 different triangle inequality types
             cut_lb = 0
@@ -177,9 +178,9 @@ class TriangleCutsGenerator(CutsGenerator):
         adj_mat = self._get_adjacency_matrix(problem)
         triple_cliques = []
         for clique in enumerate_all_cliques(from_numpy_matrix(adj_mat)):
-            if len(clique)<3:
+            if len(clique) < 3:
                 continue
-            elif len(clique)==3:
+            elif len(clique) == 3:
                 triple_cliques.append(clique)
             else:
                 break
@@ -220,11 +221,10 @@ class TriangleCutsGenerator(CutsGenerator):
         x_vals = [0] * 3
         x_vals_scaled = [0] * 3
         l = self._lbs
-        u = self._ubs
         d = self._dbs
         for idx_clique, cl in enumerate(triple_cliques):
-            # If the domain of all variables is very small, don't consider cut
-            if any(d[i]<=self._domain_eps for i in cl):
+            # If the domain of any variables is very small, don't consider cut
+            if any(d[i] <= self._domain_eps for i in cl):
                 continue
             for idx, var_idx in enumerate(cl):
                 x_vals[idx] = solution.variables[var_idx].value

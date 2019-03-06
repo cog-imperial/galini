@@ -44,6 +44,9 @@ def test_triangle_cuts(problem):
         'cuts_generator': {
             'generators': ['triangle'],
             'triangle': {
+                'domain_eps': 1e-3,
+                'thres_triangle_viol': 1e-7,
+                'max_tri_cuts_per_round': 10e3,
                 'selection_size': 2,
                 'min_tri_cuts_per_round': 0,
             },
