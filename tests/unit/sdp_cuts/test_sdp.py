@@ -3,6 +3,7 @@ import numpy as np
 import pyomo.environ as aml
 from galini.pyomo import dag_from_pyomo_model
 from galini.solvers import SolversRegistry
+from galini.galini import Galini
 from galini.config import ConfigurationManager
 from galini.cuts import CutsGeneratorsRegistry
 from galini.abb.relaxation import AlphaBBRelaxation
@@ -47,74 +48,87 @@ def problem():
     return dag_from_pyomo_model(m)
 
 
-def test_sdp_cuts(problem):
-    solvers_reg = SolversRegistry()
-    solver_cls = solvers_reg.get('ipopt')
-    cuts_gen_reg = CutsGeneratorsRegistry()
-    config_manager = ConfigurationManager()
-    config_manager.initialize(solvers_reg, cuts_gen_reg)
-    config = config_manager.configuration
-    config.update({
+@pytest.mark.parametrize('cut_selection_strategy,expected_solution', [
+    ('OPT', [-198.5, -191.13909941730438, -185.6485701612439, -185.63352288462852, -185.61964055492984]),
+    ('FEAS', [-198.5, -195.36202866122858, -185.9984527524324, -185.65131273365154, -185.0030833446988]),
+    ('RANDOM', [-198.5, -194.8096267391923, -189.7597741255273, -188.60951478551002, -188.51865496400023]),
+    ('COMB_ONE_CON', [-198.5, -191.13909941730438, -185.6485701612439, -185.63352288462852, -185.54225429303932]),
+    ('COMB_ALL_CON', [-198.5, -191.13909941730438, -185.79614907206607, -185.78886388174763, -185.00402059519647]),
+])
+def test_cut_selection_strategy(problem, cut_selection_strategy, expected_solution):
+    galini = Galini()
+    galini.update_configuration({
         'cuts_generator': {
+            'generators': ['sdp'],
             'sdp': {
                 'selection_size': 2,
             },
         }
     })
-    solver_ipopt = solver_cls(config, solvers_reg, cuts_gen_reg)
-    solver_mip = solver_ipopt.instantiate_solver("mip")
-    relaxation = AlphaBBRelaxation()
+    solver_ipopt = galini.instantiate_solver("ipopt")
+    solver_mip = galini.instantiate_solver("mip")
 
-    # Test at root node for all cut selection strategies
-    cut_sel_strategies = ["OPT", "FEAS", "RANDOM", "COMB_ONE_CON", "COMB_ALL_CON"]
-    mip_sols_to_match = [
-        [-198.5, -191.13909941730438, -185.6485701612439, -185.63352288462852, -185.61964055492984],
-        [-198.5, -195.36202866122858, -185.9984527524324, -185.65131273365154, -185.0030833446988],
-        [-198.5, -194.8096267391923, -189.7597741255273, -188.60951478551002, -188.51865496400023],
-        [-198.5, -191.13909941730438, -185.6485701612439, -185.63352288462852, -185.54225429303932],
-        [-198.5, -191.13909941730438, -185.79614907206607, -185.78886388174763, -185.00402059519647]
-    ]
-    for idx, cut_sel_strategy in enumerate(cut_sel_strategies[0:5]):
-        config.update({
-            'cuts_generator': {
-                'sdp': {
-                    'domain_eps': 1e-3,
-                    'thres_sdp_viol': -1e-15,
-                    'min_sdp_cuts_per_round': 0,
-                    'max_sdp_cuts_per_round': 5e3,
-                    'dim': 3,
-                    'big_m': 10e3,
-                    'thres_min_opt_sel': 0,
-                    'selection_size': 4,
-                    'cut_sel_strategy': cut_sel_strategy
-                },
-            }
-        })
-        sdp_cuts_gen = SdpCutsGenerator(config.cuts_generator.sdp)
-        algo = BranchAndCutAlgorithm(solver_ipopt, solver_mip, sdp_cuts_gen, config)
-        relaxed_problem = relaxation.relax(problem)
-        algo._cuts_generators_manager.before_start_at_root(problem)
-        nbs_cuts = []
-        mip_sols = []
-        if cut_sel_strategy == "RANDOM":
-            np.random.seed(0)
-        for iteration in range(5):
-            mip_solution = algo._mip_solver.solve(relaxed_problem, logger=None)
-            assert mip_solution.status.is_success()
-            mip_sols.append(mip_solution.objectives[0].value)
-            # Generate new cuts
-            new_cuts = algo._cuts_generators_manager.generate(problem, relaxed_problem, mip_solution, None, None)
-            # Add cuts as constraints
-            nbs_cuts.append(len(list(new_cuts)))
-            for cut in new_cuts:
-                new_cons = Constraint(cut.name, cut.expr, cut.lower_bound, cut.upper_bound)
-                relaxation._relax_constraint(problem, relaxed_problem, new_cons)
-        assert (np.allclose(mip_sols, mip_sols_to_match[idx]))
+    relaxation = AlphaBBRelaxation()
+    run_id = 'test_run_sdp'
+
+    galini.update_configuration({
+        'cuts_generator': {
+            'sdp': {
+                'domain_eps': 1e-3,
+                'thres_sdp_viol': -1e-15,
+                'min_sdp_cuts_per_round': 0,
+                'max_sdp_cuts_per_round': 5e3,
+                'dim': 3,
+                'big_m': 10e3,
+                'thres_min_opt_sel': 0,
+                'selection_size': 4,
+                'cut_sel_strategy': cut_selection_strategy,
+            },
+        }
+    })
+    config = galini._config
+    sdp_cuts_gen = SdpCutsGenerator(config.cuts_generator.sdp)
+    algo = BranchAndCutAlgorithm(galini)
+    relaxed_problem = relaxation.relax(problem)
+    algo._cuts_generators_manager.before_start_at_root(run_id, problem)
+    nbs_cuts = []
+    mip_sols = []
+    if cut_selection_strategy == "RANDOM":
+        np.random.seed(0)
+    for iteration in range(5):
+        mip_solution = algo._mip_solver.solve(relaxed_problem)
+        assert mip_solution.status.is_success()
+        mip_sols.append(mip_solution.objectives[0].value)
+        # Generate new cuts
+        new_cuts = algo._cuts_generators_manager.generate(run_id, problem, relaxed_problem, mip_solution, None, None)
+        # Add cuts as constraints
+        nbs_cuts.append(len(list(new_cuts)))
+        for cut in new_cuts:
+            new_cons = Constraint(cut.name, cut.expr, cut.lower_bound, cut.upper_bound)
+            relaxation._relax_constraint(problem, relaxed_problem, new_cons)
+    assert np.allclose(mip_sols, expected_solution)
+
+
+def test_sdp_cuts_after_branching(problem):
+    galini = Galini()
+    galini.update_configuration({
+        'cuts_generator': {
+            'generators': ['sdp'],
+            'sdp': {
+                'selection_size': 2,
+            },
+        }
+    })
+    solver_ipopt = galini.instantiate_solver("ipopt")
+    solver_mip = galini.instantiate_solver("mip")
+    run_id = 'test_run_sdp'
+
+    relaxation = AlphaBBRelaxation()
 
     # Test when branched on x0 in [0.5, 1]
     x0 = problem.variable_view(problem.variables[0])
     x0.set_lower_bound(0.5)
-    config.update({
+    galini.update_configuration({
         'cuts_generator': {
             'sdp': {
                 'domain_eps': 1e-3,
@@ -129,25 +143,26 @@ def test_sdp_cuts(problem):
             },
         }
     })
+    config = galini._config
     sdp_cuts_gen = SdpCutsGenerator(config.cuts_generator.sdp)
-    algo = BranchAndCutAlgorithm(solver_ipopt, solver_mip, sdp_cuts_gen, config)
+    algo = BranchAndCutAlgorithm(galini)
     relaxed_problem = relaxation.relax(problem)
-    algo._cuts_generators_manager.before_start_at_root(problem)
+    algo._cuts_generators_manager.before_start_at_root(run_id, problem)
     mip_sols = []
     mip_solution = None
     for iteration in range(5):
-        mip_solution = algo._mip_solver.solve(relaxed_problem, logger=None)
+        mip_solution = algo._mip_solver.solve(relaxed_problem)
         assert mip_solution.status.is_success()
         mip_sols.append(mip_solution.objectives[0].value)
         # Generate new cuts
-        new_cuts = algo._cuts_generators_manager.generate(problem, relaxed_problem, mip_solution, None, None)
+        new_cuts = algo._cuts_generators_manager.generate(run_id, problem, relaxed_problem, mip_solution, None, None)
         # Add cuts as constraints
         for cut in new_cuts:
             new_cons = Constraint(cut.name, cut.expr, cut.lower_bound, cut.upper_bound)
             relaxation._relax_constraint(problem, relaxed_problem, new_cons)
-    assert(np.allclose(mip_sols,
-           [-187.53571428571428, -178.17645682147835, -175.10310263115286, -175.0895610878696, -175.03389759123812]))
-    feas_solution = algo._nlp_solver.solve(relaxed_problem, logger=None)
+    assert np.allclose(mip_sols,
+           [-187.53571428571428, -178.17645682147835, -175.10310263115286, -175.0895610878696, -175.03389759123812])
+    feas_solution = algo._nlp_solver.solve(relaxed_problem)
     assert(feas_solution.objectives[0].value >= mip_sols[-1])
-    sdp_cuts_gen.after_end_at_node(problem, mip_solution)
-    sdp_cuts_gen.after_end_at_root(problem, mip_solution)
+    sdp_cuts_gen.after_end_at_node(run_id, problem, mip_solution)
+    sdp_cuts_gen.after_end_at_root(run_id, problem, mip_solution)

@@ -117,7 +117,7 @@ class SdpCutsGenerator(CutsGenerator):
                                       "constraints based on Lagrange multipliers for optimality cut selection")
         ])
 
-    def before_start_at_root(self, problem):
+    def before_start_at_root(self, run_id, problem):
         self._nb_vars = problem.num_variables
         self._add_missing_squares(problem)
         if self._nn_used:
@@ -131,30 +131,30 @@ class SdpCutsGenerator(CutsGenerator):
         self._inds = [(np.array([1 + x for x in np.triu_indices(dim, 0, dim)[0]]),
                        np.array([1 + x for x in np.triu_indices(dim, 0, dim)[1]])) for dim in self._possible_dim]
 
-        self.before_start_at_node(problem)
+        self.before_start_at_node(run_id, problem)
 
-    def after_end_at_root(self, problem, solution):
-        self.after_end_at_node(problem, solution)
+    def after_end_at_root(self, run_id, problem, solution):
+        self.after_end_at_node(run_id, problem, solution)
 
-    def before_start_at_node(self, problem):
+    def before_start_at_node(self, run_id, problem):
         self._lbs = problem.lower_bounds
         self._ubs = problem.upper_bounds
         self._dbs = [u - l for l, u in zip(self._lbs, self._ubs)]
         self._agg_list_rescaled = self._rescale_coeffs_for_cut_selection() if self._nn_used else self._agg_list
         self._cut_round = 0
 
-    def after_end_at_node(self, problem, solution):
+    def after_end_at_node(self, run_id, problem, solution):
         self._lbs = None
         self._ubs = None
         self._dbs = None
         self._agg_list_rescaled = None
 
-    def generate(self, problem, linear_problem, solution, tree, node):
-        cuts = list(self._generate(problem, linear_problem, solution, tree, node))
+    def generate(self, run_id, problem, linear_problem, solution, tree, node):
+        cuts = list(self._generate(run_id, problem, linear_problem, solution, tree, node))
         self._cut_round += 1
         return cuts
 
-    def _generate(self, problem, linear_problem, solution, tree, node):
+    def _generate(self, run_id, problem, linear_problem, solution, tree, node):
         rank_list = self._get_sdp_selection(linear_problem, solution)
         agg_list = self._agg_list_rescaled
         nb_sdp_cuts = 0
