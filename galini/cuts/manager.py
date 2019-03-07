@@ -27,15 +27,15 @@ class CutsGeneratorsRegistry(Registry):
 
 
 class CutsGeneratorsManager(object):
-    def __init__(self, registry, config):
-        self._generators = self._initialize_generators(registry, config)
+    def __init__(self, galini):
+        self._generators = self._initialize_generators(galini)
 
-    def _initialize_generators(self, registry, config):
+    def _initialize_generators(self, galini):
         generators = []
-        cuts_gen_config = config.cuts_generator
+        cuts_gen_config = galini.get_configuration_group('cuts_generator')
 
         for cut_gen_name in cuts_gen_config.generators:
-            generator_cls = registry.get(cut_gen_name)
+            generator_cls = galini.get_cuts_generator(cut_gen_name)
             if generator_cls is None:
                 raise ValueError(
                     'Invalid cuts generator "{}", available cuts generators: {}'.format(

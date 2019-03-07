@@ -25,26 +25,31 @@ class Galini(object):
         self._config_manager = ConfigurationManager(self._solvers_reg, self._cuts_gen_reg)
         self._config = self._config_manager.configuration
         self.logger = get_logger('galini')
-        self.cuts_generators_manager = \
-            CutsGeneratorsManager(self._cuts_gen_reg, self._config)
+        self.cuts_generators_manager = CutsGeneratorsManager(self)
 
     def update_configuration(self, user_config):
         self._config_manager.update_configuration(user_config)
         self._config = self._config_manager.configuration
-        self.cuts_generators_manager = \
-            CutsGeneratorsManager(self._cuts_gen_reg, self._config)
+        self.cuts_generators_manager = CutsGeneratorsManager(self)
 
     def get_solver(self, name):
         """Get solver from the registry."""
         solver_cls = self._solvers_reg.get(name, None)
         if solver_cls is None:
-            raise ValueError('No solver "{}"'.format(solver_name))
+            raise ValueError('No solver "{}"'.format(name))
         return solver_cls
 
     def instantiate_solver(self, solver_name):
         """Get and instantiate solver from the registry."""
         solver_cls = self.get_solver(solver_name)
         return solver_cls(self)
+
+    def get_cuts_generator(self, name):
+        """Get cuts generator from the registry."""
+        gen_cls = self._cuts_gen_reg.get(name, None)
+        if gen_cls is None:
+            raise ValueError('No cuts generator "{}"'.format(name))
+        return gen_cls
 
     def get_configuration_group(self, group):
         parts = group.split('.')
