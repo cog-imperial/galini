@@ -150,13 +150,14 @@ class Relaxation(metaclass=ABCMeta):
             raise ValueError('relax_constraint must return object of type ConstraintRelaxationResult')
         new_cons = result.constraint
         new_expr = self._insert_expression(new_cons.root_expr, problem, relaxed_problem)
-        relaxed_problem.add_constraint(
+        added_cons = relaxed_problem.add_constraint(
             new_cons.name,
             new_expr,
             new_cons.lower_bound,
             new_cons.upper_bound,
         )
         self._insert_constraints(result.constraints, problem, relaxed_problem)
+        return added_cons
 
     def _insert_variable(self, expr, problem, relaxed_problem, use_problem_bounds=False):
         assert expr.expression_type == ExpressionType.Variable

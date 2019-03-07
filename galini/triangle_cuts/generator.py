@@ -245,7 +245,7 @@ class TriangleCutsGenerator(CutsGenerator):
         # Build matrix of lifted X values
         nb_vars = self._nb_vars
         lifted_mat = np.zeros((nb_vars, nb_vars))
-        for var_sol in solution.variables[nb_vars:]:
+        for var_sol in solution.variables[nb_vars:problem.num_variables]:
             var = problem.variable(var_sol.name)
             var1 = var.reference.var1
             var2 = var.reference.var2

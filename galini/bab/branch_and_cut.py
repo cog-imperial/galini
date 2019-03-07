@@ -14,10 +14,11 @@
 """Branch & Cut algorithm."""
 from collections import namedtuple
 import numpy as np
+from suspect.expression import ExpressionType
 from galini.bab import BabAlgorithm, NodeSolution
 from galini.abb.relaxation import AlphaBBRelaxation
 from galini.logging import get_logger
-from galini.core import Constraint, Domain
+from galini.core import Constraint, LinearExpression, Domain, Sense
 from galini.cuts import CutsGeneratorsManager
 from galini.config import (
     OptionsGroup,
@@ -95,17 +96,24 @@ class BranchAndCutAlgorithm(BabAlgorithm):
             'Using cuts generators: {}',
             ', '.join([g.name for g in self._cuts_generators_manager.generators]))
 
+        linear_problem = self._linear_problem(relaxed_problem)
         cuts_state = CutsState()
         while (not self._cuts_converged(cuts_state) and
                not self._cuts_iterations_exceeded(cuts_state)):
             new_cuts, mip_solution = \
-                self._perform_cut_round(run_id, problem, relaxed_problem, cuts_state, tree, node)
+                self._perform_cut_round(run_id, problem, relaxed_problem, linear_problem, cuts_state, tree, node)
 
             # Add cuts as constraints
             # TODO(fra): use problem global and local cuts
             for cut in new_cuts:
                 new_cons = Constraint(cut.name, cut.expr, cut.lower_bound, cut.upper_bound)
-                relaxation._relax_constraint(problem, relaxed_problem, new_cons)
+                added_cons = relaxation._relax_constraint(problem, relaxed_problem, new_cons)
+                linear_problem.add_constraint(
+                    new_cons.name,
+                    _convert_linear_expr(linear_problem, added_cons.root_expr),
+                    new_cons.lower_bound,
+                    new_cons.upper_bound,
+                )
 
             cuts_state.update(mip_solution)
 
@@ -151,10 +159,39 @@ class BranchAndCutAlgorithm(BabAlgorithm):
         relaxed_problem = relaxation.relax(problem)
         return relaxation, relaxed_problem
 
-    def _perform_cut_round(self, run_id, problem, relaxed_problem, cuts_state, tree, node):
+    def _linear_problem(self, problem):
+        linear = problem.make_relaxed(problem.name + '_linear')
+        # Add a variable that acts as objective value
+        objvar = linear.add_variable('_objvar', None, None, Domain.REAL)
+        linear.add_objective('_objective', LinearExpression([objvar], [1.0], 0.0), Sense.MINIMIZE)
+        # add linear objective and constraints
+        for objective in problem.objectives:
+            root_expr = objective.root_expr
+            if root_expr.expression_type == ExpressionType.Linear:
+                new_root_expr = _convert_linear_expr(linear, root_expr)
+                children = [c for c in new_root_expr.children]
+                children.append(objvar)
+                coefficients = [new_root_expr.coefficient(c) for c in new_root_expr.children]
+                coefficients.append(-1.0)
+                final_root_expr = LinearExpression(children, coefficients, new_root_expr.constant_term)
+                linear.add_constraint(objective.name, final_root_expr, None, 0)
+
+        for constraint in problem.constraints:
+            root_expr = constraint.root_expr
+            if root_expr.expression_type == ExpressionType.Linear:
+                new_root_expr = _convert_linear_expr(linear, root_expr)
+                linear.add_constraint(constraint.name, new_root_expr, constraint.lower_bound, constraint.upper_bound)
+            elif root_expr.expression_type == ExpressionType.Sum:
+                if not all([ch.expression_type == ExpressionType.Linear for ch in root_expr.children]):
+                    continue
+                new_root_expr = _convert_linear_expr(linear, root_expr)
+                linear.add_constraint(constraint.name, new_root_expr, constraint.lower_bound, constraint.upper_bound)
+        return linear
+
+    def _perform_cut_round(self, run_id, problem, relaxed_problem, linear_problem, cuts_state, tree, node):
         logger.info(run_id, 'Round {}. Solving linearized problem.', cuts_state.round)
 
-        mip_solution = self._mip_solver.solve(relaxed_problem)
+        mip_solution = self._mip_solver.solve(linear_problem)
 
         logger.info(
             run_id,
@@ -201,3 +238,29 @@ class BranchAndCutAlgorithm(BabAlgorithm):
 
     def _cuts_iterations_exceeded(self, state):
         return state.round > self.cuts_maxiter
+
+
+def _convert_linear_expr(linear_problem, expr):
+    stack = [expr]
+    coefficients = {}
+    const = 0.0
+    while len(stack) > 0:
+        expr = stack.pop()
+        if expr.expression_type == ExpressionType.Sum:
+            for ch in expr.children:
+                stack.append(ch)
+        elif expr.expression_type == ExpressionType.Linear:
+            const += expr.constant_term
+            for ch in expr.children:
+                if ch.idx not in coefficients:
+                    coefficients[ch.idx] = 0
+                coefficients[ch.idx] += expr.coefficient(ch)
+        else:
+            raise ValueError('Invalid ExpressionType {}'.format(expr.expression_type))
+
+    children = []
+    coeffs = []
+    for var, coef in coefficients.items():
+        children.append(linear_problem.variable(var))
+        coeffs.append(coef)
+    return LinearExpression(children, coeffs, const)
