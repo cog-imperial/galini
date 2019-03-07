@@ -69,27 +69,27 @@ class TriangleCutsGenerator(CutsGenerator):
                           description='Max number of triangle cuts to be added to relaxation at each cut round'),
         ])
 
-    def before_start_at_root(self, run_id, problem):
+    def before_start_at_root(self, run_id, problem, relaxed_problem):
         self._nb_vars = problem.num_variables
         self._get_triangle_info(problem)
-        self.before_start_at_node(run_id, problem)
+        self.before_start_at_node(run_id, problem, relaxed_problem)
 
-    def after_end_at_root(self, run_id, problem, solution):
-        self.after_end_at_node(run_id, problem, solution)
+    def after_end_at_root(self, run_id, problem, relaxed_problem, solution):
+        self.after_end_at_node(run_id, problem, relaxed_problem, solution)
 
-    def before_start_at_node(self, run_id, problem):
+    def before_start_at_node(self, run_id, problem, relaxed_problem):
         self._lbs = problem.lower_bounds
         self._ubs = problem.upper_bounds
         self._dbs = [u - l for l, u in zip(self._lbs, self._ubs)]
         self._cut_round = 0
 
-    def after_end_at_node(self, run_id, problem, solution):
+    def after_end_at_node(self, run_id, problem, relaxed_problem, solution):
         self._lbs = None
         self._ubs = None
         self._dbs = None
 
-    def generate(self, run_id, problem, linear_problem, solution, tree, node):
-        cuts = list(self._generate(run_id, problem, linear_problem, solution, tree, node))
+    def generate(self, run_id, problem, relaxed_problem, solution, tree, node):
+        cuts = list(self._generate(run_id, problem, relaxed_problem, solution, tree, node))
         self._cut_round += 1
         return cuts
 

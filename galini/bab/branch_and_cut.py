@@ -84,9 +84,7 @@ class BranchAndCutAlgorithm(BabAlgorithm):
                           description='Cut selection size as a % of all cuts or as absolute number of cuts'),
         ])
 
-    def solve_problem_at_node(self, run_id, problem, tree, node):
-        relaxation, relaxed_problem = self._relax_problem(problem)
-
+    def solve_problem_at_node(self, run_id, problem, relaxed_problem, tree, node, relaxation):
         logger.info(
             run_id,
             'Starting Cut generation iterations. Maximum iterations={}, relative tolerance={}',
@@ -134,16 +132,18 @@ class BranchAndCutAlgorithm(BabAlgorithm):
 
     def _solve_problem_at_root(self, run_id, problem, tree, node):
         self._perform_fbbt(problem)
-        self._cuts_generators_manager.before_start_at_root(run_id, problem)
-        solution = self.solve_problem_at_node(run_id, problem, tree, node)
-        self._cuts_generators_manager.after_end_at_root(run_id, problem, solution)
+        relaxation, relaxed_problem = self._relax_problem(problem)
+        self._cuts_generators_manager.before_start_at_root(run_id, problem, relaxed_problem)
+        solution = self.solve_problem_at_root(run_id, problem, relaxed_problem, tree, node, relaxation)
+        self._cuts_generators_manager.after_end_at_root(run_id, problem, relaxed_problem, solution)
         return solution
 
     def _solve_problem_at_node(self, run_id, problem, tree, node):
         self._perform_fbbt(problem)
-        self._cuts_generators_manager.before_start_at_node(run_id, problem)
-        solution = self.solve_problem_at_node(run_id, problem, tree, node)
-        self._cuts_generators_manager.after_end_at_node(run_id, problem, solution)
+        relaxation, relaxed_problem = self._relax_problem(problem)
+        self._cuts_generators_manager.before_start_at_node(run_id, problem, relaxed_problem)
+        solution = self.solve_problem_at_node(run_id, problem, relaxed_problem, tree, node, relaxation)
+        self._cuts_generators_manager.after_end_at_node(run_id, problem, relaxed_problem, solution)
         return solution
 
     def _relax_problem(self, problem):

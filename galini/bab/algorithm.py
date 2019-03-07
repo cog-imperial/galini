@@ -62,11 +62,11 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
         self.node_limit = config['node_limit']
         self.fbbt_maxiter = config['fbbt_maxiter']
 
-    def solve_problem_at_root(self, run_id, problem, tree, node):
-        return self.solve_problem_at_node(run_id, problem, tree, node)
+    def solve_problem_at_root(self, run_id, problem, relaxed_problem, tree, node, relaxation):
+        return self.solve_problem_at_node(run_id, problem, relaxed_problem, tree, node, relaxation)
 
     @abc.abstractmethod
-    def solve_problem_at_node(self, run_id, problem, tree, node):
+    def solve_problem_at_node(self, run_id, problem, relaxed_problem, tree, node, relaxation):
         raise NotImplementedError()
 
     def has_converged(self, state):

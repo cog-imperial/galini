@@ -56,28 +56,28 @@ class CutsGeneratorsManager(object):
     def generators(self):
         return self._generators
 
-    def before_start_at_root(self, run_id, problem):
+    def before_start_at_root(self, run_id, problem, relaxed_problem):
         for gen in self._generators:
-            gen.before_start_at_root(run_id, problem)
+            gen.before_start_at_root(run_id, problem, relaxed_problem)
 
-    def after_end_at_root(self, run_id, problem, solution):
+    def after_end_at_root(self, run_id, problem, relaxed_problem, solution):
         for gen in self._generators:
-            gen.after_end_at_root(run_id, problem, solution)
+            gen.after_end_at_root(run_id, problem, relaxed_problem, solution)
 
-    def before_start_at_node(self, run_id, problem):
+    def before_start_at_node(self, run_id, problem, relaxation):
         for gen in self._generators:
-            gen.before_start_at_node(run_id, problem)
+            gen.before_start_at_node(run_id, problem, relaxation)
 
-    def after_end_at_node(self, run_id, problem, solution):
+    def after_end_at_node(self, run_id, problem, relaxed_problem, solution):
         for gen in self._generators:
-            gen.after_end_at_node(run_id, problem, solution)
+            gen.after_end_at_node(run_id, problem, relaxed_problem, solution)
 
-    def generate(self, run_id, problem, linear_problem, mip_solution, tree, node):
+    def generate(self, run_id, problem, relaxed_problem, mip_solution, tree, node):
         all_cuts = []
         logger.info(run_id, 'Generating cuts')
 
         for gen in self._generators:
-            cuts = gen.generate(run_id, problem, linear_problem, mip_solution, tree, node)
+            cuts = gen.generate(run_id, problem, relaxed_problem, mip_solution, tree, node)
             if cuts is None:
                 cuts = []
             if not isinstance(cuts, list):
