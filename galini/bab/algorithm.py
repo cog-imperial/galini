@@ -127,7 +127,7 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
                 logger.log_prune_bab_node(run_id, current_node.coordinate)
                 continue
 
-            if not current_node.solution.status.is_success():
+            if not (current_node.solution.status.is_success() or current_node.solution.status.is_iterations_exceeded()):
                 logger.info(run_id, "Skip node because it was not feasible")
                 logger.log_prune_bab_node(run_id, current_node.coordinate)
                 continue

@@ -127,7 +127,7 @@ class BranchAndCutAlgorithm(BabAlgorithm):
 
         primal_solution = self._solve_primal(problem, mip_solution)
 
-        if primal_solution.status.is_success():
+        if primal_solution.status.is_success() or primal_solution.status.is_iterations_exceeded():
             upper_bound = primal_solution.objectives[0].value
         else:
             upper_bound = np.inf
@@ -175,6 +175,11 @@ class BranchAndCutAlgorithm(BabAlgorithm):
                 coefficients.append(-1.0)
                 final_root_expr = LinearExpression(children, coefficients, new_root_expr.constant_term)
                 linear.add_constraint(objective.name, final_root_expr, None, 0)
+            elif root_expr.expression_type == ExpressionType.Sum:
+                if not all([ch.expression_type == ExpressionType.Linear for ch in root_expr.children]):
+                    continue
+                new_root_expr = _convert_linear_expr(linear, root_expr)
+                linear.add_constraint(constraint.name, new_root_expr, constraint.lower_bound, constraint.upper_bound)
 
         for constraint in problem.constraints:
             root_expr = constraint.root_expr
@@ -210,10 +215,22 @@ class BranchAndCutAlgorithm(BabAlgorithm):
         # Use mip solution as starting point
         for v, sv in zip(problem.variables, mip_solution.variables):
             domain = problem.domain(v)
-            if domain != Domain.REAL:
-                problem.fix(v, sv.value)
+            view = problem.variable_view(v)
+            if sv.value is None:
+                lb = view.lower_bound()
+                if lb is None:
+                    lb = -2e19
+                ub = view.upper_bound()
+                if ub is None:
+                    ub = 2e19
+
+                value = lb + (ub - lb) / 2.0
             else:
-                problem.set_starting_point(v, sv.value)
+                value = sv.value
+            if domain != Domain.REAL:
+                problem.fix(v, value)
+            else:
+                problem.set_starting_point(v, value)
 
         return self._nlp_solver.solve(problem)
 

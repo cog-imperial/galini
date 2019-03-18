@@ -49,6 +49,9 @@ class IpoptStatus(Status):
     def is_infeasible(self):
         return self._status == CoreIpoptSolution.StatusType.local_infeasibility
 
+    def is_iterations_exceeded(self):
+        return self._status == CoreIpoptSolution.StatusType.maxiter_exceeded
+
     def is_unbounded(self):
         return False
 
@@ -106,6 +109,7 @@ class IpoptNLPSolver(Solver):
         return solution
 
     def _configure_ipopt_application(self, app, config):
+        config = config['ipopt']
         options = app.options()
         for key, value in config.items():
             if isinstance(value, str):
