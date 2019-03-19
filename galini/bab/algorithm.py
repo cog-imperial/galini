@@ -31,11 +31,27 @@ class NodeSelectionStrategy(object):
             self.inner = node
 
         def __lt__(self, other):
-            if not self.inner.solution.status.is_success():
+            if self.inner.has_solution:
+                self_solution = self.inner.solution
+                self_state = self.inner.state
+            else:
+                assert self.inner.has_parent
+                self_solution = self.inner.parent.solution
+                self_state = self.inner.parent.state
+
+            if other.inner.has_solution:
+                other_solution = other.inner.solution
+                other_state = other.inner.state
+            else:
+                assert other.inner.has_parent
+                other_solution = other.inner.parent.solution
+                other_state = other.inner.parent.state
+
+            if not self_solution.status.is_success():
                 return False
-            if not other.inner.solution.status.is_success():
+            if not other_solution.status.is_success():
                 return True
-            return self.inner.state.lower_bound < other.inner.state.lower_bound
+            return self_state.lower_bound < other_state.lower_bound
 
     def __init__(self):
         self.nodes = []
@@ -109,12 +125,38 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
                 return tree.best_solution.solution
             current_node = tree.next_node()
 
+            if current_node.parent is None:
+                # This is the root node.
+                node_children, branching_point = current_node.branch()
+                logger.info(run_id, 'Branched at point {}', branching_point)
+                for child in node_children:
+                    tree.add_node(child)
+                continue
+
             logger.info(
                 run_id,
-                'Visiting node {}: state={}, solution={}',
+                'Visiting node {}: parent state={}, parent solution={}',
                 current_node.coordinate,
-                current_node.state,
-                current_node.solution,
+                current_node.parent.state,
+                current_node.parent.solution,
+            )
+
+            solution = self._solve_problem_at_node(run_id, current_node.problem, tree, current_node)
+            tree.update_node(current_node, solution)
+
+            self._log_problem_information_at_node(
+                run_id, current_node.problem, solution, current_node)
+            logger.info(run_id, 'Child {} has solution {}', current_node.coordinate, solution)
+            logger.info(run_id, 'New tree state {}', tree.state)
+            var_view = current_node.problem.variable_view(current_node.variable)
+            logger.log_add_bab_node(
+                run_id,
+                coordinate=current_node.coordinate,
+                lower_bound=solution.lower_bound,
+                upper_bound=solution.upper_bound,
+                branching_variables=[
+                    (current_node.variable.name, var_view.lower_bound(), var_view.upper_bound())
+                ],
             )
 
             if current_node.state.lower_bound >= tree.state.upper_bound:
@@ -135,20 +177,8 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
             node_children, branching_point = current_node.branch()
             logger.info(run_id, 'Branched at point {}', branching_point)
             for child in node_children:
-                solution = self._solve_problem_at_node(run_id, child.problem, tree, child)
-                tree.update_node(child, solution)
+                tree.add_node(child)
 
-                self._log_problem_information_at_node(run_id, child.problem, solution, child)
-                logger.info(run_id, 'Child {} has solution {}', child.coordinate, solution)
-                logger.info(run_id, 'New tree state {}', tree.state)
-                var_view = child.problem.variable_view(child.variable)
-                logger.log_add_bab_node(
-                    run_id,
-                    coordinate=child.coordinate,
-                    lower_bound=solution.lower_bound,
-                    upper_bound=solution.upper_bound,
-                    branching_variables=[(child.variable.name, var_view.lower_bound(), var_view.upper_bound())],
-                )
 
         if tree.best_solution is not None:
             return tree.best_solution.solution

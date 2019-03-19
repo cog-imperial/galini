@@ -47,13 +47,13 @@ class CutsGenerator(metaclass=abc.ABCMeta):
     def before_start_at_root(self, run_id, problem, relaxed_problem):
         pass
 
-    def after_end_at_root(self, run_id, problem, solution):
+    def after_end_at_root(self, run_id, problem, relaxed_problem, solution):
         pass
 
     def before_start_at_node(self, run_id, problem, relaxed_problem):
         pass
 
-    def after_end_at_node(self, run_id, problem, solution):
+    def after_end_at_node(self, run_id, problem, relaxed_problem, solution):
         pass
 
     @abc.abstractmethod

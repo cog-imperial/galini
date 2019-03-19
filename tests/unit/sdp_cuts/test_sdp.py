@@ -90,7 +90,7 @@ def test_cut_selection_strategy(problem, cut_selection_strategy, expected_soluti
     sdp_cuts_gen = SdpCutsGenerator(config.cuts_generator.sdp)
     algo = BranchAndCutAlgorithm(galini)
     relaxed_problem = relaxation.relax(problem)
-    algo._cuts_generators_manager.before_start_at_root(run_id, problem)
+    algo._cuts_generators_manager.before_start_at_root(run_id, problem, None)
     nbs_cuts = []
     mip_sols = []
     if cut_selection_strategy == "RANDOM":
@@ -147,7 +147,7 @@ def test_sdp_cuts_after_branching(problem):
     sdp_cuts_gen = SdpCutsGenerator(config.cuts_generator.sdp)
     algo = BranchAndCutAlgorithm(galini)
     relaxed_problem = relaxation.relax(problem)
-    algo._cuts_generators_manager.before_start_at_root(run_id, problem)
+    algo._cuts_generators_manager.before_start_at_root(run_id, problem, None)
     mip_sols = []
     mip_solution = None
     for iteration in range(5):
@@ -164,5 +164,5 @@ def test_sdp_cuts_after_branching(problem):
            [-187.53571428571428, -178.17645682147835, -175.10310263115286, -175.0895610878696, -175.03389759123812])
     feas_solution = algo._nlp_solver.solve(relaxed_problem)
     assert(feas_solution.objectives[0].value >= mip_sols[-1])
-    sdp_cuts_gen.after_end_at_node(run_id, problem, mip_solution)
-    sdp_cuts_gen.after_end_at_root(run_id, problem, mip_solution)
+    sdp_cuts_gen.after_end_at_node(run_id, problem, None, mip_solution)
+    sdp_cuts_gen.after_end_at_root(run_id, problem, None, mip_solution)

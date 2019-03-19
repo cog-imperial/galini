@@ -26,6 +26,7 @@ class BabTree(object):
         self.root = Node(problem, tree=self, coordinate=[0])
         self.branching_strategy = branching_strategy
         self.selection_strategy = selection_strategy
+        self.selection_strategy.insert_node(self.root)
         self.state = TreeState(lower_bound=-np.inf, upper_bound=np.inf, nodes_visited=0)
         self.best_solution = None
 
@@ -38,11 +39,14 @@ class BabTree(object):
     def next_node(self):
         return self.selection_strategy.next_node()
 
+    def add_node(self, node):
+        self.selection_strategy.insert_node(node)
+
     def update_node(self, node, solution):
         assert isinstance(solution, NodeSolution)
         node.update(solution)
         self.update_state(solution)
-        self.selection_strategy.insert_node(node)
+        # self.selection_strategy.insert_node(node)
 
     @property
     def upper_bound(self):

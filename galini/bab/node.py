@@ -34,10 +34,12 @@ class BranchingPoint(object):
 
 
 class Node(object):
-    def __init__(self, problem, tree=None, coordinate=None, variable=None, solution=None):
+    def __init__(self, problem, tree=None, parent=None,
+                 coordinate=None, variable=None, solution=None):
         self.children = None
         self.problem = problem
         self.tree = tree
+        self.parent = parent
         self.coordinate = coordinate
         self.variable = variable
         self.solution = None
@@ -53,6 +55,14 @@ class Node(object):
             upper_bound=solution.upper_bound,
         )
         self.solution = solution.solution
+
+    @property
+    def has_solution(self):
+        return self.solution is not None
+
+    @property
+    def has_parent(self):
+        return self.parent is not None
 
     def branch(self, strategy=None):
         """Branch at the current node using strategy."""
@@ -98,7 +108,7 @@ class Node(object):
         else:
             coordinate = None
 
-        child_node = Node(child, self.tree, coordinate, branching_var)
+        child_node = Node(child, self.tree, self, coordinate, branching_var)
 
         if self.children is None:
             self.children = [child_node]
