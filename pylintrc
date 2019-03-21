@@ -234,6 +234,10 @@ good-names=i,
            j,
            k,
 	   n,
+	   x,
+	   y,
+	   w,
+	   v,
            ex,
            ub,
            lb,
@@ -476,10 +480,10 @@ valid-metaclass-classmethod-first-arg=mcs
 [DESIGN]
 
 # Maximum number of arguments for function / method
-max-args=5
+max-args=8
 
 # Maximum number of attributes for a class (see R0902).
-max-attributes=7
+max-attributes=10
 
 # Maximum number of boolean expressions in a if statement
 max-bool-expr=5
