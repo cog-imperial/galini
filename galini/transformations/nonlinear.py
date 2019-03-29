@@ -28,6 +28,10 @@ from galini.transformation import Transformation, TransformationResult
 
 class ReplaceNonlinearTransformation(Transformation):
     """Replace Nonlinear expressions with auxiliary variables."""
+    def __init__(self, source, target):
+        super().__init__(source, target)
+        self._memo = {}
+
     def apply(self, expr, ctx):
         assert expr.problem is None or expr.problem == self.source
         if expr.expression_type != ExpressionType.Sum:
@@ -45,12 +49,15 @@ class ReplaceNonlinearTransformation(Transformation):
             else:
                 w, constraint = self._build_constraint(child, ctx)
                 new_variables.append(w)
-                new_constraints.append(constraint)
+                if constraint is not None:
+                    new_constraints.append(constraint)
 
         linear_expr = self._build_linear_expression(original_linear_expressions, new_variables)
         return TransformationResult(linear_expr, new_constraints)
 
     def _build_constraint(self, expr, ctx):
+        if expr.uid in self._memo:
+            return self._memo[expr.uid], None
         expr_bounds = ctx.bounds(expr)
         reference = ExpressionReference(expr)
         # Use bounds
@@ -71,6 +78,7 @@ class ReplaceNonlinearTransformation(Transformation):
             0.0,
             0.0,
         )
+        self._memo[expr.uid] = w
         return w, new_constraint
 
     def _build_linear_expression(self, original_linear_expressions, new_variables):
