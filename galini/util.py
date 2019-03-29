@@ -14,7 +14,7 @@
 
 import sys
 from galini.core import Sense
-from suspect.expression import ExpressionType
+from suspect.expression import ExpressionType, UnaryFunctionType
 
 
 def print_problem(problem, out=None):
@@ -27,28 +27,56 @@ def print_problem(problem, out=None):
             Sense.MAXIMIZE: 'max',
         }
         out.write(sense_name[objective.sense] + ' ')
-        out.write(print_expr(objective.root_expr))
+        out.write(expr_to_str(objective.root_expr))
         out.write('\n')
 
     for constraint in problem.constraints:
         out.write('{}:\t'.format(constraint.name))
         out.write('{} <= '.format(constraint.lower_bound))
-        out.write(print_expr(constraint.root_expr))
+        out.write(expr_to_str(constraint.root_expr))
         out.write(' <= {}'.format(constraint.upper_bound))
         out.write('\n')
     out.write('\n')
 
+_FUNC_TYPE_TO_CLS = {
+    UnaryFunctionType.Abs: 'abs',
+    UnaryFunctionType.Sqrt: 'sqrt',
+    UnaryFunctionType.Exp: 'exp',
+    UnaryFunctionType.Log: 'log',
+    UnaryFunctionType.Sin: 'sin',
+    UnaryFunctionType.Cos: 'cos',
+    UnaryFunctionType.Tan: 'tan',
+    UnaryFunctionType.Asin: 'asin',
+    UnaryFunctionType.Acos: 'acos',
+    UnaryFunctionType.Atan: 'atan',
+}
 
-def print_expr(expr):
+
+def expr_to_str(expr):
     et = expr.expression_type
+    children_str = [expr_to_str(ch) for ch in expr.children]
+
     if et == ExpressionType.Sum:
-        return ' + '.join([print_expr(ch) for ch in expr.children])
+        return ' + '.join(children_str)
     elif et == ExpressionType.Variable:
         return expr.name
+    elif et == ExpressionType.Constant:
+        return str(expr.value)
+    elif et == ExpressionType.Division:
+        return '({}) / ({})'.format(children_str[0], children_str[1])
+    elif et == ExpressionType.Product:
+        return '({}) * ({})'.format(children_str[0], children_str[1])
     elif et == ExpressionType.Linear:
         return (' + '.join(['{} {}'.format(expr.coefficient(ch), ch.name) for ch in expr.children])
                 + ' + ' + str(expr.constant_term))
+    elif et == ExpressionType.Power:
+        return 'pow({}, {})'.format(children_str[0], children_str[1])
+    elif et == ExpressionType.Negation:
+        return '-({})'.format(children_str[0])
     elif et == ExpressionType.Quadratic:
         return ' + '.join(['{} {} {}'.format(t.coefficient, t.var1.name, t.var2.name) for t in expr.terms])
+    elif et == ExpressionType.UnaryFunction:
+        return _FUNC_TYPE_TO_CLS[expr.func_type] + '(' + children_str[0] + ')'
+
     else:
         raise ValueError('Unhandled expression_type {}'.format(et))
