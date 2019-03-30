@@ -99,6 +99,16 @@ def get_ipopt_library_dir():
         return os.environ.get('IPOPT_LIBRARY_DIR')
 
 
+def get_include_dirs():
+    dirs = ['src', get_pybind11_include(), get_pybind11_include(user=True), get_ipopt_include()]
+    return [d for d in dirs if d is not None]
+
+
+def get_library_dirs():
+    dirs = [get_ipopt_library_dir()]
+    return [d for d in dirs if d is not None]
+
+
 extensions = [
     Extension(
         'galini_core',
@@ -121,13 +131,8 @@ extensions = [
             'src/ipopt/module.cc',
             'src/core.cc',
         ],
-        include_dirs=[
-            'src',
-            get_pybind11_include(),
-            get_pybind11_include(user=True),
-            get_ipopt_include(),
-        ],
-        library_dirs=[get_ipopt_library_dir()],
+        include_dirs=get_include_dirs(),
+        library_dirs=get_library_dirs(),
         language='c++',
         depends=glob.glob('src/**/*.h'),
         libraries=['ipopt'],
@@ -186,7 +191,7 @@ setup(
         'build_ext': BuildExt,
     },
     install_requires=[
-        'pyomo==5.5',
+        'pyomo==5.5.1',
         'cog-suspect>=1.3.0',
         'galini-io>=0.3.0',
         'pulp>=1.6',
