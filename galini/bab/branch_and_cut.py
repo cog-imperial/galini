@@ -179,7 +179,12 @@ class BranchAndCutAlgorithm(BabAlgorithm):
                 if not all([ch.expression_type == ExpressionType.Linear for ch in root_expr.children]):
                     continue
                 new_root_expr = _convert_linear_expr(linear, root_expr)
-                linear.add_constraint(constraint.name, new_root_expr, constraint.lower_bound, constraint.upper_bound)
+                children = [c for c in new_root_expr.children]
+                children.append(objvar)
+                coefficients = [new_root_expr.coefficient(c) for c in new_root_expr.children]
+                coefficients.append(-1.0)
+                final_root_expr = LinearExpression(children, coefficients, new_root_expr.constant_term)
+                linear.add_constraint(objective.name, final_root_expr, None, 0)
 
         for constraint in problem.constraints:
             root_expr = constraint.root_expr
