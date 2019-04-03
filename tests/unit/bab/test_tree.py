@@ -97,20 +97,71 @@ class TestBabTreeCoordinates:
 
 
 class TestBabTreeState:
-    def test_update_with_new_lower_bound(self, tree):
-        sol = NodeSolution(0.5, 2.0, FakeSolution())
-        tree.update_state(sol)
-        # assert np.isclose(0.5, tree.state.lower_bound)
-        assert np.isclose(1.0, tree.state.upper_bound)
+    def test_update_root(self):
+        tree = BabTree(create_problem(), KSectionBranchingStrategy(), FakeSelectionStrategy())
+        sol = NodeSolution(5.0, 10.0, FakeSolution())
+        tree.update_root(sol)
+        assert np.isclose(5.0, tree.lower_bound)
+        assert np.isclose(10.0, tree.upper_bound)
+
+    def test_update_with_new_lower_bound(self):
+        tree = BabTree(create_problem(), KSectionBranchingStrategy(), FakeSelectionStrategy())
+        sol = NodeSolution(5.0, 10.0, FakeSolution())
+        tree.update_root(sol)
+
+        root_children, _ = tree.root.branch()
+        a, b = root_children
+        tree.add_node(a)
+        tree.add_node(b)
+        tree.update_node(a, NodeSolution(7.0, 11.0, FakeSolution()))
+        assert np.isclose(5.0, tree.lower_bound)
+        assert np.isclose(10.0, tree.upper_bound)
+        tree.update_node(b, NodeSolution(6.0, 10.0, FakeSolution()))
+        assert np.isclose(10.0, tree.lower_bound)
+        assert np.isclose(10.0, tree.upper_bound)
+        children, _ = b.branch()
+        a, b = children
+        tree.add_node(a)
+        tree.add_node(b)
+        tree.update_node(a, NodeSolution(7.0, 10.0, FakeSolution()))
+        assert np.isclose(6.0, tree.lower_bound)
+        assert np.isclose(10.0, tree.upper_bound)
 
     def test_update_with_new_upper_bound(self, tree):
-        sol = NodeSolution(-10.0, 0.5, FakeSolution())
-        tree.update_state(sol)
-        # assert np.isclose(0.0, tree.state.lower_bound)
-        assert np.isclose(0.5, tree.state.upper_bound)
+        tree = BabTree(create_problem(), KSectionBranchingStrategy(), FakeSelectionStrategy())
+        sol = NodeSolution(5.0, 10.0, FakeSolution())
+        tree.update_root(sol)
+
+        root_children, _ = tree.root.branch()
+        a, b = root_children
+        tree.add_node(a)
+        tree.add_node(b)
+        tree.update_node(a, NodeSolution(7.0, 11.0, FakeSolution()))
+        assert np.isclose(5.0, tree.lower_bound)
+        assert np.isclose(10.0, tree.upper_bound)
+        tree.update_node(b, NodeSolution(6.0, 9.0, FakeSolution()))
+        assert np.isclose(9.0, tree.lower_bound)
+        assert np.isclose(9.0, tree.upper_bound)
 
     def test_update_with_both_new_bounds(self, tree):
-        sol = NodeSolution(0.5, 0.5, FakeSolution())
-        tree.update_state(sol)
-        # assert np.isclose(0.5, tree.state.lower_bound)
-        assert np.isclose(0.5, tree.state.upper_bound)
+        tree = BabTree(create_problem(), KSectionBranchingStrategy(), FakeSelectionStrategy())
+        sol = NodeSolution(5.0, 10.0, FakeSolution())
+        tree.update_root(sol)
+
+        root_children, _ = tree.root.branch()
+        a, b = root_children
+        tree.add_node(a)
+        tree.add_node(b)
+        tree.update_node(a, NodeSolution(7.0, 11.0, FakeSolution()))
+        assert np.isclose(5.0, tree.lower_bound)
+        assert np.isclose(10.0, tree.upper_bound)
+        tree.update_node(b, NodeSolution(6.0, 9.0, FakeSolution()))
+        assert np.isclose(9.0, tree.lower_bound)
+        assert np.isclose(9.0, tree.upper_bound)
+        children, _ = b.branch()
+        a, b = children
+        tree.add_node(a)
+        tree.add_node(b)
+        tree.update_node(a, NodeSolution(7.0, 10.0, FakeSolution()))
+        assert np.isclose(6.0, tree.lower_bound)
+        assert np.isclose(9.0, tree.upper_bound)

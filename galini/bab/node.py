@@ -64,6 +64,16 @@ class Node(object):
     def has_parent(self):
         return self.parent is not None
 
+    @property
+    def lower_bound(self):
+        assert self.state is not None
+        return self.state.lower_bound
+
+    @property
+    def upper_bound(self):
+        assert self.state is not None
+        return self.state.upper_bound
+
     def branch(self, strategy=None):
         """Branch at the current node using strategy."""
         if self.children is not None:
@@ -115,3 +125,7 @@ class Node(object):
         else:
             self.children.append(child_node)
         return child
+
+    @property
+    def coordinate_hash(self):
+        return '-'.join([str(c) for c in self.coordinate])

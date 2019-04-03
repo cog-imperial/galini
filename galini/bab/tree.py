@@ -26,12 +26,14 @@ class BabTree(object):
         self.root = Node(problem, tree=self, coordinate=[0])
         self.branching_strategy = branching_strategy
         self.selection_strategy = selection_strategy
-        self.selection_strategy.insert_node(self.root)
         self.state = TreeState(lower_bound=-np.inf, upper_bound=np.inf, nodes_visited=0)
+        self.open_nodes = {}
         self.best_solution = None
 
+        self.add_node(self.root)
+
     def update_root(self, solution):
-        self.update_node(self.root, solution)
+        self._update_node(self.root, solution, True)
 
     def has_nodes(self):
         return self.selection_strategy.has_nodes()
@@ -40,13 +42,21 @@ class BabTree(object):
         return self.selection_strategy.next_node()
 
     def add_node(self, node):
+        self.open_nodes[node.coordinate_hash] = node
         self.selection_strategy.insert_node(node)
 
     def update_node(self, node, solution):
+        self._update_node(node, solution, False)
+
+    def _update_node(self, node, solution, update_lower_bound):
         assert isinstance(solution, NodeSolution)
         node.update(solution)
-        self.update_state(solution)
-        # self.selection_strategy.insert_node(node)
+        del self.open_nodes[node.coordinate_hash]
+        self._update_state(solution, update_lower_bound)
+
+    @property
+    def lower_bound(self):
+        return self.state.lower_bound
 
     @property
     def upper_bound(self):
@@ -70,15 +80,22 @@ class BabTree(object):
             current = current.children[c]
         return current
 
-    def update_state(self, solution):
+    def _update_state(self, solution, is_root_node):
         if not solution.solution.status.is_success():
             return
 
-        new_lower_bound = self.state.lower_bound
-        if solution.upper_bound < self.state.upper_bound:
+        if not is_root_node:
+            new_lower_bound = min(self.state.upper_bound, solution.upper_bound)
+            for node in self.open_nodes.values():
+                if node.parent.lower_bound < new_lower_bound:
+                    new_lower_bound = node.parent.lower_bound
+        else:
             new_lower_bound = solution.lower_bound
-            self.best_solution = solution
 
-        new_upper_bound = min(solution.upper_bound, self.state.upper_bound)
+        if solution.upper_bound < self.state.upper_bound:
+            new_upper_bound = solution.upper_bound
+            self.best_solution = solution
+        else:
+            new_upper_bound = self.state.upper_bound
         new_nodes_visited = self.state.nodes_visited + 1
         self.state = TreeState(new_lower_bound, new_upper_bound, new_nodes_visited)
