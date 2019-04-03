@@ -177,6 +177,9 @@ class CplexSolver(object):
         model.set_results_stream(_CplexLoggerAdapter(self._logger, self._run_id, INFO))
 
         for key, value in self._config.items():
+            if isinstance(value, dict):
+                raise ValueError("Invalid CPLEX parameter '{}'".format(key))
+
             # Parameters are specified as a path (mip.tolerances.mipgap)
             # access one attribute at the time.
             if key == 'timelimit':
@@ -191,7 +194,9 @@ class CplexSolver(object):
 def _solver(logger, run_id, galini):
     cplex = CplexSolver(logger, run_id, galini)
     if cplex.available():
+        logger.info(run_id, 'Using CPLEX as MILP solver')
         return cplex
+    logger.info(run_id, 'Using CBC as MILP solver')
     return pulp.PULP_CBC_CMD()
 
 
