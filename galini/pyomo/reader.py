@@ -15,7 +15,7 @@
 import os
 import importlib
 import importlib.util
-from galini.pyomo.osil_reader import read_osil
+from suspect.pyomo.osil_reader import read_osil
 from galini.error import (
     InvalidFileExtensionError,
     InvalidPythonInputError,

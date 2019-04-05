@@ -15,15 +15,20 @@
 from numbers import Number
 import numpy as np
 import pyomo.environ as aml
+import pyomo.core.expr.expr_pyomo5 as pex
+from pyomo.core.expr.expr_pyomo5 import (
+    ExpressionValueVisitor,
+    nonpyomo_leaf_types,
+    NumericConstant,
+)
+from suspect.pyomo.expr_dict import ExpressionDict
+from suspect.float_hash import BTreeFloatHasher
 from galini.pyomo.util import (
     model_variables,
     model_objectives,
     model_constraints,
     bounds_and_expr,
 )
-from galini.pyomo.expr_visitor import ExpressionHandler, bottom_up_visit
-from galini.pyomo.expr_dict import ExpressionDict
-from galini.pyomo.float_hash import BTreeFloatHasher
 import galini.core as core
 
 
@@ -60,8 +65,9 @@ def dag_from_pyomo_model(model):
 
 class _ComponentFactory(object):
     def __init__(self, dag):
-        self._components = ExpressionDict(float_hasher=BTreeFloatHasher())
         self.dag = dag
+        self._components = ExpressionDict(float_hasher=BTreeFloatHasher())
+        self._visitor = _ConvertExpressionVisitor(self._components, self.dag)
 
     def add_variable(self, omo_var):
         """Convert and add variable to the problem."""
@@ -109,7 +115,273 @@ class _ComponentFactory(object):
         return obj
 
     def _expression(self, expr):
-        return _convert_expression(self._components, self.dag, expr)
+        return self._visitor.dfs_postorder_stack(expr)
+
+
+_unary_func_name_to_expr_cls = {
+    'sqrt': core.SqrtExpression,
+    'exp': core.ExpExpression,
+    'log': core.LogExpression,
+    'sin': core.SinExpression,
+    'cos': core.CosExpression,
+    'tan': core.TanExpression,
+    'asin': core.AsinExpression,
+    'acos': core.AcosExpression,
+    'atan': core.AtanExpression,
+}
+
+
+def _convert_as(expr_cls):
+    return lambda _, v: expr_cls(v)
+
+
+def _convert_unary_function(node, values):
+    assert len(values) == 1
+    expr_cls = _unary_func_name_to_expr_cls.get(node.getname(), None)
+    if expr_cls is None:
+        raise RuntimeError(
+            'Unknown UnaryFunctionExpression type {}'.format(node.getname())
+        )
+    return expr_cls(values)
+
+
+def _is_product_with_reciprocal(children):
+    assert len(children) == 2
+    a, b = children
+    if isinstance(a, core.DivisionExpression):
+        if isinstance(a.children[0], core.Constant):
+            return a.children[0].value == 1.0
+    if isinstance(b, core.DivisionExpression):
+        if isinstance(b.children[0], core.Constant):
+            return b.children[0].value == 1.0
+    return False
+
+
+def _is_product_constant_with_linear(children):
+    assert len(children) == 2
+    a, b = children
+    if isinstance(a, core.Constant) and isinstance(b, core.LinearExpression):
+        return True
+    if isinstance(b, core.Constant) and isinstance(a, core.LinearExpression):
+        return True
+    return False
+
+
+def _is_bilinear_product(children):
+    if len(children) != 2:
+        return False
+    a, b = children
+    if isinstance(a, core.Variable) and isinstance(b, core.Variable):
+        return True
+    if isinstance(a, core.Variable) and isinstance(b, core.LinearExpression):
+        return len(b.children) == 1 and b.constant_term == 0.0
+    if isinstance(a, core.LinearExpression) and isinstance(b, core.Variable):
+        return len(a.children) == 1 and a.constant_term == 0.0
+    return False
+
+
+def _bilinear_variables_with_coefficient(children):
+    assert len(children) == 2
+    a, b = children
+    if isinstance(a, core.Variable) and isinstance(b, core.Variable):
+        return a, b, 1.0
+    if isinstance(a, core.Variable) and isinstance(b, core.LinearExpression):
+        assert len(b.children) == 1
+        assert b.constant_term == 0.0
+        vb = b.children[0]
+        return a, vb, b.coefficient(vb)
+    if isinstance(a, core.LinearExpression) and isinstance(b, core.Variable):
+        assert len(a.children) == 1
+        assert a.constant_term == 0.0
+        va = a.children[0]
+        return va, b, a.coefficient(va)
+
+
+def _constant_with_linear(children):
+    a, b = children
+    if isinstance(a, core.Constant):
+        assert isinstance(b, core.LinearExpression)
+        constant = a.value
+        linear = b
+    else:
+        assert isinstance(a, core.LinearExpression)
+        assert isinstance(b, core.Constant)
+        constant = b.value
+        linear = a
+
+    constant_term = linear.constant_term * constant
+    variables = [v for v in linear.children]
+    coefficients = [constant * linear.coefficient(v) for v in variables]
+    return core.LinearExpression(variables, coefficients, constant_term)
+
+
+def _reciprocal_product_numerator_denominator(children):
+    a, b = children
+    if isinstance(a, core.DivisionExpression):
+        assert not isinstance(b, core.DivisionExpression)
+        _, d = a.children
+        return b, d
+
+    assert isinstance(b, core.DivisionExpression)
+    _, d = b.children
+    return a, d
+
+
+def _convert_product(_node, values):
+    if _is_product_with_reciprocal(values):
+        n, d = _reciprocal_product_numerator_denominator(values)
+        return core.DivisionExpression([n, d])
+
+    if _is_product_constant_with_linear(values):
+        return _constant_with_linear(values)
+
+    if _is_bilinear_product(values):
+        a, b, c = _bilinear_variables_with_coefficient(values)
+        return core.QuadraticExpression([a], [b], [c])
+
+    return core.ProductExpression(values)
+
+
+def _convert_reciprocal(_node, values):
+    assert len(values) == 1
+    return core.DivisionExpression([core.Constant(1.0), values[0]])
+
+
+def _decompose_sum(children):
+    quadratic = []
+    linear = []
+    constant = None
+    other = []
+    for child in children:
+        if isinstance(child, core.QuadraticExpression):
+            quadratic.append(child)
+        elif isinstance(child, core.LinearExpression):
+            linear.append(child)
+        elif isinstance(child, core.Variable):
+            linear.append(core.LinearExpression([child], [1.0], 0.0))
+        elif isinstance(child, core.Constant):
+            if constant is None:
+                constant = 0.0
+            constant += child.value
+        else:
+            other.append(child)
+
+    if len(linear) > 0 and constant is not None:
+        linear.append(core.LinearExpression([], [], constant))
+    elif constant is not None:
+        other.append(core.Constant(constant))
+
+    return quadratic, linear, other
+
+
+def _convert_sum(_node, values):
+    quadratic, linear, other = _decompose_sum(values)
+
+    if len(linear) == 0 and len(other) == 0:
+        return core.QuadraticExpression(quadratic)
+
+    if len(quadratic) == 0 and len(other) == 0:
+        return core.LinearExpression(linear)
+
+    children = other
+    if len(quadratic) > 0:
+        quadratic_expr = core.QuadraticExpression(quadratic)
+        children.append(quadratic_expr)
+
+    if len(linear) > 0:
+        linear_expr = core.LinearExpression(linear)
+        children.append(linear_expr)
+
+    return core.SumExpression(children)
+
+
+def _is_square(children):
+    assert len(children) == 2
+    base, expo = children
+    if not isinstance(expo, core.Constant):
+        return False
+
+    if not (int(expo.value) == expo.value == 2.0):
+        return False
+
+    if isinstance(base, core.LinearExpression):
+        return len(base.children) == 1 and base.constant_term == 0.0
+    if isinstance(base, core.Variable):
+        return True
+    return False
+
+
+def _square_variable_and_exponent(children):
+    assert len(children) == 2
+    base, expo = children
+    if isinstance(base, core.LinearExpression):
+        assert len(base.children) == 1
+        return base.children[0], expo.value
+    return base, expo.value
+
+
+def _convert_pow(_node, values):
+    if _is_square(values):
+        var, expo = _square_variable_and_exponent(values)
+        return core.QuadraticExpression([var], [var], [1.0])
+    return core.PowExpression(values)
+
+
+def _convert_monomial(_node, values):
+    const, var = values
+    assert isinstance(const, core.Constant)
+    assert isinstance(var, core.Variable)
+    return core.LinearExpression([var], [const.value], 0.0)
+
+
+_convert_expr_map = dict()
+_convert_expr_map[pex.UnaryFunctionExpression] = _convert_unary_function
+_convert_expr_map[pex.ProductExpression] = _convert_product
+_convert_expr_map[pex.ReciprocalExpression] = _convert_reciprocal
+_convert_expr_map[pex.PowExpression] = _convert_pow
+_convert_expr_map[pex.SumExpression] = _convert_sum
+_convert_expr_map[pex.MonomialTermExpression] = _convert_monomial
+_convert_expr_map[pex.AbsExpression] = _convert_as(core.AbsExpression)
+_convert_expr_map[pex.NegationExpression] = _convert_as(core.NegationExpression)
+
+
+class _ConvertExpressionVisitor(ExpressionValueVisitor):
+    def __init__(self, memo, dag):
+        self.memo = memo
+
+    def get(self, expr):
+        """Get galini expression equivalent to expr."""
+        if isinstance(expr, Number):
+            const = NumericConstant(expr)
+            return self.get(const)
+        return self.memo[expr]
+
+    def set(self, expr, new_expr):
+        """Set expr to new_expr index."""
+        self.memo.set(expr, new_expr)
+
+    def visiting_potential_leaf(self, node):
+        if node.__class__ in nonpyomo_leaf_types:
+            expr = NumericConstant(float(node))
+            const = core.Constant(float(node))
+            self.set(expr, const)
+            return True, const
+
+        if node.is_variable_type():
+            return True, self.get(node)
+        return False, None
+
+    def visit(self, node, values):
+        if self.get(node) is not None:
+            return self.get(node)
+
+        callback = _convert_expr_map.get(type(node), None)
+        if callback is None:
+            raise RuntimeError('Unknown expression type {}'.format(type(node)))
+
+        new_expr = callback(node, values)
+        self.set(node, new_expr)
+        return new_expr
 
 
 def _convert_domain(dom):
@@ -121,243 +393,3 @@ def _convert_domain(dom):
         return core.Domain.BINARY
     else:
         raise RuntimeError('Unknown domain {}'.format(dom))
-
-
-def _convert_expression(memo, dag, expr):
-    handler = _ExpressionConverterHandler(memo, dag)
-    bottom_up_visit(handler, expr)
-    return memo[expr]
-
-
-# pylint: disable=protected-access
-class _ExpressionConverterHandler(ExpressionHandler):
-    def __init__(self, memo, dag):
-        self.memo = memo
-
-    def get(self, expr):
-        """Get galini expression equivalent to expr."""
-        if isinstance(expr, Number):
-            const = aml.NumericConstant(expr)
-            return self.get(const)
-        return self.memo[expr]
-
-    def set(self, expr, new_expr):
-        """Set expr to new_expr index."""
-        # self.dag.insert_vertex(new_expr)
-        self.memo.set(expr, new_expr)
-
-    def _check_children(self, expr):
-        for arg in expr._args:
-            if self.get(arg) is None:
-                raise RuntimeError('unknown child')
-
-    def visit_number(self, n):
-        const = aml.NumericConstant(n)
-        self.visit_numeric_constant(const)
-
-    def visit_numeric_constant(self, expr):
-        if self.memo[expr] is not None:
-            return self.memo[expr]
-        const = core.Constant(expr.value)
-        self.set(expr, const)
-        return None
-
-    def visit_variable(self, expr):
-        if self.memo[expr] is not None:
-            return self.memo[expr]
-        raise AssertionError('Unknown variable encountered')
-
-    def visit_equality(self, expr):
-        raise AssertionError('Invalid EqualityExpression encountered')
-
-    def visit_inequality(self, expr):
-        raise AssertionError('Invalid EqualityExpression encountered')
-
-    def visit_product(self, expr):
-        def _is_bilinear(children):
-            if len(children) != 2:
-                return False
-            a, b = children
-            if isinstance(a, core.Variable) and isinstance(b, core.Variable):
-                return True
-            if isinstance(a, core.Variable) and isinstance(b, core.LinearExpression):
-                return len(b.children) == 1
-            if isinstance(a, core.LinearExpression) and isinstance(b, core.Variable):
-                return len(a.children) == 1
-            return False
-
-        def _bilinear_variables_with_coefficient(children):
-            assert len(children) == 2
-            a, b = children
-            if isinstance(a, core.Variable) and isinstance(b, core.Variable):
-                return a, b, 1.0
-            if isinstance(a, core.Variable) and isinstance(b, core.LinearExpression):
-                assert len(b.children) == 1
-                assert b.constant_term == 0.0
-                vb = b.children[0]
-                return a, vb, b.coefficient(vb)
-            if isinstance(a, core.LinearExpression) and isinstance(b, core.Variable):
-                assert len(a.children) == 1
-                assert a.constant_term == 0.0
-                va = a.children[0]
-                return va, b, a.coefficient(va)
-
-        if self.memo[expr] is not None:
-            return self.memo[expr]
-        self._check_children(expr)
-        children = [self.get(a) for a in expr._args]
-        if _is_bilinear(children):
-            a, b, c = _bilinear_variables_with_coefficient(children)
-            new_expr = core.QuadraticExpression([a], [b], [c])
-        else:
-            new_expr = core.ProductExpression(children)
-        self.set(expr, new_expr)
-        return None
-
-    def visit_division(self, expr):
-        if self.memo[expr] is not None:
-            return self.memo[expr]
-
-        self._check_children(expr)
-        children = [self.get(a) for a in expr._args]
-        new_expr = core.DivisionExpression(children)
-        self.set(expr, new_expr)
-        return None
-
-    def visit_sum(self, expr):
-        def _decompose_children(children):
-            quadratic = []
-            linear = []
-            other = []
-            for child in children:
-                if isinstance(child, core.QuadraticExpression):
-                    quadratic.append(child)
-                elif isinstance(child, core.LinearExpression):
-                    linear.append(child)
-                elif isinstance(child, core.Variable):
-                    linear.append(core.LinearExpression([child], [1.0], 0.0))
-                else:
-                    other.append(child)
-            return quadratic, linear, other
-
-        if self.memo[expr] is not None:
-            return self.memo[expr]
-
-        self._check_children(expr)
-        children = [self.get(a) for a in expr._args]
-
-        # Decompose summation in sum of: Quadratic + Linear + Other
-        quadratic_children, linear_children, other_children = _decompose_children(children)
-
-        if len(linear_children) == 0 and len(other_children) == 0:
-            new_expr = core.QuadraticExpression(quadratic_children)
-        elif len(quadratic_children) == 0 and len(other_children) == 0:
-            new_expr = core.LinearExpression(linear_children)
-        else:
-            new_children = other_children
-
-            if len(quadratic_children) > 0:
-                quadratic_expr = core.QuadraticExpression(quadratic_children)
-                new_children.append(quadratic_expr)
-
-            if len(linear_children) > 0:
-                linear_expr = core.LinearExpression(linear_children)
-                new_children.append(linear_expr)
-
-            new_expr = core.SumExpression(new_children)
-        self.set(expr, new_expr)
-        return None
-
-    def visit_linear(self, expr):
-        if self.memo[expr] is not None:
-            return self.memo[expr]
-        self._check_children(expr)
-        children = [self.get(a) for a in expr._args]
-        coeffs = np.array([expr._coef[id(a)] for a in expr._args])
-        const = expr._const
-        new_expr = core.LinearExpression(children, coeffs, const)
-        self.set(expr, new_expr)
-        return None
-
-    def visit_negation(self, expr):
-        if self.memo[expr] is not None:
-            return self.memo[expr]
-
-        self._check_children(expr)
-        children = [self.get(a) for a in expr._args]
-        new_expr = core.NegationExpression(children)
-        self.set(expr, new_expr)
-        return None
-
-    def visit_unary_function(self, expr):
-        if self.memo[expr] is not None:
-            return self.memo[expr]
-
-        self._check_children(expr)
-        children = [self.get(a) for a in expr._args]
-        assert len(children) == 1
-        fun = expr.name
-        # pylint: disable=invalid-name
-        ExprClass = {
-            'sqrt': core.SqrtExpression,
-            'exp': core.ExpExpression,
-            'log': core.LogExpression,
-            'sin': core.SinExpression,
-            'cos': core.CosExpression,
-            'tan': core.TanExpression,
-            'asin': core.AsinExpression,
-            'acos': core.AcosExpression,
-            'atan': core.AtanExpression,
-        }.get(fun)
-        if ExprClass is None:
-            raise AssertionError('Unknwon function', fun)
-        new_expr = ExprClass(children)
-        self.set(expr, new_expr)
-        return None
-
-    def visit_abs(self, expr):
-        if self.memo[expr] is not None:
-            return self.memo[expr]
-
-        self._check_children(expr)
-        children = [self.get(a) for a in expr._args]
-        new_expr = core.AbsExpression(children)
-        self.set(expr, new_expr)
-        return None
-
-    def visit_pow(self, expr):
-        def _is_square(children):
-            assert len(children) == 2
-            base, expo = children
-            if not isinstance(expo, core.Constant):
-                return False
-
-            if not (int(expo.value) == expo.value == 2.0):
-                return False
-
-            if isinstance(base, core.LinearExpression):
-                return len(base.children) == 1 and base.constant_term == 0.0
-            if isinstance(base, core.Variable):
-                return True
-            return False
-
-        def _square_variable_and_exponent(children):
-            assert len(children) == 2
-            base, expo = children
-            if isinstance(base, core.LinearExpression):
-                assert len(base.children) == 1
-                return base.children[0], expo.value
-            return base, expo.value
-
-        if self.memo[expr] is not None:
-            return self.memo[expr]
-
-        self._check_children(expr)
-        children = [self.get(a) for a in expr._args]
-        if _is_square(children):
-            var, expo = _square_variable_and_exponent(children)
-            new_expr = core.QuadraticExpression([var], [var], [1.0])
-        else:
-            new_expr = core.PowExpression(children)
-        self.set(expr, new_expr)
-        return None

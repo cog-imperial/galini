@@ -15,52 +15,37 @@
 from typing import Any
 from numbers import Number
 import pyomo.environ as aml
-from galini.pyomo.expr_visitor import (
-    InequalityExpression,
-    EqualityExpression,
-)
-
-# pylint: disable=invalid-name
-numeric_types = (int, Number, aml.NumericConstant)
-
-
-def numeric_value(n: Any) -> float:
-    """Get an object numeric value."""
-    if isinstance(n, (int, float)):
-        return float(n)
-    elif isinstance(n, aml.NumericConstant):
-        return float(n.value)
-    else:
-        raise ValueError('must be one of numeric_types')
+import pyomo.core.expr.expr_pyomo5 as omo
+from pyomo.core.expr.expr_pyomo5 import NumericConstant
 
 
 def bounds_and_expr(expr):
     """Returns a Pyomo expression bounds and root expression."""
-    if isinstance(expr, InequalityExpression):
+    if isinstance(expr, omo.InequalityExpression):
         return _inequality_bounds_and_expr(expr)
-    elif isinstance(expr, EqualityExpression):
+    elif isinstance(expr, omo.EqualityExpression):
         return _equality_bounds_and_expr(expr)
     else:
         raise ValueError('expr must be InequalityExpression or EqualityExpression')
 
 
 def _inequality_bounds_and_expr(expr):
-    if len(expr._args) == 2:
-        (lhs, rhs) = expr._args
-        if isinstance(lhs, aml.NumericConstant):
+    if len(expr._args_) == 2:
+        (lhs, rhs) = expr._args_
+        if isinstance(lhs, NumericConstant):
             return (lhs.value, None), rhs
         else:
             return (None, rhs.value), lhs
-    elif len(expr._args) == 3:
-        (lhs, ex, rhs) = expr._args
+    elif len(expr._args_) == 3:
+        (lhs, ex, rhs) = expr._args_
         return (lhs.value, rhs.value), ex
     else:
         raise ValueError('Malformed InequalityExpression')
 
 
 def _equality_bounds_and_expr(expr):
-    if len(expr._args) == 2:
-        body, rhs = expr._args
+    if len(expr._args_) == 2:
+        body, rhs = expr._args_
         return (rhs.value, rhs.value), body
     else:
         raise ValueError('Malformed EqualityExpression')

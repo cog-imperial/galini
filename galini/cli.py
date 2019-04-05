@@ -16,7 +16,6 @@
 import sys
 import argparse
 import pkg_resources
-from galini.pyomo import set_pyomo4_expression_tree
 
 
 def collect_commands(parser, subcommands_entry_points_iter):
@@ -43,8 +42,6 @@ def collect_commands(parser, subcommands_entry_points_iter):
 
 def main(): # pragma: no cover
     """Main entry point."""
-    set_pyomo4_expression_tree()
-
     parser = argparse.ArgumentParser(prog='galini')
     subparser = parser.add_subparsers(dest='command')
     subcommands = collect_commands(

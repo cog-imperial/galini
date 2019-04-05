@@ -191,7 +191,7 @@ setup(
         'build_ext': BuildExt,
     },
     install_requires=[
-        'pyomo==5.5.1',
+        'pyomo>=5.6',
         'cog-suspect>=1.3.0',
         'galini-io>=0.3.0',
         'pulp>=1.6',

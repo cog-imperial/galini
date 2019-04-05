@@ -321,9 +321,19 @@ class OsilParser(object):
             nl = self._nonlinear_terms(i)
             expr = linear + quad + nl
             cons_name = self._constraint_name(constraint)
-            lb = float(constraint.attrib.get('lb', '-inf'))
-            ub = float(constraint.attrib.get('ub', 'inf'))
-            cons = aml.Constraint(expr=lb <= expr <= ub)
+            lb = constraint.attrib.get('lb', None)
+            ub = constraint.attrib.get('ub', None)
+            if lb is None:
+                assert ub is not None
+                expr = aml.inequality(lb, expr)
+            elif ub is None:
+                assert lb is not None
+                expr = aml.inequality(expr, ub)
+            else:
+                assert lb is not None
+                assert ub is not None
+                expr = aml.inequality(lb, expr, ub)
+            cons = aml.Constraint(expr=expr)
             setattr(self.model, cons_name, cons)
 
         return self.model
