@@ -42,6 +42,10 @@ public:
     return true;
   }
 
+  bool is_expression() const override {
+    return false;
+  }
+
   double value() const {
     return value_;
   }

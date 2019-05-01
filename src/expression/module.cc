@@ -39,10 +39,13 @@ void init_module(py::module& m) {
     .def_property_readonly("default_depth", &Expression::default_depth)
     .def_property_readonly("num_children", &Expression::num_children)
     .def_property_readonly("children", &Expression::children)
+    .def_property_readonly("args", &Expression::children)
     .def("expression_tree_data", &Expression::expression_tree_data)
     .def("nth_children", &Expression::nth_children)
     .def("is_constant", &Expression::is_constant)
-    .def("is_variable", &Expression::is_variable);
+    .def("is_expression_type", &Expression::is_expression)
+    .def("is_variable", &Expression::is_variable)
+    .def("is_variable_type", &Expression::is_variable);
 
   py::class_<UnaryExpression, Expression, UnaryExpression::ptr>(m, "UnaryExpression");
   py::class_<BinaryExpression, Expression, BinaryExpression::ptr>(m, "BinaryExpression");
@@ -54,6 +57,8 @@ void init_module(py::module& m) {
     .def_property_readonly("name", &Variable::name)
     .def_property_readonly("lower_bound", &Variable::lower_bound)
     .def_property_readonly("upper_bound", &Variable::upper_bound)
+    .def_property_readonly("lb", &Variable::lower_bound)
+    .def_property_readonly("ub", &Variable::upper_bound)
     .def_property_readonly("domain", &Variable::domain)
     .def_property_readonly("is_auxiliary", [](const Variable&) { return false; })
     .def_property_readonly("expression_type",

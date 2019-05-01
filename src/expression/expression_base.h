@@ -72,6 +72,10 @@ public:
     return false;
   }
 
+  virtual bool is_expression() const {
+    return true;
+  }
+
   void set_depth(index_t depth) {
     depth_ = depth;
   }

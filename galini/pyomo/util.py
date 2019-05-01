@@ -15,40 +15,7 @@
 from typing import Any
 from numbers import Number
 import pyomo.environ as aml
-import pyomo.core.expr.expr_pyomo5 as omo
-from pyomo.core.expr.expr_pyomo5 import NumericConstant
-
-
-def bounds_and_expr(expr):
-    """Returns a Pyomo expression bounds and root expression."""
-    if isinstance(expr, omo.InequalityExpression):
-        return _inequality_bounds_and_expr(expr)
-    elif isinstance(expr, omo.EqualityExpression):
-        return _equality_bounds_and_expr(expr)
-    else:
-        raise ValueError('expr must be InequalityExpression or EqualityExpression')
-
-
-def _inequality_bounds_and_expr(expr):
-    if len(expr._args_) == 2:
-        (lhs, rhs) = expr._args_
-        if isinstance(lhs, NumericConstant):
-            return (lhs.value, None), rhs
-        else:
-            return (None, rhs.value), lhs
-    elif len(expr._args_) == 3:
-        (lhs, ex, rhs) = expr._args_
-        return (lhs.value, rhs.value), ex
-    else:
-        raise ValueError('Malformed InequalityExpression')
-
-
-def _equality_bounds_and_expr(expr):
-    if len(expr._args_) == 2:
-        body, rhs = expr._args_
-        return (rhs.value, rhs.value), body
-    else:
-        raise ValueError('Malformed EqualityExpression')
+from pyomo.core.expr.numeric_expr import NumericConstant
 
 
 def model_variables(model):

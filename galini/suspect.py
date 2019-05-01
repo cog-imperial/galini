@@ -20,6 +20,12 @@ class ExpressionDict(object):
     def __init__(self, problem):
         self._dict = [None] * problem.size
 
+    def get(self, key, default=None):
+        result =  self._dict[key.idx]
+        if result is None:
+            return default
+        return result
+
     def __getitem__(self, item):
         return self._dict[item.idx]
 
@@ -61,20 +67,20 @@ class ProblemContext(object):
 
 
 class ProblemForwardIterator(ForwardIterator):
-    def iterate(self, problem, visitor, ctx, *_args, **_kwargs):
+    def iterate(self, problem, visitor, *args, **_kwargs):
         changed_vertices = []
         for vertex in problem.vertices:
-            has_changed = visitor.visit(vertex, ctx)
+            has_changed = visitor.visit(vertex, *args)
             if has_changed:
                 changed_vertices.append(vertex)
         return changed_vertices
 
 
 class ProblemBackwardIterator(BackwardIterator):
-    def iterate(self, problem, visitor, ctx, *args, **kwargs):
+    def iterate(self, problem, visitor, *args, **kwargs):
         changed_vertices = []
         for vertex in reversed(problem.vertices):
-            has_changed = visitor.visit(vertex, ctx)
+            has_changed = visitor.visit(vertex, *args)
             if has_changed:
                 changed_vertices.append(vertex)
         return changed_vertices

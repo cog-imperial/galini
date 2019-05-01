@@ -15,11 +15,18 @@
 from numbers import Number
 import numpy as np
 import pyomo.environ as aml
-import pyomo.core.expr.expr_pyomo5 as pex
-from pyomo.core.expr.expr_pyomo5 import (
-    ExpressionValueVisitor,
+from pyomo.core.expr.visitor import ExpressionValueVisitor
+from pyomo.core.expr.numeric_expr import (
     nonpyomo_leaf_types,
     NumericConstant,
+    UnaryFunctionExpression,
+    ProductExpression,
+    ReciprocalExpression,
+    PowExpression,
+    SumExpression,
+    MonomialTermExpression,
+    AbsExpression,
+    NegationExpression,
 )
 from suspect.pyomo.expr_dict import ExpressionDict
 from suspect.float_hash import BTreeFloatHasher
@@ -27,7 +34,6 @@ from galini.pyomo.util import (
     model_variables,
     model_objectives,
     model_constraints,
-    bounds_and_expr,
 )
 import galini.core as core
 
@@ -83,7 +89,13 @@ class _ComponentFactory(object):
 
     def add_constraint(self, omo_cons):
         """Convert and add constraint to the problem."""
-        (lower_bound, upper_bound), expr = bounds_and_expr(omo_cons.expr)
+        expr = omo_cons.body
+        lower_bound = omo_cons.lower
+        upper_bound = omo_cons.upper
+        if lower_bound is not None:
+            lower_bound = aml.value(lower_bound)
+        if upper_bound is not None:
+            upper_bound = aml.value(upper_bound)
         root_expr = self._expression(expr)
         self.dag.insert_tree(root_expr)
         constraint = self.dag.add_constraint(
@@ -335,14 +347,14 @@ def _convert_monomial(_node, values):
 
 
 _convert_expr_map = dict()
-_convert_expr_map[pex.UnaryFunctionExpression] = _convert_unary_function
-_convert_expr_map[pex.ProductExpression] = _convert_product
-_convert_expr_map[pex.ReciprocalExpression] = _convert_reciprocal
-_convert_expr_map[pex.PowExpression] = _convert_pow
-_convert_expr_map[pex.SumExpression] = _convert_sum
-_convert_expr_map[pex.MonomialTermExpression] = _convert_monomial
-_convert_expr_map[pex.AbsExpression] = _convert_as(core.AbsExpression)
-_convert_expr_map[pex.NegationExpression] = _convert_as(core.NegationExpression)
+_convert_expr_map[UnaryFunctionExpression] = _convert_unary_function
+_convert_expr_map[ProductExpression] = _convert_product
+_convert_expr_map[ReciprocalExpression] = _convert_reciprocal
+_convert_expr_map[PowExpression] = _convert_pow
+_convert_expr_map[SumExpression] = _convert_sum
+_convert_expr_map[MonomialTermExpression] = _convert_monomial
+_convert_expr_map[AbsExpression] = _convert_as(core.AbsExpression)
+_convert_expr_map[NegationExpression] = _convert_as(core.NegationExpression)
 
 
 class _ConvertExpressionVisitor(ExpressionValueVisitor):

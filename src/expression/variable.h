@@ -74,6 +74,7 @@ public:
   }
 
   bool is_variable() const override { return true; }
+  bool is_expression() const override { return false; }
 
   ADFloat eval(values_ptr<ADFloat>& values) const override {
     return (*values)[self()];
