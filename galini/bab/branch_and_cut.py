@@ -259,7 +259,12 @@ class BranchAndCutAlgorithm(BabAlgorithm):
             else:
                 problem.set_starting_point(v, value)
 
-        return self._nlp_solver.solve(problem)
+        solution = self._nlp_solver.solve(problem)
+
+        # unfix all variables
+        for v in problem.variables:
+            problem.unfix(v)
+        return solution
 
 
     def _cuts_converged(self, state):

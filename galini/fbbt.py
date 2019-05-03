@@ -72,6 +72,9 @@ class BoundsTightener(object):
     def tighten(self, problem, bounds):
         """Tighten bounds of ``problem`` storing them in ``bounds``."""
         self._forward_iterator.iterate(problem, BoundsInitializationVisitor(), bounds)
+        if self._stop_criterion._max_iter == 0:
+            return
+
         prop_visitor = self._stop_criterion.intercept_changes(_GaliniBoundsPropagationVisitor())
         tigh_visitor = self._stop_criterion.intercept_changes(_GaliniBoundsTighteningVisitor())
         changes_tigh = None
