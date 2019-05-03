@@ -44,6 +44,14 @@ class BabTree(object):
     def add_node(self, node):
         self.open_nodes[node.coordinate_hash] = node
         self.selection_strategy.insert_node(node)
+        if node != self.root:
+            new_lower_bound = self._open_nodes_lower_bound()
+            new_state = TreeState(
+                lower_bound=new_lower_bound,
+                upper_bound=self.state.upper_bound,
+                nodes_visited=self.state.nodes_visited,
+            )
+            self.state = new_state
 
     def update_node(self, node, solution):
         self._update_node(node, solution, False)
@@ -85,10 +93,7 @@ class BabTree(object):
             return
 
         if not is_root_node:
-            new_lower_bound = min(self.state.upper_bound, solution.upper_bound)
-            for node in self.open_nodes.values():
-                if node.parent.lower_bound < new_lower_bound:
-                    new_lower_bound = node.parent.lower_bound
+            new_lower_bound = self._open_nodes_lower_bound()
         else:
             new_lower_bound = solution.lower_bound
 
@@ -99,3 +104,10 @@ class BabTree(object):
             new_upper_bound = self.state.upper_bound
         new_nodes_visited = self.state.nodes_visited + 1
         self.state = TreeState(new_lower_bound, new_upper_bound, new_nodes_visited)
+
+    def _open_nodes_lower_bound(self):
+        new_lower_bound = self.state.upper_bound
+        for node in self.open_nodes.values():
+            if node.parent.lower_bound < new_lower_bound:
+                new_lower_bound = node.parent.lower_bound
+        return new_lower_bound

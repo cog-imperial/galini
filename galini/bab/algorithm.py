@@ -133,6 +133,7 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
                 for child in node_children:
                     tree.add_node(child)
                 continue
+
             logger.info(
                 run_id,
                 'Visiting node {}: parent state={}, parent solution={}',
@@ -160,6 +161,9 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
                 logger.log_prune_bab_node(run_id, current_node.coordinate)
                 continue
 
+            if np.isclose(solution.lower_bound, solution.upper_bound):
+                continue
+
             node_children, branching_point = current_node.branch()
             logger.info(run_id, 'Branched at point {}', branching_point)
             for child in node_children:
@@ -177,14 +181,14 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
             return None
 
     def _solve_problem_at_root(self, run_id, problem, tree, node):
-        self._perform_fbbt(problem)
+        self._perform_fbbt(run_id, problem, tree, node)
         return self.solve_problem_at_root(run_id, problem, tree, node)
 
     def _solve_problem_at_node(self, run_id, problem, tree, node):
-        self._perform_fbbt(problem)
+        self._perform_fbbt(run_id, problem, tree, node)
         return self.solve_problem_at_node(run_id, problem, tree, node)
 
-    def _perform_fbbt(self, problem):
+    def _perform_fbbt(self, run_id, problem, tree, node):
         ctx = detect_special_structure(problem, max_iter=self.fbbt_maxiter)
         for v in problem.variables:
             vv = problem.variable_view(v)
@@ -193,6 +197,9 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
                 new_bound = Interval(None, None)
             vv.set_lower_bound(_safe_lb(new_bound.lower_bound, vv.lower_bound()))
             vv.set_upper_bound(_safe_ub(new_bound.upper_bound, vv.upper_bound()))
+        group_name = '_'.join([str(c) for c in node.coordinate])
+        logger.tensor(run_id, group_name, 'lb', problem.lower_bounds)
+        logger.tensor(run_id, group_name, 'ub', problem.upper_bounds)
 
     def _log_problem_information_at_node(self, run_id, problem, solution, node):
         var_view = node.problem.variable_view(node.variable)

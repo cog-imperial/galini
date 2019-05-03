@@ -22,6 +22,7 @@ from galini.config import (
 from galini.solvers import Solver
 from galini.cuts import CutsGeneratorsRegistry
 from galini.bab.branch_and_cut import BranchAndCutAlgorithm
+from galini.util import print_problem
 
 
 class BranchAndBoundSolver(Solver):

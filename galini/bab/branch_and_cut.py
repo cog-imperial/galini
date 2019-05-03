@@ -20,6 +20,7 @@ from galini.abb.relaxation import AlphaBBRelaxation
 from galini.logging import get_logger
 from galini.core import Constraint, LinearExpression, Domain, Sense
 from galini.cuts import CutsGeneratorsManager
+from galini.util import print_problem
 from galini.config import (
     OptionsGroup,
     NumericOption,
@@ -116,8 +117,17 @@ class BranchAndCutAlgorithm(BabAlgorithm):
                 )
 
             cuts_state.update(mip_solution)
+            if len(new_cuts) == 0:
+                break
 
-        if cuts_state.lower_bound >= tree.upper_bound:
+        logger.info(
+            run_id,
+            'Lower Bound from MIP = {}; Tree Upper Bound = {}',
+            cuts_state.lower_bound,
+            tree.upper_bound
+        )
+
+        if cuts_state.lower_bound >= tree.upper_bound and not np.isclose(cuts_state.lower_bound, tree.upper_bound):
             # No improvement
             return NodeSolution(
                 cuts_state.lower_bound,
@@ -139,7 +149,7 @@ class BranchAndCutAlgorithm(BabAlgorithm):
         )
 
     def _solve_problem_at_root(self, run_id, problem, tree, node):
-        self._perform_fbbt(problem)
+        self._perform_fbbt(run_id, problem, tree, node)
         relaxation, relaxed_problem = self._relax_problem(problem)
         self._cuts_generators_manager.before_start_at_root(run_id, problem, relaxed_problem)
         solution = self.solve_problem_at_root(run_id, problem, relaxed_problem, tree, node, relaxation)
@@ -147,7 +157,7 @@ class BranchAndCutAlgorithm(BabAlgorithm):
         return solution
 
     def _solve_problem_at_node(self, run_id, problem, tree, node):
-        self._perform_fbbt(problem)
+        self._perform_fbbt(run_id, problem, tree, node)
         relaxation, relaxed_problem = self._relax_problem(problem)
         self._cuts_generators_manager.before_start_at_node(run_id, problem, relaxed_problem)
         solution = self.solve_problem_at_node(run_id, problem, relaxed_problem, tree, node, relaxation)
@@ -185,6 +195,11 @@ class BranchAndCutAlgorithm(BabAlgorithm):
                 coefficients.append(-1.0)
                 final_root_expr = LinearExpression(children, coefficients, new_root_expr.constant_term)
                 linear.add_constraint(objective.name, final_root_expr, None, 0)
+            elif root_expr.expression_type == ExpressionType.Variable:
+                new_root_expr = LinearExpression([root_expr, objvar], [1.0, -1.0], 0.0)
+                linear.add_constraint(objective.name, new_root_expr, None, 0)
+            else:
+                raise ValueError('Unknown expression type {}'.format(root_expr.expression_type))
 
         for constraint in problem.constraints:
             root_expr = constraint.root_expr
@@ -196,6 +211,8 @@ class BranchAndCutAlgorithm(BabAlgorithm):
                     continue
                 new_root_expr = _convert_linear_expr(linear, root_expr)
                 linear.add_constraint(constraint.name, new_root_expr, constraint.lower_bound, constraint.upper_bound)
+            else:
+                raise ValueError('Unknown expression type {}'.format(root_expr.expression_type))
         return linear
 
     def _perform_cut_round(self, run_id, problem, relaxed_problem, linear_problem, cuts_state, tree, node):
@@ -207,6 +224,8 @@ class BranchAndCutAlgorithm(BabAlgorithm):
             run_id,
             'Round {}. Linearized problem solution is {}',
             cuts_state.round, mip_solution.status.description())
+        logger.debug(run_id, 'Objective is {}'.format(mip_solution.objectives))
+        logger.debug(run_id, 'Variables are {}'.format(mip_solution.variables))
         assert mip_solution.status.is_success()
 
         # Generate new cuts
