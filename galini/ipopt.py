@@ -44,7 +44,10 @@ class IpoptStatus(Status):
         self._status = status
 
     def is_success(self):
-        return self._status == CoreIpoptSolution.StatusType.success
+        return (
+            self._status == CoreIpoptSolution.StatusType.success or
+            self._status == CoreIpoptSolution.StatusType.stop_at_acceptable_point
+        )
 
     def is_infeasible(self):
         return self._status == CoreIpoptSolution.StatusType.local_infeasibility
