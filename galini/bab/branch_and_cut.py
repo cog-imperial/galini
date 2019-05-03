@@ -199,7 +199,7 @@ class BranchAndCutAlgorithm(BabAlgorithm):
                 new_root_expr = LinearExpression([root_expr, objvar], [1.0, -1.0], 0.0)
                 linear.add_constraint(objective.name, new_root_expr, None, 0)
             else:
-                raise ValueError('Unknown expression type {}'.format(root_expr.expression_type))
+                raise ValueError('Unknown expression {} of type {}'.format(root_expr, root_expr.expression_type))
 
         for constraint in problem.constraints:
             root_expr = constraint.root_expr
@@ -211,8 +211,11 @@ class BranchAndCutAlgorithm(BabAlgorithm):
                     continue
                 new_root_expr = _convert_linear_expr(linear, root_expr)
                 linear.add_constraint(constraint.name, new_root_expr, constraint.lower_bound, constraint.upper_bound)
+            elif root_expr.expression_type == ExpressionType.Variable:
+                new_root_expr = LinearExpression([root_expr], [1.0], 0.0)
+                linear.add_constraint(constraint.name, new_root_expr, constraint.lower_bound, constraint.upper_bound)
             else:
-                raise ValueError('Unknown expression type {}'.format(root_expr.expression_type))
+                raise ValueError('Unknown expression {} of type {}'.format(root_expr, root_expr.expression_type))
         return linear
 
     def _perform_cut_round(self, run_id, problem, relaxed_problem, linear_problem, cuts_state, tree, node):
