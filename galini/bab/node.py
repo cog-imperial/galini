@@ -12,12 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Branch & Bound node."""
+import numpy as np
 from collections import namedtuple
 from galini.core import VariableView
 
 
-NodeState = namedtuple('NodeState', ['lower_bound', 'upper_bound'])
-NodeSolution = namedtuple('NodeSolution', ['lower_bound', 'upper_bound', 'solution'])
+NodeState = namedtuple('NodeState', ['lower_bound_solution', 'upper_bound_solution'])
+
+
+class NodeSolution(object):
+    def __init__(self, lower_bound_solution, upper_bound_solution):
+        self.lower_bound_solution = lower_bound_solution
+        self.upper_bound_solution = upper_bound_solution
+
+    @property
+    def lower_bound(self):
+        solution = self.lower_bound_solution
+        if solution is None:
+            return -np.inf
+        if not solution.status.is_success():
+            return -np.inf
+        return solution.objective_value()
+
+    @property
+    def upper_bound(self):
+        solution = self.upper_bound_solution
+        if solution is None:
+            return np.inf
+        if not solution.status.is_success():
+            return np.inf
+        return solution.objective_value()
 
 
 class BranchingPoint(object):
@@ -42,7 +66,6 @@ class Node(object):
         self.parent = parent
         self.coordinate = coordinate
         self.variable = variable
-        self.solution = None
         self.state = None
 
         if solution:
@@ -50,15 +73,19 @@ class Node(object):
 
     def update(self, solution):
         assert self.state is None
+        assert isinstance(solution, NodeSolution)
+
+        lower_bound_solution = solution.lower_bound_solution
+        upper_bound_solution = solution.upper_bound_solution
+
         self.state = NodeState(
-            lower_bound=solution.lower_bound,
-            upper_bound=solution.upper_bound,
+            lower_bound_solution=lower_bound_solution,
+            upper_bound_solution=upper_bound_solution,
         )
-        self.solution = solution.solution
 
     @property
     def has_solution(self):
-        return self.solution is not None
+        return self.state is not None
 
     @property
     def has_parent(self):
@@ -67,21 +94,37 @@ class Node(object):
     @property
     def lower_bound(self):
         assert self.state is not None
-        return self.state.lower_bound
+        solution = self.state.lower_bound_solution
+        if solution is None:
+            return -np.inf
+        if not solution.status.is_success():
+            return -np.inf
+        return solution.objective_value()
 
     @property
     def upper_bound(self):
         assert self.state is not None
-        return self.state.upper_bound
+        solution = self.state.upper_bound_solution
+        if solution is None:
+            return np.inf
+        if not solution.status.is_success():
+            return np.inf
+        return solution.objective_value()
 
     def branch(self, strategy=None):
         """Branch at the current node using strategy."""
         if self.children is not None:
             raise RuntimeError('Trying to branch on node with children.')
+
         if strategy is None:
             if self.tree is None:
                 raise RuntimeError('Trying to branch without associated strategy.')
             strategy = self.tree.branching_strategy
+
+        lower_bound_solution = self.state.lower_bound_solution
+        if not lower_bound_solution.status.is_success():
+            return None, None
+
         branching_point = strategy.branch(self, self.tree)
         if branching_point is None:
             raise RuntimeError('Could not branch')

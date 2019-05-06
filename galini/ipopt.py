@@ -14,6 +14,7 @@
 """Solve NLP using Ipopt."""
 import numpy as np
 from galini.logging import get_logger, INFO, WARNING
+from galini.util import expr_to_str
 from galini.config.options import (
     SolverOptions,
     ExternalSolverOptions,
@@ -200,7 +201,14 @@ class IpoptNLPSolver(Solver):
             c = problem.constraint(i)
             gl[i] = c.lower_bound if c.lower_bound is not None else -2e19
             gu[i] = c.upper_bound if c.upper_bound is not None else 2e19
-            logger.debug(run_id, 'Constraint: {} <= {} <= {}', gl[i], c.name, gu[i])
+            logger.debug(
+                run_id,
+                'Constraint {}: {} <= {} <= {}',
+                c.name,
+                gl[i],
+                expr_to_str(c.root_expr),
+                gu[i],
+            )
 
         return gl, gu
 

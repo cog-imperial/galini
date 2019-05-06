@@ -101,8 +101,11 @@ class BranchAndCutAlgorithm(BabAlgorithm):
         cuts_state = CutsState()
         while (not self._cuts_converged(cuts_state) and
                not self._cuts_iterations_exceeded(cuts_state)):
-            new_cuts, mip_solution = \
+            feasible, new_cuts, mip_solution = \
                 self._perform_cut_round(run_id, problem, relaxed_problem, linear_problem, cuts_state, tree, node)
+
+            if not feasible:
+                return NodeSolution(mip_solution, None)
 
             # Add cuts as constraints
             # TODO(fra): use problem global and local cuts
@@ -129,24 +132,11 @@ class BranchAndCutAlgorithm(BabAlgorithm):
 
         if cuts_state.lower_bound >= tree.upper_bound and not np.isclose(cuts_state.lower_bound, tree.upper_bound):
             # No improvement
-            return NodeSolution(
-                cuts_state.lower_bound,
-                np.inf,
-                mip_solution,
-            )
+            return NodeSolution(mip_solution, None)
 
         primal_solution = self._solve_primal(problem, mip_solution)
 
-        if primal_solution.status.is_success() or primal_solution.status.is_iterations_exceeded():
-            upper_bound = primal_solution.objectives[0].value
-        else:
-            upper_bound = np.inf
-
-        return NodeSolution(
-            cuts_state.lower_bound,
-            upper_bound,
-            primal_solution,
-        )
+        return NodeSolution(mip_solution, primal_solution)
 
     def _solve_problem_at_root(self, run_id, problem, tree, node):
         self._perform_fbbt(run_id, problem, tree, node)
@@ -229,13 +219,15 @@ class BranchAndCutAlgorithm(BabAlgorithm):
             cuts_state.round, mip_solution.status.description())
         logger.debug(run_id, 'Objective is {}'.format(mip_solution.objectives))
         logger.debug(run_id, 'Variables are {}'.format(mip_solution.variables))
-        assert mip_solution.status.is_success()
+        if not mip_solution.status.is_success():
+            return False, None, mip_solution
+        # assert mip_solution.status.is_success()
 
         # Generate new cuts
         new_cuts = self._cuts_generators_manager.generate(
             run_id, problem, relaxed_problem, mip_solution, tree, node)
         logger.info(run_id, 'Round {}. Adding {} cuts.', cuts_state.round, len(new_cuts))
-        return new_cuts, mip_solution
+        return True, new_cuts, mip_solution
 
     def _solve_primal(self, problem, mip_solution):
         # Solve original problem

@@ -32,26 +32,25 @@ class NodeSelectionStrategy(object):
 
         def __lt__(self, other):
             if self.inner.has_solution:
-                self_solution = self.inner.solution
                 self_state = self.inner.state
             else:
                 assert self.inner.has_parent
-                self_solution = self.inner.parent.solution
                 self_state = self.inner.parent.state
 
             if other.inner.has_solution:
-                other_solution = other.inner.solution
                 other_state = other.inner.state
             else:
                 assert other.inner.has_parent
-                other_solution = other.inner.parent.solution
                 other_state = other.inner.parent.state
 
-            if not self_solution.status.is_success():
+            self_lb = self_state.lower_bound_solution
+            other_lb = other_state.lower_bound_solution
+
+            if not self_lb.status.is_success():
                 return False
-            if not other_solution.status.is_success():
+            if not other_lb.status.is_success():
                 return True
-            return self_state.lower_bound < other_state.lower_bound
+            return self_lb.objective_value() < other_lb.objective_value()
 
     def __init__(self):
         self.nodes = []
@@ -111,27 +110,25 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
         logger.log_add_bab_node(
             run_id,
             coordinate=[0],
-            lower_bound=root_solution.lower_bound,
-            upper_bound=root_solution.upper_bound,
+            lower_bound=tree.root.lower_bound,
+            upper_bound=tree.root.upper_bound,
         )
 
         if self.has_converged(tree.state):
             # problem is convex so it has converged already
-            return root_solution.solution
+            return root_solution
 
         while not self.has_converged(tree.state) and not self._node_limit_exceeded(tree.state):
             logger.info(run_id, 'Tree state at beginning of iteration: {}', tree.state)
             if not tree.has_nodes():
-                return tree.best_solution.solution
+                return tree.best_solution
 
             current_node = tree.next_node()
 
             if current_node.parent is None:
                 # This is the root node.
-                node_children, branching_point = current_node.branch()
+                node_children, branching_point = tree.branch_at_node(current_node)
                 logger.info(run_id, 'Branched at point {}', branching_point)
-                for child in node_children:
-                    tree.add_node(child)
                 continue
 
             logger.info(
@@ -139,7 +136,7 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
                 'Visiting node {}: parent state={}, parent solution={}',
                 current_node.coordinate,
                 current_node.parent.state,
-                current_node.parent.solution,
+                current_node.parent.state.upper_bound_solution,
             )
 
             if current_node.parent.lower_bound >= tree.upper_bound:
@@ -156,29 +153,18 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
 
             tree.update_node(current_node, solution)
 
-            if not (current_node.solution.status.is_success() or current_node.solution.status.is_iterations_exceeded()):
-                logger.info(run_id, "Phatom node because it was not feasible")
-                logger.log_prune_bab_node(run_id, current_node.coordinate)
-                continue
-
             if np.isclose(solution.lower_bound, solution.upper_bound):
                 continue
 
-            node_children, branching_point = current_node.branch()
+            node_children, branching_point = tree.branch_at_node(current_node)
             logger.info(run_id, 'Branched at point {}', branching_point)
-            for child in node_children:
-                tree.add_node(child)
-
             logger.info(run_id, 'Child {} has solution {}', current_node.coordinate, solution)
             logger.info(run_id, 'New tree state at {}: {}', current_node.coordinate, tree.state)
 
             self._log_problem_information_at_node(
                 run_id, current_node.problem, solution, current_node)
 
-        if tree.best_solution is not None:
-            return tree.best_solution.solution
-        else:
-            return None
+        return tree.best_solution
 
     def _solve_problem_at_root(self, run_id, problem, tree, node):
         self._perform_fbbt(run_id, problem, tree, node)
@@ -195,8 +181,8 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
             new_bound = ctx.bounds[v]
             if new_bound is None:
                 new_bound = Interval(None, None)
-            vv.set_lower_bound(_safe_lb(new_bound.lower_bound, vv.lower_bound()))
-            vv.set_upper_bound(_safe_ub(new_bound.upper_bound, vv.upper_bound()))
+            vv.set_lower_bound(_safe_lb(v.domain, new_bound.lower_bound, vv.lower_bound()))
+            vv.set_upper_bound(_safe_ub(v.domain, new_bound.upper_bound, vv.upper_bound()))
         group_name = '_'.join([str(c) for c in node.coordinate])
         logger.tensor(run_id, group_name, 'lb', problem.lower_bounds)
         logger.tensor(run_id, group_name, 'ub', problem.upper_bounds)
@@ -227,21 +213,36 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
             dataset='upper_bounds',
             data=np.array(problem.upper_bounds)
         )
-        if solution.solution.status.is_success():
+        solution = solution.upper_bound_solution
+        if solution is None:
+            return
+        if solution.status.is_success():
             logger.tensor(
                 run_id,
                 group=group_name,
                 dataset='solution',
-                data=np.array([v.value for v in solution.solution.variables]),
+                data=np.array([v.value for v in solution.variables]),
             )
 
 
-def _safe_lb(a, b):
+def _safe_lb(domain, a, b):
     if b is None:
-        return a
-    return max(a, b)
+        lb = a
+    else:
+        lb = max(a, b)
 
-def _safe_ub(a, b):
+    if domain.is_integer():
+        return np.ceil(lb)
+
+    return lb
+
+def _safe_ub(domain, a, b):
     if b is None:
-        return a
-    return min(a, b)
+        ub = a
+    else:
+        ub = min(a, b)
+
+    if domain.is_integer():
+        return np.floor(ub)
+
+    return ub

@@ -35,6 +35,9 @@ class Domain(Enum):
     INTEGER = 1
     BINARY = 2
 
+    def is_integer(self):
+        return self != self.REAL
+
 
 class Sense(Enum):
     MINIMIZE = 0

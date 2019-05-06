@@ -77,3 +77,8 @@ class Solution(object):
         return 'Solution(status={}, objectives={}, variables={})'.format(
             self.status.description(), self.objectives, self.variables
         )
+
+    def objective_value(self):
+        if self.objectives is None:
+            return None
+        return self.objectives[0].value
