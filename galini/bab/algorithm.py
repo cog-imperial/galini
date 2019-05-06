@@ -116,7 +116,10 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
 
         if self.has_converged(tree.state):
             # problem is convex so it has converged already
-            return root_solution
+            return (
+                root_solution.lower_bound_solution,
+                root_solution.upper_bound_solution,
+            )
 
         while not self.has_converged(tree.state) and not self._node_limit_exceeded(tree.state):
             logger.info(run_id, 'Tree state at beginning of iteration: {}', tree.state)

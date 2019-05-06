@@ -123,7 +123,7 @@ class BabTree(object):
             new_upper_bound = upper_bound_solution.objective_value()
             if not is_root_node:
                 new_lower_bound = self._open_nodes_lower_bound(new_upper_bound)
-            self.best_solution = upper_bound_solution
+            self.best_solution = (lower_bound_solution, upper_bound_solution)
             return self._set_new_state(new_lower_bound, new_upper_bound)
         else:
             return self._set_new_state(new_lower_bound, None)

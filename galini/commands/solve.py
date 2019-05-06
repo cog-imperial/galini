@@ -53,7 +53,7 @@ class SolveCommand(CliCommandWithProblem):
         galini_group = galini.get_configuration_group('galini')
         timelimit = galini_group.get('timelimit')
         with timeout(timelimit):
-            solution = solver.solve(problem)
+            _, solution = solver.solve(problem)
 
         if solution is None:
             raise RuntimeError('Solver did not return a solution')
