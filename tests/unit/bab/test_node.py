@@ -2,8 +2,10 @@
 import pytest
 import numpy as np
 import pyomo.environ as aml
+from tests.unit.bab.conftest import create_solution
+from galini.solvers.solution import OptimalObjective, Solution
 from galini.pyomo import dag_from_pyomo_model
-from galini.bab.node import Node, BranchingPoint
+from galini.bab.node import Node, BranchingPoint, NodeSolution
 
 
 @pytest.fixture()
@@ -32,6 +34,7 @@ class TestBranching:
     def test_branch_on_single_point(self, problem):
         tree = MockTree()
         node = Node(problem, tree, coordinate=[0])
+        node.update(create_solution(0.0, 1.0))
         new_nodes, _ = node.branch(MockBranching(1.5))
 
         assert len(new_nodes) == 2
@@ -42,6 +45,7 @@ class TestBranching:
     def test_branch_on_list_of_points(self, problem):
         tree = MockTree()
         node = Node(problem, tree, coordinate=[0])
+        node.update(create_solution(0.0, 1.0))
         new_nodes, _ = node.branch(MockBranching([-0.5, 0.0, 0.5, 1.0, 1.5]))
         assert len(new_nodes) == 6
 

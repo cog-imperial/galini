@@ -27,6 +27,7 @@ def problem():
     return dag_from_pyomo_model(m)
 
 
+@pytest.mark.skip('Nonlinear disabled.')
 def test_nonlinear_with_1_child(problem):
     t = ReplaceNonlinearTransformation(problem, None)
     ctx = ProblemContext(problem)
@@ -37,6 +38,7 @@ def test_nonlinear_with_1_child(problem):
     assert result.constraints == []
 
 
+@pytest.mark.skip('Nonlinear disabled.')
 def test_nonlinear_with_multiple_children(problem):
     t = ReplaceNonlinearTransformation(problem, None)
     ctx = detect_special_structure(problem)
@@ -58,6 +60,7 @@ def test_nonlinear_with_multiple_children(problem):
         assert _is_func_type(c1.root_expr, UnaryFunctionType.Exp)
 
 
+@pytest.mark.skip('Nonlinear disabled.')
 def test_nonlienar_with_linear(problem):
     t = ReplaceNonlinearTransformation(problem, None)
     ctx = detect_special_structure(problem)

@@ -2,31 +2,11 @@
 import pytest
 import pyomo.environ as aml
 import numpy as np
+from tests.unit.bab.conftest import MockSelectionStrategy, create_solution
 from galini.pyomo import dag_from_pyomo_model
-from galini.solvers.solution import OptimalObjective, Solution
 from galini.bab.node import Node, NodeSolution
 from galini.bab.strategy import  KSectionBranchingStrategy
 from galini.bab.tree import BabTree
-
-
-class FakeSelectionStrategy:
-    def insert_node(self, node):
-        pass
-
-
-class FakeStatus(object):
-    def is_success(self):
-        return True
-
-    def description(self):
-        return 'Success'
-
-
-class FakeSolution(Solution):
-    def __init__(self, obj):
-        self.status = FakeStatus()
-        self.objectives = [OptimalObjective(name='obj', value=obj)]
-        self.variables = []
 
 
 def create_problem():
@@ -35,10 +15,6 @@ def create_problem():
     m.x = aml.Var(m.I, bounds=(-1, 2))
     m.obj = aml.Objective(expr=sum(m.x[i] for i in m.I))
     return dag_from_pyomo_model(m)
-
-
-def create_solution(lb, ub):
-    return NodeSolution(FakeSolution(lb), FakeSolution(ub))
 
 
 @pytest.fixture()
@@ -73,7 +49,7 @@ def tree():
      5 : [0, 2, 1]
 
     """
-    t = BabTree(create_problem(), KSectionBranchingStrategy(), FakeSelectionStrategy())
+    t = BabTree(create_problem(), KSectionBranchingStrategy(), MockSelectionStrategy())
     t.update_root(create_solution(-30.0, 0.0))
     root = t.root
     for _ in range(3):
@@ -105,14 +81,14 @@ class TestBabTreeCoordinates:
 
 class TestBabTreeState:
     def test_update_root(self):
-        tree = BabTree(create_problem(), KSectionBranchingStrategy(), FakeSelectionStrategy())
+        tree = BabTree(create_problem(), KSectionBranchingStrategy(), MockSelectionStrategy())
         sol = create_solution(5.0, 10.0)
         tree.update_root(sol)
         assert np.isclose(5.0, tree.lower_bound)
         assert np.isclose(10.0, tree.upper_bound)
 
     def test_update_with_new_lower_bound(self):
-        tree = BabTree(create_problem(), KSectionBranchingStrategy(), FakeSelectionStrategy())
+        tree = BabTree(create_problem(), KSectionBranchingStrategy(), MockSelectionStrategy())
         sol = create_solution(5.0, 10.0)
         tree.update_root(sol)
 
@@ -131,7 +107,7 @@ class TestBabTreeState:
         assert np.isclose(10.0, tree.upper_bound)
 
     def test_update_with_new_upper_bound(self):
-        tree = BabTree(create_problem(), KSectionBranchingStrategy(), FakeSelectionStrategy())
+        tree = BabTree(create_problem(), KSectionBranchingStrategy(), MockSelectionStrategy())
         sol = create_solution(5.0, 10.0)
         tree.update_root(sol)
 
@@ -145,7 +121,7 @@ class TestBabTreeState:
         assert np.isclose(9.0, tree.upper_bound)
 
     def test_update_with_both_new_bounds(self):
-        tree = BabTree(create_problem(), KSectionBranchingStrategy(), FakeSelectionStrategy())
+        tree = BabTree(create_problem(), KSectionBranchingStrategy(), MockSelectionStrategy())
         sol = create_solution(5.0, 10.0)
         tree.update_root(sol)
 

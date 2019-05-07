@@ -1,6 +1,7 @@
 # pylint: skip-file
 import pytest
 import pyomo.environ as aml
+from tests.unit.bab.conftest import create_solution
 from galini.pyomo import dag_from_pyomo_model
 from galini.bab.node import NodeSolution
 from galini.bab.tree import BabTree
@@ -23,7 +24,7 @@ def problem():
 
 @pytest.fixture()
 def solution():
-    return NodeSolution(0.0, 1.0, None)
+    return create_solution(0.0, 1.0)
 
 
 class TestKFoldBranchingStrategy:
@@ -32,6 +33,7 @@ class TestKFoldBranchingStrategy:
         tree = BabTree(problem, bisect_strat, FakeSelectionStrategy())
         node = tree.root
         for i in range(5):
+            node.update(create_solution(0.0, 1.0))
             children, _ = node.branch(bisect_strat)
             assert len(children) == 2
             for child in children:
@@ -43,6 +45,7 @@ class TestKFoldBranchingStrategy:
         tree = BabTree(problem, ksection_strat, FakeSelectionStrategy())
         node = tree.root
         for i in range(5):
+            node.update(create_solution(0.0, 1.0))
             children, _ = node.branch(ksection_strat)
             assert len(children) == 7
             for child in children:

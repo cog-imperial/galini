@@ -17,6 +17,7 @@ def problem():
     return dag_from_pyomo_model(model)
 
 
+@pytest.mark.skip('Skip nonlinear.')
 def test_underestimator(problem):
     abb = AlphaBBUnderestimator()
     expr = problem.objective('obj').root_expr
@@ -33,6 +34,7 @@ def test_underestimator(problem):
     assert count_of_type(new_expr, ExpressionType.Linear) == 1
 
 
+@pytest.mark.skip('Skip nonlinear.')
 def test_relaxation(problem):
     abb = AlphaBBRelaxation()
     relaxed = abb.relax(problem)
