@@ -161,7 +161,13 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
 
             node_children, branching_point = tree.branch_at_node(current_node)
             logger.info(run_id, 'Branched at point {}', branching_point)
-            logger.info(run_id, 'Child {} has solution {}', current_node.coordinate, solution)
+            logger.info(
+                run_id,
+                'Child {} has solutions: LB={} UB={}',
+                current_node.coordinate,
+                solution.lower_bound_solution,
+                solution.upper_bound_solution,
+            )
             logger.info(run_id, 'New tree state at {}: {}', current_node.coordinate, tree.state)
 
             self._log_problem_information_at_node(
