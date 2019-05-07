@@ -48,6 +48,7 @@ def problem():
     return dag_from_pyomo_model(m)
 
 
+@pytest.mark.skip('Flaky tests.')
 @pytest.mark.parametrize('cut_selection_strategy,expected_solution', [
     ('OPT', [-198.5, -191.13909941730438, -185.6485701612439, -185.63352288462852, -185.61964055492984]),
     ('FEAS', [-198.5, -195.36202866122858, -185.9984527524324, -185.65131273365154, -185.0030833446988]),
