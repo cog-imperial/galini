@@ -123,7 +123,7 @@ class BranchAndCutAlgorithm(BabAlgorithm):
             if len(new_cuts) == 0:
                 break
 
-        logger.info(
+        logger.debug(
             run_id,
             'Lower Bound from MIP = {}; Tree Upper Bound = {}',
             cuts_state.lower_bound,
@@ -209,11 +209,11 @@ class BranchAndCutAlgorithm(BabAlgorithm):
         return linear
 
     def _perform_cut_round(self, run_id, problem, relaxed_problem, linear_problem, cuts_state, tree, node):
-        logger.info(run_id, 'Round {}. Solving linearized problem.', cuts_state.round)
+        logger.debug(run_id, 'Round {}. Solving linearized problem.', cuts_state.round)
 
         mip_solution = self._mip_solver.solve(linear_problem)
 
-        logger.info(
+        logger.debug(
             run_id,
             'Round {}. Linearized problem solution is {}',
             cuts_state.round, mip_solution.status.description())
@@ -226,7 +226,7 @@ class BranchAndCutAlgorithm(BabAlgorithm):
         # Generate new cuts
         new_cuts = self._cuts_generators_manager.generate(
             run_id, problem, relaxed_problem, mip_solution, tree, node)
-        logger.info(run_id, 'Round {}. Adding {} cuts.', cuts_state.round, len(new_cuts))
+        logger.debug(run_id, 'Round {}. Adding {} cuts.', cuts_state.round, len(new_cuts))
         return True, new_cuts, mip_solution
 
     def _solve_primal(self, problem, mip_solution):

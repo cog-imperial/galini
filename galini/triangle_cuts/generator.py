@@ -111,14 +111,14 @@ class TriangleCutsGenerator(CutsGenerator):
         d = self._dbs
 
         # Add all triangle cuts (ranked by violation) within selection size
-        logger.info(run_id, 'Adding {} cuts', max_tri_cuts)
+        logger.debug(run_id, 'Adding {} cuts', max_tri_cuts)
         for ix in range(0, max_tri_cuts):
             ineq_type = rank_list_tri_viol[ix][1]
             i, j, k = triple_cliques[rank_list_tri_viol[ix][0]]
             xi, xj, xk = problem.variables[i], problem.variables[j], problem.variables[k]
             # Generate constraints for the 4 different triangle inequality types
             cut_lb = 0
-            logger.info(run_id, 'Cut {} is of type {}', ix, ineq_type)
+            logger.debug(run_id, 'Cut {} is of type {}', ix, ineq_type)
             if ineq_type == 3:
                 sum_expr = SumExpression([
                     QuadraticExpression([xi, xj, xk], [xj, xk, xi],
