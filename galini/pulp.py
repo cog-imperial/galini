@@ -194,9 +194,9 @@ class CplexSolver(object):
 def _solver(logger, run_id, galini):
     cplex = CplexSolver(logger, run_id, galini)
     if cplex.available():
-        logger.info(run_id, 'Using CPLEX as MILP solver')
+        logger.debug(run_id, 'Using CPLEX as MILP solver')
         return cplex
-    logger.info(run_id, 'Using CBC as MILP solver')
+    logger.debug(run_id, 'Using CBC as MILP solver')
     return pulp.PULP_CBC_CMD()
 
 

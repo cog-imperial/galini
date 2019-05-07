@@ -13,7 +13,7 @@
 # limitations under the License.
 """Solve NLP using Ipopt."""
 import numpy as np
-from galini.logging import get_logger, INFO, WARNING
+from galini.logging import get_logger, DEBUG, WARNING
 from galini.util import expr_to_str
 from galini.config.options import (
     SolverOptions,
@@ -106,7 +106,7 @@ class IpoptNLPSolver(Solver):
         logger.debug(run_id, 'Calling in IPOPT')
 
         ipopt_solution = ipopt_solve(
-            app, problem, xi, xl, xu, gl, gu, _IpoptLoggerAdapter(logger, run_id, INFO)
+            app, problem, xi, xl, xu, gl, gu, _IpoptLoggerAdapter(logger, run_id, DEBUG)
         )
         solution = self._build_solution(problem, ipopt_solution)
         logger.debug(run_id, 'IPOPT returned {}', solution)
@@ -127,7 +127,7 @@ class IpoptNLPSolver(Solver):
         logging_config = config['logging']
         level_name = logging_config.get('level', 'J_ITERSUMMARY')
         level = getattr(EJournalLevel, level_name)
-        journal = PythonJournal('Default', level, _IpoptLoggerAdapter(logger, run_id, INFO))
+        journal = PythonJournal('Default', level, _IpoptLoggerAdapter(logger, run_id, DEBUG))
         journalist = app.journalist()
         journalist.delete_all_journals()
         journalist.add_journal(journal)

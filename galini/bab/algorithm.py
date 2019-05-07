@@ -173,6 +173,8 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
             self._log_problem_information_at_node(
                 run_id, current_node.problem, solution, current_node)
 
+        logger.info(run_id, 'Branch & Bound Finished: {}', tree.state)
+
         return tree.best_solution
 
     def _solve_problem_at_root(self, run_id, problem, tree, node):
