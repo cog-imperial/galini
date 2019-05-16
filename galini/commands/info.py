@@ -24,7 +24,7 @@ from galini.commands import (
 
 class InfoCommand(CliCommandWithProblem):
     """Command to output information about a problem."""
-    def execute_with_problem(self, problem, args):
+    def execute_with_problem(self, _model, problem, args):
         tables = []
         tables.append(self._output_variables_information(problem))
         tables.append(self._output_objectives_information(problem))

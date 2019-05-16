@@ -32,7 +32,7 @@ DEFAULT_SOLVER = 'bab'
 class SolveCommand(CliCommandWithProblem):
     """Command to solve an optimization problem."""
 
-    def execute_with_problem(self, problem, args):
+    def execute_with_problem(self, model, problem, args):
         galini = Galini()
         if args.config:
             galini.update_configuration(args.config)
@@ -53,6 +53,7 @@ class SolveCommand(CliCommandWithProblem):
         galini_group = galini.get_configuration_group('galini')
         timelimit = galini_group.get('timelimit')
         with timeout(timelimit):
+            solver.before_solve(model, problem)
             _, solution = solver.solve(problem)
 
         if solution is None:

@@ -19,7 +19,7 @@ from galini.dot import dag_to_pydot_graph
 
 class DotCommand(CliCommandWithProblem):
     """Command to output Graphiviz dot file of the problem."""
-    def execute_with_problem(self, problem, args):
+    def execute_with_problem(self, _model, problem, args):
         graph = dag_to_pydot_graph(problem)
 
         if args.out:

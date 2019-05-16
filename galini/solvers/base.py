@@ -38,6 +38,13 @@ class Solver(metaclass=abc.ABCMeta):
     def __init__(self, galini):
         self.galini = galini
 
+    @property
+    def config(self):
+        return self.galini.get_configuration_group(self.name)
+
+    def before_solve(self, model, problem):
+        pass
+
     def solve(self, problem, **kwargs):
         """Solve the optimization problem.
 

@@ -21,7 +21,7 @@ from galini.util import print_problem
 
 
 class TransformCommand(CliCommandWithProblem):
-    def execute_with_problem(self, problem, args):
+    def execute_with_problem(self, _model, problem, args):
         relaxed = problem.make_relaxed('relaxed')
         transformation = ReplaceNonlinearTransformation(problem, relaxed)
         ctx = detect_special_structure(problem)

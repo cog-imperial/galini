@@ -19,7 +19,7 @@ from galini.dot import dag_to_pydot_graph
 
 
 class AbbCommand(CliCommandWithProblem):
-    def execute_with_problem(self, problem, args):
+    def execute_with_problem(self, _model, problem, args):
         abb = AlphaBBRelaxation()
         relaxed_problem = abb.relax(problem)
         graph = dag_to_pydot_graph(relaxed_problem)

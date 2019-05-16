@@ -247,6 +247,7 @@ def _safe_lb(domain, a, b):
 
     return lb
 
+
 def _safe_ub(domain, a, b):
     if b is None:
         ub = a

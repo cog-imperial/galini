@@ -43,10 +43,10 @@ class CliCommandWithProblem(CliCommand):
             objective_prefix=args.objective_prefix,
         )
         problem = dag_from_pyomo_model(pyomo_model)
-        return self.execute_with_problem(problem, args)
+        return self.execute_with_problem(pyomo_model, problem, args)
 
     @abc.abstractmethod
-    def execute_with_problem(self, problem, args):
+    def execute_with_problem(self, model, problem, args):
         """Run the command."""
         pass
 

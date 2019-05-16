@@ -41,7 +41,7 @@ def _mono_to_str(mono):
 
 
 class SpecialStructureCommand(CliCommandWithProblem):
-    def execute_with_problem(self, problem, args):
+    def execute_with_problem(self, _model, problem, args):
         ctx = detect_special_structure(problem)
 
         tables = []
