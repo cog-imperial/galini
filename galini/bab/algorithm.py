@@ -175,6 +175,8 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
                 solution.upper_bound_solution,
             )
             logger.info(run_id, 'New tree state at {}: {}', current_node.coordinate, tree.state)
+            logger.update_variable(run_id, 'z_l', tree.nodes_visited, tree.lower_bound)
+            logger.update_variable(run_id, 'z_u', tree.nodes_visited, tree.upper_bound)
 
             self._log_problem_information_at_node(
                 run_id, current_node.problem, solution, current_node)
