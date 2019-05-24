@@ -13,6 +13,8 @@
 # limitations under the License.
 """Generic Branch & Bound solver."""
 import pyomo.environ as pe
+from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.core.expr.current import identify_variables
 import numpy as np
 from coramin.domain_reduction.obbt import perform_obbt
 from coramin.relaxations.auto_relax import relax
@@ -58,10 +60,23 @@ class BranchAndBoundSolver(Solver):
         solver.set_instance(relaxed_model)
         obbt_simplex_maxiter = self.config['obbt_simplex_maxiter']
         solver._solver_model.parameters.simplex.limits.iterations.set(obbt_simplex_maxiter)
-        original_vars = model.component_data_objects(ctype=pe.Var)
-        relaxed_vars = [getattr(relaxed_model, v.name) for v in original_vars]
+        # collect variables in nonlinear constraints
+        nonlinear_variables = ComponentSet()
+        for constraint in model.component_data_objects(ctype=pe.Constraint):
+            # skip linear constraint
+            if constraint.body.polynomial_degree() == 1:
+                continue
+
+            for var in identify_variables(constraint.body, include_fixed=False):
+                nonlinear_variables.add(var)
+
+        relaxed_vars = [getattr(relaxed_model, v.name) for v in nonlinear_variables]
+
         for var in relaxed_vars:
             var.domain = pe.Reals
+
+        logger.info(0, 'Performaning OBBT on {} variables: {}', len(relaxed_vars), [v.name for v in relaxed_vars])
+
         try:
             result = perform_obbt(relaxed_model, solver, relaxed_vars)
             if result is None:

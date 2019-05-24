@@ -72,6 +72,16 @@ class IpoptSolution(Solution):
         self.g = g
         self.lambda_ = lambda_
 
+    def __str__(self):
+        return 'IpoptSolution(status={}, objective={}, variables={})'.format(
+            self.status.description(),
+            self.objectives,
+            self.variables,
+        )
+
+    def __repr__(self):
+        return '<{} at {}>'.format(str(self), hex(id(self)))
+
 
 class IpoptNLPSolver(Solver):
     """Solver for NLP problems that uses Ipopt."""
