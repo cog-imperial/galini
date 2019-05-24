@@ -80,6 +80,10 @@ class BabTree(object):
     def upper_bound(self):
         return self.state.upper_bound
 
+    @property
+    def nodes_visited(self):
+        return self.state.nodes_visited
+
     def node(self, coord):
         if not isinstance(coord, list):
             raise TypeError('BabTree coord must be a list')

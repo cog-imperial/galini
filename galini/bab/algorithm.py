@@ -14,6 +14,7 @@
 """Base class for B&B algorithms."""
 import heapq
 import abc
+from collections import namedtuple
 import numpy as np
 from suspect.interval import Interval
 from galini.logging import get_logger
@@ -24,6 +25,10 @@ from galini.special_structure import detect_special_structure
 
 
 logger = get_logger(__name__)
+
+
+BabSolution = namedtuple('BabSolution', ['primal_solution', 'dual_solution', 'nodes_visited'])
+
 
 class NodeSelectionStrategy(object):
     class _Node(object):
@@ -116,15 +121,16 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
 
         if self.has_converged(tree.state):
             # problem is convex so it has converged already
-            return (
-                root_solution.lower_bound_solution,
-                root_solution.upper_bound_solution,
+            return BabSolution(
+                primal_solution=root_solution.upper_bound_solution,
+                dual_solution=root_solution.lower_bound_solution,
+                nodes_visited=1,
             )
 
         while not self.has_converged(tree.state) and not self._node_limit_exceeded(tree.state):
             logger.info(run_id, 'Tree state at beginning of iteration: {}', tree.state)
             if not tree.has_nodes():
-                return tree.best_solution
+                break
 
             current_node = tree.next_node()
 
@@ -175,7 +181,12 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
 
         logger.info(run_id, 'Branch & Bound Finished: {}', tree.state)
 
-        return tree.best_solution
+        if tree.best_solution is None:
+            return None
+
+        dual_solution, primal_solution = tree.best_solution
+        nodes_visited = tree.nodes_visited
+        return BabSolution(primal_solution, dual_solution, nodes_visited)
 
     def _solve_problem_at_root(self, run_id, problem, tree, node):
         self._perform_fbbt(run_id, problem, tree, node)
