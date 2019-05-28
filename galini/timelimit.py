@@ -13,7 +13,6 @@
 # limitations under the License.
 """Time and run time related utilities."""
 import datetime
-import signal
 
 
 DEFAULT_TIMELIMIT = 86400
@@ -55,11 +54,6 @@ class timeout(object):
     def __enter__(self):
         global _timelimit
         _timelimit.start_now()
-        signal.signal(signal.SIGALRM, self.handle_timeout)
-        signal.alarm(_timelimit.seconds_left())
 
     def __exit__(self, type, value, traceback):
-        signal.alarm(0)
-
-    def handle_timeout(self, signum, frame):
-        raise TimeoutError('Timelimit reached.')
+        pass

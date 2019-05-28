@@ -59,8 +59,6 @@ class Solver(metaclass=abc.ABCMeta):
         -------
         Solution
         """
-        if seconds_left() <= 0:
-            raise TimeoutError('Timelimit reached.')
         run_id = _create_run_id(self.name)
         self.galini.logger.log_solve_start(run_id)
         solution = self.actual_solve(problem, run_id=run_id, **kwargs)

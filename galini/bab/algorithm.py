@@ -17,6 +17,7 @@ import abc
 from collections import namedtuple
 import numpy as np
 from suspect.interval import Interval
+from galini.timelimit import seconds_left
 from galini.logging import get_logger
 from galini.quantities import relative_gap, absolute_gap
 from galini.bab.strategy import KSectionBranchingStrategy
@@ -102,6 +103,9 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
     def _node_limit_exceeded(self, state):
         return state.nodes_visited > self.node_limit
 
+    def _limits_exceeded(self, state):
+        return seconds_left() <= 0 or self._node_limit_exceeded(state)
+
     def solve(self, problem, run_id, **kwargs):
         branching_strategy = KSectionBranchingStrategy(2)
         node_selection_strategy = NodeSelectionStrategy()
@@ -127,7 +131,7 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
                 nodes_visited=1,
             )
 
-        while not self.has_converged(tree.state) and not self._node_limit_exceeded(tree.state):
+        while not self.has_converged(tree.state) and not self._limits_exceeded(tree.state):
             logger.info(run_id, 'Tree state at beginning of iteration: {}', tree.state)
             if not tree.has_nodes():
                 break
@@ -182,13 +186,16 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
                 run_id, current_node.problem, solution, current_node)
 
         logger.info(run_id, 'Branch & Bound Finished: {}', tree.state)
+        return self._solution_from_tree(tree)
 
+    def _solution_from_tree(self, tree):
         if tree.best_solution is None:
             return None
 
         dual_solution, primal_solution = tree.best_solution
         nodes_visited = tree.nodes_visited
         return BabSolution(primal_solution, dual_solution, nodes_visited)
+
 
     def _solve_problem_at_root(self, run_id, problem, tree, node):
         self._perform_fbbt(run_id, problem, tree, node)
