@@ -137,12 +137,23 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
                 break
 
             current_node = tree.next_node()
-
             if current_node.parent is None:
                 # This is the root node.
                 node_children, branching_point = tree.branch_at_node(current_node)
                 logger.info(run_id, 'Branched at point {}', branching_point)
                 continue
+            else:
+                var_view = current_node.problem.variable_view(current_node.variable)
+
+                logger.log_add_bab_node(
+                    run_id,
+                    coordinate=current_node.coordinate,
+                    lower_bound=current_node.parent.lower_bound,
+                    upper_bound=current_node.parent.upper_bound,
+                    branching_variables=[
+                        (current_node.variable.name, var_view.lower_bound(), var_view.upper_bound())
+                    ],
+                )
 
             logger.info(
                 run_id,
@@ -166,11 +177,15 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
 
             tree.update_node(current_node, solution)
 
-            if np.isclose(solution.lower_bound, solution.upper_bound):
-                continue
+            if not np.isclose(solution.lower_bound, solution.upper_bound):
+                node_children, branching_point = tree.branch_at_node(current_node)
+                logger.info(run_id, 'Branched at point {}', branching_point)
 
-            node_children, branching_point = tree.branch_at_node(current_node)
-            logger.info(run_id, 'Branched at point {}', branching_point)
+            self._log_problem_information_at_node(
+                run_id, current_node.problem, solution, current_node)
+            logger.info(run_id, 'New tree state at {}: {}', current_node.coordinate, tree.state)
+            logger.update_variable(run_id, 'z_l', tree.nodes_visited, tree.lower_bound)
+            logger.update_variable(run_id, 'z_u', tree.nodes_visited, tree.upper_bound)
             logger.info(
                 run_id,
                 'Child {} has solutions: LB={} UB={}',
@@ -178,12 +193,6 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
                 solution.lower_bound_solution,
                 solution.upper_bound_solution,
             )
-            logger.info(run_id, 'New tree state at {}: {}', current_node.coordinate, tree.state)
-            logger.update_variable(run_id, 'z_l', tree.nodes_visited, tree.lower_bound)
-            logger.update_variable(run_id, 'z_u', tree.nodes_visited, tree.upper_bound)
-
-            self._log_problem_information_at_node(
-                run_id, current_node.problem, solution, current_node)
 
         logger.info(run_id, 'Branch & Bound Finished: {}', tree.state)
         return self._solution_from_tree(tree)
@@ -195,7 +204,6 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
         dual_solution, primal_solution = tree.best_solution
         nodes_visited = tree.nodes_visited
         return BabSolution(primal_solution, dual_solution, nodes_visited)
-
 
     def _solve_problem_at_root(self, run_id, problem, tree, node):
         self._perform_fbbt(run_id, problem, tree, node)
@@ -219,18 +227,6 @@ class BabAlgorithm(metaclass=abc.ABCMeta):
         logger.tensor(run_id, group_name, 'ub', problem.upper_bounds)
 
     def _log_problem_information_at_node(self, run_id, problem, solution, node):
-        var_view = node.problem.variable_view(node.variable)
-
-        logger.log_add_bab_node(
-            run_id,
-            coordinate=node.coordinate,
-            lower_bound=solution.lower_bound,
-            upper_bound=solution.upper_bound,
-            branching_variables=[
-                (node.variable.name, var_view.lower_bound(), var_view.upper_bound())
-            ],
-        )
-
         group_name = '_'.join([str(c) for c in node.coordinate])
         logger.tensor(
             run_id,
