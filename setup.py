@@ -176,7 +176,7 @@ setup(
             'transform=galini.commands.transform:TransformCommand',
         ],
         'galini.solvers': [
-            'mip=galini.pulp:MIPSolver',
+            'mip=galini.mip.solver:MIPSolver',
             'ipopt=galini.ipopt:IpoptNLPSolver',
             'bab=galini.bab:BranchAndBoundSolver',
         ],
