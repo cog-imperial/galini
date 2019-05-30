@@ -12,15 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Galini Branch & Bound module."""
+"""Branch & Bound solution."""
+from galini.solvers import Solution
 
-__all__ = [
-    'BabTree', 'Node', 'BranchingStrategy', 'KSectionBranchingStrategy',
-    'NodeSelectionstrategy', 'BestLowerBoundSelectionStrategy',
-]
 
-from .tree import BabTree
-from .node import Node, NodeSolution
-from .solver import BranchAndBoundSolver
-from .strategy import BranchingStrategy, KSectionBranchingStrategy
-from .selection import BestLowerBoundSelectionStrategy
+class BabSolution(Solution):
+    """Solution of the Branch & Bound algorithm."""
+    def __init__(self, status, optimal_obj, optimal_vars, dual_bound,
+                 nodes_visited=None, nodes_remaining=None, runtime=None):
+        super().__init__(status, optimal_obj, optimal_vars)
+        self.dual_bound = dual_bound
+        self.nodes_visited = nodes_visited
+        self.nodes_remaining = nodes_remaining
+        self.runtime = runtime

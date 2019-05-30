@@ -15,8 +15,8 @@
 
 import sys
 from argparse import ArgumentParser, Namespace
+import signal
 from galini.galini import Galini
-from galini.bab.algorithm import BabSolution
 from galini.commands import (
     CliCommandWithProblem,
     OutputTable,
@@ -56,9 +56,6 @@ class SolveCommand(CliCommandWithProblem):
         with timeout(timelimit):
             solver.before_solve(model, problem)
             solution = solver.solve(problem)
-
-            if isinstance(solution, BabSolution):
-                solution = solution.primal_solution
 
         if solution is None:
             raise RuntimeError('Solver did not return a solution')

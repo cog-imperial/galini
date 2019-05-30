@@ -12,12 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Generic Branch & Bound solver."""
-import pyomo.environ as pe
-from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.core.expr.current import identify_variables
 import numpy as np
-from coramin.domain_reduction.obbt import perform_obbt
-from coramin.relaxations.auto_relax import relax
 from galini.logging import get_logger
 from galini.config import (
     SolverOptions,
@@ -25,9 +20,11 @@ from galini.config import (
     IntegerOption,
     EnumOption,
 )
+from galini.bab.tree import BabTree
 from galini.solvers import Solver
 from galini.cuts import CutsGeneratorsRegistry
 from galini.bab.branch_and_cut import BranchAndCutAlgorithm
+from galini.bab.solution import BabSolution
 from galini.util import print_problem
 
 
@@ -38,6 +35,10 @@ class BranchAndBoundSolver(Solver):
     name = 'bab'
 
     description = 'Generic Branch & Bound solver.'
+
+    def __init__(self, galini):
+        super().__init__(galini)
+        self._algo = BranchAndCutAlgorithm(galini, solver=self)
 
     @staticmethod
     def solver_options():
@@ -51,71 +52,138 @@ class BranchAndBoundSolver(Solver):
         ])
 
     def before_solve(self, model, problem):
-        relaxed_model = relax(model)
-
-        for obj in relaxed_model.component_data_objects(ctype=pe.Objective):
-            relaxed_model.del_component(obj)
-
-        solver = pe.SolverFactory('cplex_persistent')
-        solver.set_instance(relaxed_model)
-        obbt_simplex_maxiter = self.config['obbt_simplex_maxiter']
-        solver._solver_model.parameters.simplex.limits.iterations.set(obbt_simplex_maxiter)
-        # collect variables in nonlinear constraints
-        nonlinear_variables = ComponentSet()
-        for constraint in model.component_data_objects(ctype=pe.Constraint):
-            # skip linear constraint
-            if constraint.body.polynomial_degree() == 1:
-                continue
-
-            for var in identify_variables(constraint.body, include_fixed=False):
-                nonlinear_variables.add(var)
-
-        relaxed_vars = [getattr(relaxed_model, v.name) for v in nonlinear_variables]
-
-        for var in relaxed_vars:
-            var.domain = pe.Reals
-
-        logger.info(0, 'Performaning OBBT on {} variables: {}', len(relaxed_vars), [v.name for v in relaxed_vars])
-
-        try:
-            result = perform_obbt(relaxed_model, solver, relaxed_vars)
-            if result is None:
-                return
-
-            for v, new_lb, new_ub in zip(relaxed_vars, *result):
-                vv = problem.variable_view(v.name)
-                vv.set_lower_bound(_safe_lb(vv.domain, new_lb, vv.lower_bound()))
-                vv.set_upper_bound(_safe_ub(vv.domain, new_ub, vv.upper_bound()))
-        except Exception as ex:
-            logger.warning(0, 'Error performing OBBT: {}', ex)
-            return
+        self._algo.before_solve(model, problem)
 
     def actual_solve(self, problem, run_id, **kwargs):
-        algo = BranchAndCutAlgorithm(self.galini)
-        return algo.solve(problem, run_id=run_id)
+        branching_strategy = self._algo.branching_strategy
+        node_selection_strategy = self._algo.node_selection_strategy
 
+        tree = BabTree(problem, branching_strategy, node_selection_strategy)
 
+        logger.info(run_id, 'Solving root problem')
+        root_solution = self._algo.solve_problem_at_root(run_id, problem, tree, tree.root)
 
+        tree.update_root(root_solution)
 
-def _safe_lb(domain, a, b):
-    if b is None:
-        lb = a
-    else:
-        lb = max(a, b)
+        logger.info(run_id, 'Root problem solved, tree state {}', tree.state)
+        logger.log_add_bab_node(
+            run_id,
+            coordinate=[0],
+            lower_bound=tree.root.lower_bound,
+            upper_bound=tree.root.upper_bound,
+        )
 
-    if domain.is_integer():
-        return np.ceil(lb)
+        if self._algo.should_terminate(tree.state):
+            # problem is convex so it has converged already
+            return BabSolution(
+                primal_solution=root_solution.upper_bound_solution,
+                dual_solution=root_solution.lower_bound_solution,
+                nodes_visited=1,
+            )
 
-    return lb
+        while not self._algo.should_terminate(tree.state):
+            logger.info(run_id, 'Tree state at beginning of iteration: {}', tree.state)
+            if not tree.has_nodes():
+                break
 
+            current_node = tree.next_node()
+            if current_node.parent is None:
+                # This is the root node.
+                node_children, branching_point = tree.branch_at_node(current_node)
+                logger.info(run_id, 'Branched at point {}', branching_point)
+                continue
+            else:
+                var_view = current_node.problem.variable_view(current_node.variable)
 
-def _safe_ub(domain, a, b):
-    if b is None:
-        ub = a
-    else:
-        ub = min(a, b)
+                logger.log_add_bab_node(
+                    run_id,
+                    coordinate=current_node.coordinate,
+                    lower_bound=current_node.parent.lower_bound,
+                    upper_bound=current_node.parent.upper_bound,
+                    branching_variables=[
+                        (current_node.variable.name, var_view.lower_bound(), var_view.upper_bound())
+                    ],
+                )
 
-    if domain.is_integer():
-        return np.floor(ub)
+            logger.info(
+                run_id,
+                'Visiting node {}: parent state={}, parent solution={}',
+                current_node.coordinate,
+                current_node.parent.state,
+                current_node.parent.state.upper_bound_solution,
+            )
 
-    return ub
+            if current_node.parent.lower_bound >= tree.upper_bound:
+                logger.info(
+                    run_id,
+                    "Phatom node because it won't improve bound: node.lower_bound={}, tree.upper_bound={}",
+                    current_node.parent.lower_bound,
+                    tree.upper_bound,
+                )
+                logger.log_prune_bab_node(run_id, current_node.coordinate)
+                continue
+
+            solution = self._algo.solve_problem_at_node(
+                run_id, current_node.problem, tree, current_node)
+
+            tree.update_node(current_node, solution)
+
+            if not np.isclose(solution.lower_bound, solution.upper_bound):
+                node_children, branching_point = tree.branch_at_node(current_node)
+                logger.info(run_id, 'Branched at point {}', branching_point)
+
+            self._log_problem_information_at_node(
+                run_id, current_node.problem, solution, current_node)
+            logger.info(run_id, 'New tree state at {}: {}', current_node.coordinate, tree.state)
+            logger.update_variable(run_id, 'z_l', tree.nodes_visited, tree.lower_bound)
+            logger.update_variable(run_id, 'z_u', tree.nodes_visited, tree.upper_bound)
+            logger.info(
+                run_id,
+                'Child {} has solutions: LB={} UB={}',
+                current_node.coordinate,
+                solution.lower_bound_solution,
+                solution.upper_bound_solution,
+            )
+
+        logger.info(run_id, 'Branch & Bound Finished: {}', tree.state)
+        return self._solution_from_tree(tree)
+
+    def _solution_from_tree(self, tree):
+        if tree.best_solution is None:
+            return None
+
+        dual_solution, primal_solution = tree.best_solution
+        nodes_visited = tree.nodes_visited
+        # TODO(fra): objective value of dual
+        return BabSolution(
+            primal_solution.status,
+            primal_solution.objectives,
+            primal_solution.variables,
+            dual_bound=dual_solution.objective_value(),
+            nodes_visited=nodes_visited,
+        )
+
+    def _log_problem_information_at_node(self, run_id, problem, solution, node):
+        group_name = '_'.join([str(c) for c in node.coordinate])
+        logger.tensor(
+            run_id,
+            group=group_name,
+            dataset='lower_bounds',
+            data=np.array(problem.lower_bounds)
+        )
+        logger.tensor(
+            run_id,
+            group=group_name,
+            dataset='upper_bounds',
+            data=np.array(problem.upper_bounds)
+        )
+        solution = solution.upper_bound_solution
+        if solution is None:
+            return
+        if solution.status.is_success():
+            logger.tensor(
+                run_id,
+                group=group_name,
+                dataset='solution',
+                data=np.array([v.value for v in solution.variables]),
+            )
