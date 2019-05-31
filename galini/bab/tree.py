@@ -28,6 +28,7 @@ class BabTree(object):
         self.selection_strategy = selection_strategy
         self.state = TreeState(lower_bound=-np.inf, upper_bound=np.inf, nodes_visited=0)
         self.open_nodes = {}
+        self.phatomed_nodes = []
         self.best_solution = None
 
         self._add_node(self.root)
@@ -83,6 +84,9 @@ class BabTree(object):
     @property
     def nodes_visited(self):
         return self.state.nodes_visited
+
+    def phatom_node(self, node):
+        self.phatomed_nodes.append(node)
 
     def node(self, coord):
         if not isinstance(coord, list):

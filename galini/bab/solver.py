@@ -39,6 +39,8 @@ class BranchAndBoundSolver(Solver):
     def __init__(self, galini):
         super().__init__(galini)
         self._algo = BranchAndCutAlgorithm(galini, solver=self)
+        self._tree = None
+        self._solution = None
 
     @staticmethod
     def solver_options():
@@ -55,10 +57,20 @@ class BranchAndBoundSolver(Solver):
         self._algo.before_solve(model, problem)
 
     def actual_solve(self, problem, run_id, **kwargs):
+        # Run bab loop, catch keyboard interrupt from users
+        try:
+            self._bab_loop(problem, run_id, **kwargs)
+        except KeyboardInterrupt:
+            pass
+        assert self._tree is not None
+        return self._solution_from_tree(self._tree)
+
+    def _bab_loop(self, problem, run_id, **kwargs):
         branching_strategy = self._algo.branching_strategy
         node_selection_strategy = self._algo.node_selection_strategy
 
         tree = BabTree(problem, branching_strategy, node_selection_strategy)
+        self._tree = tree
 
         logger.info(run_id, 'Solving root problem')
         root_solution = self._algo.solve_problem_at_root(run_id, problem, tree, tree.root)
@@ -72,14 +84,6 @@ class BranchAndBoundSolver(Solver):
             lower_bound=tree.root.lower_bound,
             upper_bound=tree.root.upper_bound,
         )
-
-        if self._algo.should_terminate(tree.state):
-            # problem is convex so it has converged already
-            return BabSolution(
-                primal_solution=root_solution.upper_bound_solution,
-                dual_solution=root_solution.lower_bound_solution,
-                nodes_visited=1,
-            )
 
         while not self._algo.should_terminate(tree.state):
             logger.info(run_id, 'Tree state at beginning of iteration: {}', tree.state)
@@ -121,6 +125,7 @@ class BranchAndBoundSolver(Solver):
                     tree.upper_bound,
                 )
                 logger.log_prune_bab_node(run_id, current_node.coordinate)
+                tree.phatom_node(current_node)
                 continue
 
             solution = self._algo.solve_problem_at_node(
@@ -146,7 +151,6 @@ class BranchAndBoundSolver(Solver):
             )
 
         logger.info(run_id, 'Branch & Bound Finished: {}', tree.state)
-        return self._solution_from_tree(tree)
 
     def _solution_from_tree(self, tree):
         if tree.best_solution is None:
