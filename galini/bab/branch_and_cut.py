@@ -29,6 +29,7 @@ from galini.special_structure import detect_special_structure
 from galini.quantities import relative_gap, absolute_gap
 from galini.core import Constraint, LinearExpression, Domain, Sense
 from galini.cuts import CutsGeneratorsManager
+from galini.timelimit import seconds_left
 from galini.util import print_problem
 from galini.config import (
     OptionsGroup,
@@ -159,8 +160,15 @@ class BranchAndCutAlgorithm:
     def _node_limit_exceeded(self, state):
         return state.nodes_visited > self.node_limit
 
+    def _timeout(self):
+        return seconds_left() <= 0
+
     def should_terminate(self, state):
-        return self._has_converged(state) or self._node_limit_exceeded(state)
+        return (
+            self._has_converged(state) or
+            self._node_limit_exceeded(state) or
+            self._timeout()
+        )
 
     def _solve_problem_at_node(self, run_id, problem, relaxed_problem, tree, node, relaxation):
         logger.info(
