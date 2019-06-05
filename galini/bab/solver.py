@@ -136,6 +136,10 @@ class BranchAndBoundSolver(Solver):
             if not np.isclose(solution.lower_bound, solution.upper_bound):
                 node_children, branching_point = tree.branch_at_node(current_node)
                 logger.info(run_id, 'Branched at point {}', branching_point)
+            else:
+                # We won't explore this part of the tree anymore. Add to phatomed
+                # nodes.
+                tree.phatom_node(current_node)
 
             self._log_problem_information_at_node(
                 run_id, current_node.problem, solution, current_node)
@@ -153,17 +157,18 @@ class BranchAndBoundSolver(Solver):
         logger.info(run_id, 'Branch & Bound Finished: {}', tree.state)
 
     def _solution_from_tree(self, tree):
-        if tree.best_solution is None:
+        if len(tree.solution_pool) == 0:
             return None
 
-        dual_solution, primal_solution = tree.best_solution
+        primal_solution = tree.solution_pool.head
+
         nodes_visited = tree.nodes_visited
         # TODO(fra): objective value of dual
         return BabSolution(
             primal_solution.status,
             primal_solution.objectives,
             primal_solution.variables,
-            dual_bound=dual_solution.objective_value(),
+            dual_bound=tree.state.lower_bound,
             nodes_visited=nodes_visited,
         )
 

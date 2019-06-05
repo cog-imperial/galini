@@ -16,12 +16,13 @@
 from collections import namedtuple
 import numpy as np
 from galini.bab.node import Node, NodeSolution
+from galini.bab.solution import SolutionPool
 
 
 TreeState = namedtuple('TreeState', ['lower_bound', 'upper_bound', 'nodes_visited'])
 
 
-class BabTree(object):
+class BabTree:
     def __init__(self, problem, branching_strategy, selection_strategy):
         self.root = Node(problem, tree=self, coordinate=[0])
         self.branching_strategy = branching_strategy
@@ -29,7 +30,7 @@ class BabTree(object):
         self.state = TreeState(lower_bound=-np.inf, upper_bound=np.inf, nodes_visited=0)
         self.open_nodes = {}
         self.phatomed_nodes = []
-        self.best_solution = None
+        self.solution_pool = SolutionPool(5)
 
         self._add_node(self.root)
 
@@ -110,31 +111,50 @@ class BabTree(object):
         lower_bound_solution = solution.lower_bound_solution
         upper_bound_solution = solution.upper_bound_solution
 
+        if upper_bound_solution is not None and upper_bound_solution.status.is_success():
+            self.solution_pool.add(upper_bound_solution)
+
         if lower_bound_solution is None:
             return self._set_new_state(None, None)
 
         if not lower_bound_solution.status.is_success():
             return self._set_new_state(None, None)
 
-        if not is_root_node:
-            new_lower_bound = self._open_nodes_lower_bound()
-        else:
+        if is_root_node:
             new_lower_bound = lower_bound_solution.objective_value()
 
+            if upper_bound_solution is None:
+                return self._set_new_state(new_lower_bound, None)
+
+            if not upper_bound_solution.status.is_success():
+                return self._set_new_state(new_lower_bound, None)
+
+            return self._set_new_state(
+                new_lower_bound,
+                upper_bound_solution.objective_value(),
+            )
+
+        # If there are open nodes, then the lower bound is the lowest
+        # of their lower bounds.
+        # If there are no open nodes, then the lower bound is the lowest
+        # of the phatomed nodes lower bounds.
         if upper_bound_solution is None:
-            return self._set_new_state(new_lower_bound, None)
-
-        if not upper_bound_solution.status.is_success():
-            return self._set_new_state(new_lower_bound, None)
-
-        if upper_bound_solution.objective_value() < self.state.upper_bound:
-            new_upper_bound = upper_bound_solution.objective_value()
-            if not is_root_node:
-                new_lower_bound = self._open_nodes_lower_bound(new_upper_bound)
-            self.best_solution = (lower_bound_solution, upper_bound_solution)
-            return self._set_new_state(new_lower_bound, new_upper_bound)
+            new_upper_bound = None
         else:
-            return self._set_new_state(new_lower_bound, None)
+            new_upper_bound = min(
+                upper_bound_solution.objective_value(),
+                self.state.upper_bound,
+            )
+
+        if self.open_nodes:
+            new_lower_bound = self._open_nodes_lower_bound(new_upper_bound)
+            return self._set_new_state(new_lower_bound, new_upper_bound)
+
+        if self.phatomed_nodes:
+            new_lower_bound = self.phatomed_nodes(new_upper_bound)
+            return self._set_new_state(new_lower_bound, new_upper_bound)
+
+        return self._set_new_state(None, new_upper_bound)
 
     def _set_new_state(self, new_lower_bound, new_upper_bound):
         if new_lower_bound is None:
@@ -147,12 +167,24 @@ class BabTree(object):
         self.state = TreeState(new_lower_bound, new_upper_bound, new_nodes_visited)
 
     def _open_nodes_lower_bound(self, upper_bound=None):
+        return self._nodes_minimum_lower_bound(
+            self.open_nodes.values(),
+            upper_bound,
+        )
+
+    def _phatomed_nodes_lower_bound(self, upper_bound=None):
+        return self._nodes_minimum_lower_bound(
+            self.phatomed_nodes,
+            upper_bound,
+        )
+
+    def _nodes_minimum_lower_bound(self, nodes, upper_bound=None):
         if upper_bound is None:
             new_lower_bound = self.state.upper_bound
         else:
             new_lower_bound = upper_bound
 
-        for node in self.open_nodes.values():
+        for node in nodes:
             if node.parent.lower_bound < new_lower_bound:
                 new_lower_bound = node.parent.lower_bound
         return new_lower_bound

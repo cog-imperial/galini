@@ -95,46 +95,75 @@ class TestBabTreeState:
         root_children, _ = tree.branch_at_node(tree.root)
         a, b = root_children
         tree.update_node(a, create_solution(7.0, 11.0))
+
+        tree.branch_at_node(a)
+
         assert np.isclose(5.0, tree.lower_bound)
         assert np.isclose(10.0, tree.upper_bound)
+
         tree.update_node(b, create_solution(6.0, 10.0))
-        assert np.isclose(10.0, tree.lower_bound)
-        assert np.isclose(10.0, tree.upper_bound)
         children, _ = tree.branch_at_node(b)
+
+        assert np.isclose(6.0, tree.lower_bound)
+        assert np.isclose(10.0, tree.upper_bound)
+
         a, b = children
         tree.update_node(a, create_solution(7.0, 10.0))
+        tree.branch_at_node(a)
+
         assert np.isclose(6.0, tree.lower_bound)
         assert np.isclose(10.0, tree.upper_bound)
 
     def test_update_with_new_upper_bound(self):
         tree = BabTree(create_problem(), KSectionBranchingStrategy(), MockSelectionStrategy())
         sol = create_solution(5.0, 10.0)
-        tree.update_root(sol)
 
+        tree.update_root(sol)
         root_children, _ = tree.branch_at_node(tree.root)
         a, b = root_children
-        tree.update_node(a, create_solution(7.0, 11.0))
+
         assert np.isclose(5.0, tree.lower_bound)
         assert np.isclose(10.0, tree.upper_bound)
+
+        tree.update_node(a, create_solution(7.0, 11.0))
+        tree.branch_at_node(a)
+
+        assert np.isclose(5.0, tree.lower_bound)
+        assert np.isclose(10.0, tree.upper_bound)
+
         tree.update_node(b, create_solution(6.0, 9.0))
-        assert np.isclose(9.0, tree.lower_bound)
+        tree.branch_at_node(b)
+
+        assert np.isclose(6.0, tree.lower_bound)
         assert np.isclose(9.0, tree.upper_bound)
 
     def test_update_with_both_new_bounds(self):
         tree = BabTree(create_problem(), KSectionBranchingStrategy(), MockSelectionStrategy())
         sol = create_solution(5.0, 10.0)
-        tree.update_root(sol)
 
+        tree.update_root(sol)
         root_children, _ = tree.branch_at_node(tree.root)
         a, b = root_children
-        tree.update_node(a, create_solution(7.0, 11.0))
+
+
         assert np.isclose(5.0, tree.lower_bound)
         assert np.isclose(10.0, tree.upper_bound)
+
+        tree.update_node(a, create_solution(7.0, 11.0))
+        tree.branch_at_node(a)
+
+        assert np.isclose(5.0, tree.lower_bound)
+        assert np.isclose(10.0, tree.upper_bound)
+
         tree.update_node(b, create_solution(6.0, 9.0))
-        assert np.isclose(9.0, tree.lower_bound)
-        assert np.isclose(9.0, tree.upper_bound)
         children, _ = tree.branch_at_node(b)
         a, b = children
+
+        assert np.isclose(6.0, tree.lower_bound)
+        assert np.isclose(9.0, tree.upper_bound)
+
         tree.update_node(a, create_solution(7.0, 10.0))
+        tree.branch_at_node(a)
+
         assert np.isclose(6.0, tree.lower_bound)
         assert np.isclose(9.0, tree.upper_bound)

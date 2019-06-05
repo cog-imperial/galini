@@ -9,6 +9,12 @@ from galini.core import Constraint
 from galini.triangle_cuts.generator import TriangleCutsGenerator
 
 
+class FakeSolver:
+    config = {
+        'obbt_simplex_maxiter': 100,
+    }
+
+
 @pytest.fixture()
 def problem():
     Q = [[28.0, 23.0, 0.0, 0.0, 0.0, 2.0, 0.0, 24.0],
@@ -95,7 +101,7 @@ def test_triangle_cuts(problem):
                          [23, 3, 0.0], [24, 0, 0.0], [24, 1, -0.5], [24, 2, 0.0], [24, 3, -0.5]]))
 
     # Test at root node
-    algo = BranchAndCutAlgorithm(galini)
+    algo = BranchAndCutAlgorithm(galini, FakeSolver())
     algo._cuts_generators_manager.before_start_at_root(run_id, problem, None)
     algo._cuts_generators_manager.before_start_at_node(run_id, problem, None)
     relaxed_problem = relaxation.relax(problem)

@@ -12,6 +12,12 @@ from galini.core import Constraint
 from galini.sdp_cuts.generator import SdpCutsGenerator
 
 
+class FakeSolver:
+    config = {
+        'obbt_simplex_maxiter': 100,
+    }
+
+
 @pytest.fixture()
 def problem():
     Q = [[28.0, 23.0, 0.0, 0.0, 0.0, 2.0, 0.0, 24.0],
@@ -89,7 +95,7 @@ def test_cut_selection_strategy(problem, cut_selection_strategy, expected_soluti
     })
     config = galini._config
     sdp_cuts_gen = SdpCutsGenerator(config.cuts_generator.sdp)
-    algo = BranchAndCutAlgorithm(galini)
+    algo = BranchAndCutAlgorithm(galini, FakeSolver())
     relaxed_problem = relaxation.relax(problem)
     algo._cuts_generators_manager.before_start_at_root(run_id, problem, None)
     nbs_cuts = []
@@ -146,7 +152,7 @@ def test_sdp_cuts_after_branching(problem):
     })
     config = galini._config
     sdp_cuts_gen = SdpCutsGenerator(config.cuts_generator.sdp)
-    algo = BranchAndCutAlgorithm(galini)
+    algo = BranchAndCutAlgorithm(galini, FakeSolver())
     relaxed_problem = relaxation.relax(problem)
     algo._cuts_generators_manager.before_start_at_root(run_id, problem, None)
     mip_sols = []
