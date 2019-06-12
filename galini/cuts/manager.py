@@ -43,7 +43,7 @@ class CutsGeneratorsManager(object):
                         ', '.join(registry.keys())
                     ))
             generator_config = cuts_gen_config[generator_cls.name]
-            generators.append(generator_cls(generator_config))
+            generators.append(generator_cls(galini, generator_config))
         return generators
 
     @staticmethod

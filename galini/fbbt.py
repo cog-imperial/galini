@@ -24,9 +24,11 @@ import galini.core as core
 
 _expr_to_prop = dict()
 _expr_to_prop[core.Variable] = prop.VariableRule()
+_expr_to_prop[core.Constant] = prop.ConstantRule()
 _expr_to_prop[core.LinearExpression] = prop.LinearRule()
 _expr_to_prop[core.QuadraticExpression] = prop.QuadraticRule()
 _expr_to_prop[core.SumExpression] = prop.SumRule()
+_expr_to_prop[core.NegationExpression] = prop.NegationRule()
 
 class _GaliniBoundsPropagationVisitor(BoundsPropagationVisitor):
     def visit_expression(self, expr, bounds):

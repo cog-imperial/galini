@@ -34,7 +34,7 @@ class TriangleCutsGenerator(CutsGenerator):
     """
     name = 'triangle'
 
-    def __init__(self, config):
+    def __init__(self, galini, config):
         self._domain_eps = config['domain_eps']
         self._sel_size = config['selection_size']
         self._thres_tri_viol = config['thres_triangle_viol']

@@ -22,7 +22,7 @@ class CutType(Enum):
 
 
 class Cut(object):
-    def __init__(self, type_, name, expr, lower_bound, upper_bound):
+    def __init__(self, type_, name, expr, lower_bound, upper_bound, is_objective=False):
         if not isinstance(type_, CutType):
             raise ValueError('type_ must be a valid CutType')
         self.type_ = type_
@@ -30,6 +30,7 @@ class Cut(object):
         self.expr = expr
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
+        self.is_objective = is_objective
 
     @property
     def is_global(self):
@@ -41,7 +42,7 @@ class Cut(object):
 
 
 class CutsGenerator(metaclass=abc.ABCMeta):
-    def __init__(self, config):
+    def __init__(self, galini, config):
         pass
 
     def before_start_at_root(self, run_id, problem, relaxed_problem):

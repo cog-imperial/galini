@@ -70,6 +70,7 @@ _expr_to_mono[core.Variable] = mono_rules.VariableRule()
 _expr_to_mono[core.LinearExpression] = mono_rules.LinearRule()
 _expr_to_mono[core.QuadraticExpression] = mono_rules.QuadraticRule()
 _expr_to_mono[core.SumExpression] = mono_rules.SumRule()
+_expr_to_mono[core.NegationExpression] = mono_rules.NegationRule()
 
 
 class _GaliniMonotonicityPropagationVisitor(MonotonicityPropagationVisitor):
@@ -83,6 +84,7 @@ _expr_to_cvx[core.Variable] = cvx_rules.VariableRule()
 _expr_to_cvx[core.LinearExpression] = cvx_rules.LinearRule()
 _expr_to_cvx[core.QuadraticExpression] = cvx_rules.QuadraticRule()
 _expr_to_cvx[core.SumExpression] = cvx_rules.SumRule()
+_expr_to_cvx[core.NegationExpression] = cvx_rules.NegationRule()
 
 
 class _GaliniConvexityPropagationVisitor(ConvexityPropagationVisitor):

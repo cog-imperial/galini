@@ -24,6 +24,7 @@ from pyomo.core.expr.numeric_expr import (
     ReciprocalExpression,
     PowExpression,
     SumExpression,
+    LinearExpression,
     MonomialTermExpression,
     AbsExpression,
     NegationExpression,
@@ -381,6 +382,13 @@ class _ConvertExpressionVisitor(ExpressionValueVisitor):
 
         if node.is_variable_type():
             return True, self.get(node)
+
+        # LinearExpression is special because it does not have
+        # args even thought it has children.
+        if isinstance(node, LinearExpression):
+            variables = [self.get(var) for var in node.linear_vars]
+            return True, core.LinearExpression(variables, node.linear_coefs, node.constant)
+
         return False, None
 
     def visit(self, node, values):

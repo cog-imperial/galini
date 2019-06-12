@@ -179,6 +179,8 @@ class Relaxation(metaclass=ABCMeta):
 
     def _insert_expression(self, expr, problem, relaxed_problem):
         def _inner(expr):
+            if expr.problem == relaxed_problem:
+                return expr
             if expr.uid in self._problem_expr:
                 return self._problem_expr[expr.uid]
 

@@ -24,3 +24,4 @@ compile_commands.json
 compile.log
 dist
 site/
+Dockerfile

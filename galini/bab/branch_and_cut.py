@@ -23,11 +23,12 @@ from suspect.expression import ExpressionType
 from galini.bab.node import NodeSolution
 from galini.bab.strategy import KSectionBranchingStrategy
 from galini.bab.selection import BestLowerBoundSelectionStrategy
-from galini.abb.relaxation import AlphaBBRelaxation
+from galini.bab.relaxations import ConvexRelaxation, LinearRelaxation
+from galini.relaxations.relaxed_problem import RelaxedProblem
 from galini.logging import get_logger
 from galini.special_structure import detect_special_structure
 from galini.quantities import relative_gap, absolute_gap
-from galini.core import Constraint, LinearExpression, Domain, Sense
+from galini.core import Constraint, LinearExpression, SumExpression, Domain, Sense
 from galini.cuts import CutsGeneratorsManager
 from galini.timelimit import seconds_left
 from galini.util import print_problem
@@ -170,7 +171,7 @@ class BranchAndCutAlgorithm:
             self._timeout()
         )
 
-    def _solve_problem_at_node(self, run_id, problem, relaxed_problem, tree, node, relaxation):
+    def _solve_problem_at_node(self, run_id, problem, relaxed_problem, tree, node):
         logger.info(
             run_id,
             'Starting Cut generation iterations. Maximum iterations={}, relative tolerance={}',
@@ -181,12 +182,17 @@ class BranchAndCutAlgorithm:
             'Using cuts generators: {}',
             ', '.join([g.name for g in self._cuts_generators_manager.generators]))
 
-        linear_problem = self._linear_problem(relaxed_problem)
+        linear_problem = self._build_linear_relaxation(relaxed_problem.relaxed)
+
         cuts_state = CutsState()
+
+        print_problem(relaxed_problem.relaxed)
+
         while (not self._cuts_converged(cuts_state) and
                not self._cuts_iterations_exceeded(cuts_state)):
-            feasible, new_cuts, mip_solution = \
-                self._perform_cut_round(run_id, problem, relaxed_problem, linear_problem, cuts_state, tree, node)
+            feasible, new_cuts, mip_solution = self._perform_cut_round(
+                run_id, problem, relaxed_problem.relaxed, linear_problem.relaxed, cuts_state, tree, node
+            )
 
             if not feasible:
                 return NodeSolution(mip_solution, None)
@@ -194,19 +200,34 @@ class BranchAndCutAlgorithm:
             # Add cuts as constraints
             # TODO(fra): use problem global and local cuts
             for cut in new_cuts:
-                new_cons = Constraint(cut.name, cut.expr, cut.lower_bound, cut.upper_bound)
-                added_cons = relaxation._relax_constraint(problem, relaxed_problem, new_cons)
-                linear_problem.add_constraint(
-                    new_cons.name,
-                    _convert_linear_expr(linear_problem, added_cons.root_expr),
-                    new_cons.lower_bound,
-                    new_cons.upper_bound,
-                )
+                if not cut.is_objective:
+                    linear_problem.add_constraint(
+                        cut.name,
+                        cut.expr,
+                        cut.lower_bound,
+                        cut.upper_bound,
+                    )
+                else:
+                    objvar = linear_problem.relaxed.variable('_objvar')
+                    assert cut.lower_bound is None
+                    assert cut.upper_bound is None
+                    new_root_expr = SumExpression([
+                        cut.expr,
+                        LinearExpression([objvar], [-1.0], 0.0)
+                    ])
+                    linear_problem.add_constraint(
+                        cut.name,
+                        new_root_expr,
+                        None,
+                        0.0
+                    )
 
             cuts_state.update(mip_solution)
             if len(new_cuts) == 0:
                 break
 
+        print_problem(linear_problem.relaxed)
+        2/0
         logger.debug(
             run_id,
             'Lower Bound from MIP = {}; Tree Upper Bound = {}',
@@ -224,73 +245,25 @@ class BranchAndCutAlgorithm:
 
     def solve_problem_at_root(self, run_id, problem, tree, node):
         self._perform_fbbt(run_id, problem, tree, node)
-        relaxation, relaxed_problem = self._relax_problem(problem)
-        self._cuts_generators_manager.before_start_at_root(run_id, problem, relaxed_problem)
-        solution = self._solve_problem_at_node(run_id, problem, relaxed_problem, tree, node, relaxation)
-        self._cuts_generators_manager.after_end_at_root(run_id, problem, relaxed_problem, solution)
+        relaxed_problem = self._build_convex_relaxation(problem)
+        self._cuts_generators_manager.before_start_at_root(run_id, problem, relaxed_problem.relaxed)
+        solution = self._solve_problem_at_node(run_id, problem, relaxed_problem, tree, node)
+        self._cuts_generators_manager.after_end_at_root(run_id, problem, relaxed_problem.relaxed, solution)
         return solution
 
     def solve_problem_at_node(self, run_id, problem, tree, node):
         self._perform_fbbt(run_id, problem, tree, node)
-        relaxation, relaxed_problem = self._relax_problem(problem)
-        self._cuts_generators_manager.before_start_at_node(run_id, problem, relaxed_problem)
-        solution = self._solve_problem_at_node(run_id, problem, relaxed_problem, tree, node, relaxation)
-        self._cuts_generators_manager.after_end_at_node(run_id, problem, relaxed_problem, solution)
+        relaxed_problem = self._build_convex_relaxation(problem)
+        self._cuts_generators_manager.before_start_at_node(run_id, problem, relaxed_problem.relaxed)
+        solution = self._solve_problem_at_node(run_id, problem, relaxed_problem, tree, node)
+        self._cuts_generators_manager.after_end_at_node(run_id, problem, relaxed_problem.relaxed, solution)
         return solution
 
-    def _relax_problem(self, problem):
-        relaxation = AlphaBBRelaxation()
-        relaxed_problem = relaxation.relax(problem)
-        return relaxation, relaxed_problem
+    def _build_convex_relaxation(self, problem):
+        return RelaxedProblem(ConvexRelaxation(), problem)
 
-    def _linear_problem(self, problem):
-        linear = problem.make_relaxed(problem.name + '_linear')
-        # Add a variable that acts as objective value
-        objvar = linear.add_variable('_objvar', None, None, Domain.REAL)
-        linear.add_objective('_objective', LinearExpression([objvar], [1.0], 0.0), Sense.MINIMIZE)
-        # add linear objective and constraints
-        for objective in problem.objectives:
-            root_expr = objective.root_expr
-            if root_expr.expression_type == ExpressionType.Linear:
-                new_root_expr = _convert_linear_expr(linear, root_expr)
-                children = [c for c in new_root_expr.children]
-                children.append(objvar)
-                coefficients = [new_root_expr.coefficient(c) for c in new_root_expr.children]
-                coefficients.append(-1.0)
-                final_root_expr = LinearExpression(children, coefficients, new_root_expr.constant_term)
-                linear.add_constraint(objective.name, final_root_expr, None, 0)
-            elif root_expr.expression_type == ExpressionType.Sum:
-                if not all([ch.expression_type == ExpressionType.Linear for ch in root_expr.children]):
-                    continue
-                new_root_expr = _convert_linear_expr(linear, root_expr)
-                children = [c for c in new_root_expr.children]
-                children.append(objvar)
-                coefficients = [new_root_expr.coefficient(c) for c in new_root_expr.children]
-                coefficients.append(-1.0)
-                final_root_expr = LinearExpression(children, coefficients, new_root_expr.constant_term)
-                linear.add_constraint(objective.name, final_root_expr, None, 0)
-            elif root_expr.expression_type == ExpressionType.Variable:
-                new_root_expr = LinearExpression([root_expr, objvar], [1.0, -1.0], 0.0)
-                linear.add_constraint(objective.name, new_root_expr, None, 0)
-            else:
-                raise ValueError('Unknown expression {} of type {}'.format(root_expr, root_expr.expression_type))
-
-        for constraint in problem.constraints:
-            root_expr = constraint.root_expr
-            if root_expr.expression_type == ExpressionType.Linear:
-                new_root_expr = _convert_linear_expr(linear, root_expr)
-                linear.add_constraint(constraint.name, new_root_expr, constraint.lower_bound, constraint.upper_bound)
-            elif root_expr.expression_type == ExpressionType.Sum:
-                if not all([ch.expression_type == ExpressionType.Linear for ch in root_expr.children]):
-                    continue
-                new_root_expr = _convert_linear_expr(linear, root_expr)
-                linear.add_constraint(constraint.name, new_root_expr, constraint.lower_bound, constraint.upper_bound)
-            elif root_expr.expression_type == ExpressionType.Variable:
-                new_root_expr = LinearExpression([root_expr], [1.0], 0.0)
-                linear.add_constraint(constraint.name, new_root_expr, constraint.lower_bound, constraint.upper_bound)
-            else:
-                raise ValueError('Unknown expression {} of type {}'.format(root_expr, root_expr.expression_type))
-        return linear
+    def _build_linear_relaxation(self, problem):
+        return RelaxedProblem(LinearRelaxation(), problem)
 
     def _perform_cut_round(self, run_id, problem, relaxed_problem, linear_problem, cuts_state, tree, node):
         logger.debug(run_id, 'Round {}. Solving linearized problem.', cuts_state.round)
@@ -378,7 +351,7 @@ class BranchAndCutAlgorithm:
         logger.tensor(run_id, group_name, 'ub', problem.upper_bounds)
 
 
-def _convert_linear_expr(linear_problem, expr):
+def _convert_linear_expr(linear_problem, expr, objvar=None):
     stack = [expr]
     coefficients = {}
     const = 0.0
@@ -401,7 +374,13 @@ def _convert_linear_expr(linear_problem, expr):
     for var, coef in coefficients.items():
         children.append(linear_problem.variable(var))
         coeffs.append(coef)
+
+    if objvar is not None:
+        children.append(objvar)
+        coeffs.append(1.0)
+
     return LinearExpression(children, coeffs, const)
+
 
 
 

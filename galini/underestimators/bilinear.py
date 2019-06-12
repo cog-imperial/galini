@@ -16,12 +16,23 @@
 import numpy as np
 from suspect.interval import Interval
 from suspect.expression import ExpressionType
-from galini.core import LinearExpression, AuxiliaryVariable, Constraint, Domain, BilinearTermReference
+from galini.core import (
+    QuadraticExpression,
+    LinearExpression,
+    SumExpression,
+    AuxiliaryVariable,
+    Constraint,
+    Domain,
+    BilinearTermReference,
+)
 from galini.underestimators.underestimator import Underestimator, UnderestimatorResult
 
 
 class McCormickUnderestimator(Underestimator):
     """Underestimate Quadratic expressions using McCormick envelope."""
+    def __init__(self, linear=True):
+        self.linear = linear
+
     def can_underestimate(self, problem, expr, ctx):
         return expr.expression_type == ExpressionType.Quadratic
 
@@ -29,17 +40,36 @@ class McCormickUnderestimator(Underestimator):
         assert expr.expression_type == ExpressionType.Quadratic
         if ctx.metadata.get('bilinear_aux_variables', None) is None:
             ctx.metadata['bilinear_aux_variables'] = {}
+        squares = []
         variables = []
         constraints = []
         for term in expr.terms:
-            aux_var_linear, aux_var_constraints = self._underestimate_bilinear_term(problem, term, ctx)
-            if aux_var_linear is None:
-                return None
-            variables.append(aux_var_linear)
-            constraints.extend(aux_var_constraints)
+            if term.var1 != term.var2 or self.linear:
+                aux_var_linear, aux_var_constraints = self._underestimate_bilinear_term(problem, term, ctx)
+                if aux_var_linear is None:
+                    return None
+                variables.append(aux_var_linear)
+                constraints.extend(aux_var_constraints)
+            else:
+                squares.append((term.coefficient, term.var1))
+
+        if not squares:
+            new_linear_expr = LinearExpression(variables)
+            return UnderestimatorResult(new_linear_expr, constraints)
+
+        # Squares + (optional) linear expression
+        square_coefficients = [c for c, _ in squares]
+        square_variables = [v for _, v in squares]
+        quadratic_expr = QuadraticExpression(square_variables, square_variables, square_coefficients)
+        if not variables:
+            return UnderestimatorResult(quadratic_expr, constraints)
 
         new_linear_expr = LinearExpression(variables)
-        return UnderestimatorResult(new_linear_expr, constraints)
+        return UnderestimatorResult(
+            SumExpression([quadratic_expr, new_linear_expr]),
+            constraints,
+        )
+
 
     def _underestimate_bilinear_term(self, problem, term, ctx):
         bilinear_aux_vars = ctx.metadata['bilinear_aux_variables']
@@ -61,6 +91,14 @@ class McCormickUnderestimator(Underestimator):
         y_l = y.lower_bound()
         y_u = y.upper_bound()
 
+        any_unbounded = (
+            _is_inf(x_l) or
+            _is_inf(x_u) or
+            _is_inf(y_l) or
+            _is_inf(y_u)
+        )
+        if any_unbounded:
+            return None, None
         assert not _is_inf(x_l)
         assert not _is_inf(x_u)
         assert not _is_inf(y_l)

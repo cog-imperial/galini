@@ -43,7 +43,7 @@ class SdpCutsGenerator(CutsGenerator):
     """
     name = 'sdp'
 
-    def __init__(self, config):
+    def __init__(self, galini, config):
         self._domain_eps = config['domain_eps']
         self._sel_size = config['selection_size']
         self._thres_sdp_viol = config['thres_sdp_viol']
