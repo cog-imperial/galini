@@ -186,8 +186,6 @@ class BranchAndCutAlgorithm:
 
         cuts_state = CutsState()
 
-        print_problem(relaxed_problem.relaxed)
-
         while (not self._cuts_converged(cuts_state) and
                not self._cuts_iterations_exceeded(cuts_state)):
             feasible, new_cuts, mip_solution = self._perform_cut_round(
@@ -226,8 +224,6 @@ class BranchAndCutAlgorithm:
             if len(new_cuts) == 0:
                 break
 
-        print_problem(linear_problem.relaxed)
-        2/0
         logger.debug(
             run_id,
             'Lower Bound from MIP = {}; Tree Upper Bound = {}',

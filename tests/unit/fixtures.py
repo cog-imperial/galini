@@ -1,7 +1,34 @@
 import pytest
+from enum import Enum
 import pyomo.environ as aml
 import hypothesis.strategies as st
 from galini.core import Variable
+from galini.solvers.solution import (
+    Status
+)
+
+
+class FakeStatusEnum(Enum):
+    Success = 0
+    Infeasible = 1
+    Unbounded = 2
+
+
+class FakeStatus(Status):
+    def __init__(self, inner):
+        self._inner = inner
+
+    def is_success(self):
+        return self._inner == FakeStatusEnum.Success
+
+    def is_infeasible(self):
+        return self._inner == FakeStatusEnum.Infeasible
+
+    def is_unbounded(self):
+        return self._inner == FakeStatusEnum.Unbounded
+
+    def description(self):
+        return str(self._inner)
 
 
 @pytest.fixture
