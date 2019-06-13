@@ -188,6 +188,10 @@ class Relaxation(metaclass=ABCMeta):
                 return self._problem_expr[expr.uid]
 
             if expr.expression_type == ExpressionType.Variable:
+                if expr.problem:
+                    existing_var = relaxed_problem.variable(expr.idx)
+                    assert existing_var.name == expr.name
+                    return existing_var
                 return self._insert_variable(expr, problem, relaxed_problem, use_problem_bounds=True)
             else:
                 children = [_inner(child) for child in expr.children]

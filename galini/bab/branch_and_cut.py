@@ -184,6 +184,15 @@ class BranchAndCutAlgorithm:
 
         linear_problem = self._build_linear_relaxation(relaxed_problem.relaxed)
 
+
+        bilinear_aux_variables = \
+            linear_problem.relaxation._ctx.metadata['bilinear_aux_variables']
+
+        for v in linear_problem.relaxed.variables:
+            if v.is_auxiliary:
+                ref = v.reference
+                bilinear_aux_variables[(ref.var1.idx, ref.var2.idx)] = v
+
         cuts_state = CutsState()
 
         while (not self._cuts_converged(cuts_state) and
