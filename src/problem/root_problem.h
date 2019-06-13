@@ -74,8 +74,8 @@ public:
   VariableView variable_view(const std::string& name) override;
   VariableView variable_view(index_t idx) override;
 
-  std::shared_ptr<ChildProblem> make_child();
-  std::shared_ptr<RelaxedProblem> make_relaxed(const std::string& name);
+  std::shared_ptr<ChildProblem> make_child() override;
+  std::shared_ptr<RelaxedProblem> make_relaxed(const std::string& name) override;
 
   std::vector<std::shared_ptr<Expression>>& vertices() override {
     return vertices_;

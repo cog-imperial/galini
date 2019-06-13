@@ -17,6 +17,7 @@ limitations under the License.
 #include <queue>
 
 #include "ad/expression_tree_data.h"
+#include "expression/auxiliary_variable.h"
 #include "problem/child_problem.h"
 #include "problem/constraint.h"
 #include "problem/objective.h"
@@ -232,7 +233,15 @@ std::shared_ptr<RelaxedProblem> RootProblem::make_relaxed(const std::string& nam
   // Copy all variables to relaxed problem to keep variables indexes the same
   for (index_t i = 0; i < num_variables_; ++i) {
     auto var = variable(i);
-    auto new_var = relaxed->add_variable(var->name(), lower_bound(var), upper_bound(var), domain(var));
+    std::shared_ptr<Variable> new_var = nullptr;
+    if (var->is_auxiliary()) {
+      auto aux_var = std::static_pointer_cast<expression::AuxiliaryVariable>(var);
+      new_var =
+	relaxed->add_aux_variable(var->name(), lower_bound(var), upper_bound(var), domain(var), aux_var->reference());
+    } else {
+      new_var =
+	relaxed->add_variable(var->name(), lower_bound(var), upper_bound(var), domain(var));
+    }
     if (var->idx() != new_var->idx()) {
       throw std::runtime_error("Index of new variable is different than original variable. This is a BUG.");
     }
@@ -240,6 +249,7 @@ std::shared_ptr<RelaxedProblem> RootProblem::make_relaxed(const std::string& nam
 
   return relaxed;
 }
+
 
 } // namespace problem
 

@@ -35,21 +35,17 @@ class SumOfUnderestimators(Underestimator):
     def underestimate(self, problem, expr, ctx):
         if self._can_be_underestimated_as_sum_of_expressions(problem, expr, ctx):
             return self._underestimate_as_sum(problem, expr, ctx)
+
         for underestimator in self._underestimators:
             if underestimator.can_underestimate(problem, expr, ctx):
                 return underestimator.underestimate(problem, expr, ctx)
+
         return None
 
     def _can_be_underestimated_as_sum_of_expressions(self, problem, expr, ctx):
         if expr.expression_type == ExpressionType.Sum:
             for child in expr.children:
-                # Check at least one underestimator can underestimate the child
-                # expression
-                has_match = False
-                for underestimator in self._underestimators:
-                    if underestimator.can_underestimate(problem, child, ctx):
-                        has_match = True
-                if not has_match:
+                if not self.can_underestimate(problem, child, ctx):
                     return False
             return True
         return False
@@ -64,13 +60,9 @@ class SumOfUnderestimators(Underestimator):
         new_children = []
         new_constraints = []
         for child in expr.children:
-            for underestimator in self._underestimators:
-                if underestimator.can_underestimate(problem, child, ctx):
-                    result = underestimator.underestimate(problem, child, ctx)
-                    if result is None:
-                        continue
-                    new_children.append(result.expression)
-                    new_constraints.extend(result.constraints)
-                    break
+            result = self.underestimate(problem, child, ctx)
+            if result is not None:
+                new_children.append(result.expression)
+                new_constraints.extend(result.constraints)
         new_expression = SumExpression(new_children)
         return UnderestimatorResult(new_expression, new_constraints)

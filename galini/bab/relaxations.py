@@ -30,9 +30,6 @@ class _RelaxationBase(Relaxation):
         self._ctx = None
         self._underestimator = self._root_underestimator()
 
-    def relaxed_problem_name(self, problem):
-        return problem.name + '_convex'
-
     def before_relax(self, problem):
         self._ctx = detect_special_structure(problem)
         self._before_relax(problem)
@@ -71,6 +68,9 @@ class ConvexRelaxation(_RelaxationBase):
             McCormickUnderestimator(linear=False),
         ])
 
+    def relaxed_problem_name(self, problem):
+        return problem.name + '_convex'
+
     def relax_expression(self, problem, expr):
         convexity = self._ctx.convexity(expr)
         if convexity.is_convex():
@@ -91,6 +91,9 @@ class LinearRelaxation(_RelaxationBase):
             LinearUnderestimator(),
             McCormickUnderestimator(linear=True),
         ])
+
+    def relaxed_problem_name(self, problem):
+        return problem.name + '_linear'
 
     def relax_objective(self, problem, objective):
         self._objective_count += 1

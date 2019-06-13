@@ -41,6 +41,7 @@ public:
 		    py::object domain,
 		    py::object reference);
 
+  bool is_auxiliary() const override { return true; }
   py::object reference() const { return reference_; }
 private:
   py::object reference_;

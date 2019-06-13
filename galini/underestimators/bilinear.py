@@ -77,6 +77,7 @@ class McCormickUnderestimator(Underestimator):
         y_expr = term.var2
 
         xy_tuple = self._bilinear_tuple(x_expr, y_expr)
+        print(xy_tuple, x_expr.name, y_expr.name, xy_tuple in bilinear_aux_vars)
         if xy_tuple in bilinear_aux_vars:
             w = bilinear_aux_vars[xy_tuple]
             new_expr = LinearExpression([w], [term.coefficient], 0.0)
@@ -184,8 +185,8 @@ class McCormickUnderestimator(Underestimator):
         return '_mccormick_{}_{}'.format(v.name, suffix)
 
     def _bilinear_tuple(self, x, y):
-        x_uid = x.uid
-        y_uid = y.uid
+        x_uid = x.idx
+        y_uid = y.idx
         return min(x_uid, y_uid), max(x_uid, y_uid)
 
 

@@ -73,6 +73,7 @@ public:
     return nullptr;
   }
 
+  virtual bool is_auxiliary() const { return false; }
   bool is_variable() const override { return true; }
   bool is_expression() const override { return false; }
 

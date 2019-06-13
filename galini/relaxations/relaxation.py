@@ -169,11 +169,13 @@ class Relaxation(metaclass=ABCMeta):
             lower_bound = expr.lower_bound
             upper_bound = expr.upper_bound
             domain = expr.domain
+
         if isinstance(expr, AuxiliaryVariable):
             new_var = relaxed_problem.add_aux_variable(
                 expr.name, lower_bound, upper_bound, domain, expr.reference)
         else:
             new_var = relaxed_problem.add_variable(expr.name, lower_bound, upper_bound, domain)
+
         self._problem_expr[expr.uid] = new_var
         return new_var
 
@@ -181,6 +183,7 @@ class Relaxation(metaclass=ABCMeta):
         def _inner(expr):
             if expr.problem == relaxed_problem:
                 return expr
+
             if expr.uid in self._problem_expr:
                 return self._problem_expr[expr.uid]
 

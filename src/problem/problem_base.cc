@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "expression/variable.h"
 
+
 namespace galini {
 
 namespace problem {
@@ -98,7 +99,6 @@ namespace problem {
   void Problem::unfix(const std::shared_ptr<Variable>& variable) {
     fixed_mask_.at(variable->idx()) = false;
   }
-
 
 } // namespace problem
 
