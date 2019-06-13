@@ -14,28 +14,27 @@
 
 """Contain relaxations used in the Branch & Cut algorithm."""
 from galini.core import Domain, Objective, Constraint, Variable, LinearExpression, SumExpression
+from galini.special_structure import detect_special_structure
 from galini.relaxations import Relaxation, RelaxationResult
 from galini.underestimators import (
     McCormickUnderestimator,
     LinearUnderestimator,
     SumOfUnderestimators,
+    UnderestimatorResult,
 )
-
-class ConvexRelaxationContext:
-    metadata = {}
 
 
 class _RelaxationBase(Relaxation):
     def __init__(self):
         super().__init__()
-        self._ctx = ConvexRelaxationContext()
+        self._ctx = None
         self._underestimator = self._root_underestimator()
 
     def relaxed_problem_name(self, problem):
         return problem.name + '_convex'
 
     def before_relax(self, problem):
-        self._ctx = ConvexRelaxationContext()
+        self._ctx = detect_special_structure(problem)
         self._before_relax(problem)
 
     def _before_relax(self, problem):
@@ -57,6 +56,9 @@ class _RelaxationBase(Relaxation):
         return RelaxationResult(new_constraint, result.constraints)
 
     def relax_expression(self, problem, expr):
+        return self._relax_expression(problem, expr)
+
+    def _relax_expression(self, problem, expr):
         assert self._underestimator.can_underestimate(problem, expr, self._ctx)
         result = self._underestimator.underestimate(problem, expr, self._ctx)
         return result
@@ -68,6 +70,12 @@ class ConvexRelaxation(_RelaxationBase):
             LinearUnderestimator(),
             McCormickUnderestimator(linear=False),
         ])
+
+    def relax_expression(self, problem, expr):
+        convexity = self._ctx.convexity(expr)
+        if convexity.is_convex():
+            return UnderestimatorResult(expr, [])
+        return self._relax_expression(problem, expr)
 
 
 class LinearRelaxation(_RelaxationBase):
