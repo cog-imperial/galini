@@ -184,6 +184,8 @@ class BranchAndCutAlgorithm:
 
         linear_problem = self._build_linear_relaxation(relaxed_problem.relaxed)
 
+        # from galini.util import print_problem
+        # print_problem(relaxed_problem.relaxed)
 
         bilinear_aux_variables = \
             linear_problem.relaxation._ctx.metadata['bilinear_aux_variables']
