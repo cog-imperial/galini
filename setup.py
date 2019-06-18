@@ -193,8 +193,8 @@ setup(
     },
     install_requires=[
         'pyomo>=5.6',
-        'cog-suspect>=1.3.0',
-        'galini-io>=0.3.0',
+        'cog-suspect>=1.5.2',
+        'galini-io>=0.3.1',
         'pulp>=1.6',
         'numpy',
         'toml',
