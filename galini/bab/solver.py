@@ -26,6 +26,7 @@ from galini.cuts import CutsGeneratorsRegistry
 from galini.bab.branch_and_cut import BranchAndCutAlgorithm
 from galini.bab.solution import BabSolution
 from galini.util import print_problem
+from galini.special_structure import detect_special_structure
 
 
 logger = get_logger(__name__)
@@ -59,7 +60,23 @@ class BranchAndBoundSolver(Solver):
     def actual_solve(self, problem, run_id, **kwargs):
         # Run bab loop, catch keyboard interrupt from users
         try:
+            # Check if problem is an convex one, in that case
+            # solve directly with NLP solver
+            special_structure = detect_special_structure(
+                problem,
+                max_iter=self._algo.fbbt_maxiter,
+            )
+            cvx_map = special_structure.convexity
+            if _is_convex(problem, cvx_map):
+                all_reals = all(
+                    v.domain.is_real()
+                    for v in problem.variables
+                )
+                if all_reals:
+                    return self._solve_convex_problem(problem, run_id, **kwargs)
+
             self._bab_loop(problem, run_id, **kwargs)
+
         except KeyboardInterrupt:
             pass
         assert self._tree is not None
@@ -163,13 +180,23 @@ class BranchAndBoundSolver(Solver):
         primal_solution = tree.solution_pool.head
 
         nodes_visited = tree.nodes_visited
-        # TODO(fra): objective value of dual
         return BabSolution(
             primal_solution.status,
             primal_solution.objectives,
             primal_solution.variables,
             dual_bound=tree.state.lower_bound,
             nodes_visited=nodes_visited,
+        )
+
+    def _solve_convex_problem(self, problem, run_id, **kwargs):
+        nlp_solver = self.galini.instantiate_solver('ipopt')
+        solution = nlp_solver.solve(problem)
+        return BabSolution(
+            solution.status,
+            solution.objectives,
+            solution.variables,
+            dual_bound=None,
+            nodes_visited=1,
         )
 
     def _log_problem_information_at_node(self, run_id, problem, solution, node):
@@ -196,3 +223,18 @@ class BranchAndBoundSolver(Solver):
                 dataset='solution',
                 data=np.array([v.value for v in solution.variables]),
             )
+
+
+def _is_convex(problem, cvx_map):
+    are_objectives_cvx = all(
+        cvx_map[obj.root_expr].is_convex()
+        for obj in problem.objectives
+    )
+
+    if not are_objectives_cvx:
+        return False
+
+    return all(
+        cvx_map[cons.root_expr].is_convex()
+        for cons in problem.constraints
+    )

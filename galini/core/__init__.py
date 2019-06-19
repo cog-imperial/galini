@@ -38,6 +38,12 @@ class Domain(Enum):
     def is_integer(self):
         return self != self.REAL
 
+    def is_real(self):
+        return self == self.REAL
+
+    def is_binary(self):
+        return self == self.BINARY
+
 
 class Sense(Enum):
     MINIMIZE = 0
