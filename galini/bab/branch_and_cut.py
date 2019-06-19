@@ -13,6 +13,7 @@
 # limitations under the License.
 """Branch & Cut algorithm."""
 from collections import namedtuple
+import warnings
 import numpy as np
 import pyomo.environ as pe
 from pyomo.core.kernel.component_set import ComponentSet
@@ -149,8 +150,8 @@ class BranchAndCutAlgorithm:
                 vv = problem.variable_view(v.name)
                 if new_lb is None or new_ub is None:
                     logger.warning(0, 'Could not tighten variable {}', v.name)
-                new_lb = _safe_lb(vv.domain, new_lb, vv.lower_bound(), infinity=self._infinity)
-                new_ub = _safe_ub(vv.domain, new_ub, vv.upper_bound(), infinity=self._infinity)
+                new_lb = _safe_lb(vv.domain, new_lb, vv.lower_bound())
+                new_ub = _safe_ub(vv.domain, new_ub, vv.upper_bound())
                 vv.set_lower_bound(new_lb)
                 vv.set_upper_bound(new_ub)
         except Exception as ex:
@@ -379,18 +380,30 @@ class BranchAndCutAlgorithm:
             new_lb = _safe_lb(
                 v.domain,
                 new_bound.lower_bound,
-                vv.lower_bound(),
-                infinity=self._infinity,
+                vv.lower_bound()
             )
+
+            if np.isinf(new_lb):
+                msg = 'Variable {} Lower Bound is -infinity, replacing with {}'
+                warnings.warn(msg.format(v.name, -self._infinity))
+                logger.warning(run_id, msg, v.name, -self._infinity)
+                new_lb = -self._infinity
 
             new_ub = _safe_ub(
                 v.domain,
                 new_bound.upper_bound,
-                vv.upper_bound(),
-                infinity=self._infinity,
+                vv.upper_bound()
             )
+
+            if np.isinf(new_ub):
+                msg = 'Variable {} Upper Bound is infinity, replacing with {}'
+                warnings.warn(msg.format(v.name, self._infinity))
+                logger.warning(run_id, msg, v.name, self._infinity)
+                new_ub = self._infinity
+
             vv.set_lower_bound(new_lb)
             vv.set_upper_bound(new_ub)
+
         group_name = '_'.join([str(c) for c in node.coordinate])
         logger.tensor(run_id, group_name, 'lb', problem.lower_bounds)
         logger.tensor(run_id, group_name, 'ub', problem.upper_bounds)
@@ -430,14 +443,11 @@ def _convert_linear_expr(linear_problem, expr, objvar=None):
 
 
 
-def _safe_lb(domain, a, b, infinity=None):
+def _safe_lb(domain, a, b):
     if b is None:
         lb = a
     else:
         lb = max(a, b)
-
-    if np.isinf(lb) and infinity is not None:
-        lb = -infinity
 
     if domain.is_integer():
         return np.ceil(lb)
@@ -445,14 +455,11 @@ def _safe_lb(domain, a, b, infinity=None):
     return lb
 
 
-def _safe_ub(domain, a, b, infinity=None):
+def _safe_ub(domain, a, b):
     if b is None:
         ub = a
     else:
         ub = min(a, b)
-
-    if np.isinf(ub) and infinity is not None:
-        ub = infinity
 
     if domain.is_integer():
         return np.floor(ub)
