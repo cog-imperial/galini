@@ -74,6 +74,9 @@ class BranchAndCutAlgorithm:
         self._mip_solver = galini.instantiate_solver('mip')
         self._cuts_generators_manager = galini.cuts_generators_manager
 
+        galini_config = galini.get_configuration_group('galini')
+        self._infinity = galini_config['infinity']
+
         bab_config = galini.get_configuration_group('bab')
 
         self.tolerance = bab_config['tolerance']
@@ -144,11 +147,14 @@ class BranchAndCutAlgorithm:
 
             for v, new_lb, new_ub in zip(relaxed_vars, *result):
                 vv = problem.variable_view(v.name)
-                vv.set_lower_bound(_safe_lb(vv.domain, new_lb, vv.lower_bound()))
-                vv.set_upper_bound(_safe_ub(vv.domain, new_ub, vv.upper_bound()))
+                if new_lb is None or new_ub is None:
+                    logger.warning(0, 'Could not tighten variable {}', v.name)
+                new_lb = _safe_lb(vv.domain, new_lb, vv.lower_bound(), infinity=self._infinity)
+                new_ub = _safe_ub(vv.domain, new_ub, vv.upper_bound(), infinity=self._infinity)
+                vv.set_lower_bound(new_lb)
+                vv.set_upper_bound(new_ub)
         except Exception as ex:
             logger.warning(0, 'Error performing OBBT: {}', ex)
-            return
 
     def _has_converged(self, state):
         rel_gap = relative_gap(state.lower_bound, state.upper_bound)
@@ -195,6 +201,9 @@ class BranchAndCutAlgorithm:
                 return self._solve_convex_problem(problem)
 
         linear_problem = self._build_linear_relaxation(relaxed_problem.relaxed)
+
+        if 'bilinear_aux_variables' not in linear_problem.relaxation._ctx.metadata:
+            linear_problem.relaxation._ctx.metadata['bilinear_aux_variables'] = dict()
 
         bilinear_aux_variables = \
             linear_problem.relaxation._ctx.metadata['bilinear_aux_variables']
@@ -366,8 +375,22 @@ class BranchAndCutAlgorithm:
             new_bound = ctx.bounds[v]
             if new_bound is None:
                 new_bound = Interval(None, None)
-            vv.set_lower_bound(_safe_lb(v.domain, new_bound.lower_bound, vv.lower_bound()))
-            vv.set_upper_bound(_safe_ub(v.domain, new_bound.upper_bound, vv.upper_bound()))
+
+            new_lb = _safe_lb(
+                v.domain,
+                new_bound.lower_bound,
+                vv.lower_bound(),
+                infinity=self._infinity,
+            )
+
+            new_ub = _safe_ub(
+                v.domain,
+                new_bound.upper_bound,
+                vv.upper_bound(),
+                infinity=self._infinity,
+            )
+            vv.set_lower_bound(new_lb)
+            vv.set_upper_bound(new_ub)
         group_name = '_'.join([str(c) for c in node.coordinate])
         logger.tensor(run_id, group_name, 'lb', problem.lower_bounds)
         logger.tensor(run_id, group_name, 'ub', problem.upper_bounds)
@@ -407,11 +430,14 @@ def _convert_linear_expr(linear_problem, expr, objvar=None):
 
 
 
-def _safe_lb(domain, a, b):
+def _safe_lb(domain, a, b, infinity=None):
     if b is None:
         lb = a
     else:
         lb = max(a, b)
+
+    if np.isinf(lb) and infinity is not None:
+        lb = -infinity
 
     if domain.is_integer():
         return np.ceil(lb)
@@ -419,11 +445,14 @@ def _safe_lb(domain, a, b):
     return lb
 
 
-def _safe_ub(domain, a, b):
+def _safe_ub(domain, a, b, infinity=None):
     if b is None:
         ub = a
     else:
         ub = min(a, b)
+
+    if np.isinf(ub) and infinity is not None:
+        ub = infinity
 
     if domain.is_integer():
         return np.floor(ub)
