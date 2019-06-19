@@ -91,6 +91,8 @@ class BranchAndCutAlgorithm:
         self.branching_strategy = KSectionBranchingStrategy(2)
         self.node_selection_strategy = BestLowerBoundSelectionStrategy()
 
+        self._ctx = None
+
     @staticmethod
     def algorithm_options():
         return OptionsGroup('branch_and_cut', [
@@ -182,6 +184,16 @@ class BranchAndCutAlgorithm:
             'Using cuts generators: {}',
             ', '.join([g.name for g in self._cuts_generators_manager.generators]))
 
+        # Check if problem is convex in current domain, in that case
+        # use IPOPT to solve it (if all variables are reals)
+        if _is_convex(problem, self._ctx.convexity):
+            all_reals = all(
+                problem.variable_view(v).domain.is_real()
+                for v in problem.variables
+            )
+            if all_reals:
+                return self._solve_convex_problem(problem)
+
         linear_problem = self._build_linear_relaxation(relaxed_problem.relaxed)
 
         bilinear_aux_variables = \
@@ -253,6 +265,7 @@ class BranchAndCutAlgorithm:
         self._cuts_generators_manager.before_start_at_root(run_id, problem, relaxed_problem.relaxed)
         solution = self._solve_problem_at_node(run_id, problem, relaxed_problem, tree, node)
         self._cuts_generators_manager.after_end_at_root(run_id, problem, relaxed_problem.relaxed, solution)
+        self._ctx = None
         return solution
 
     def solve_problem_at_node(self, run_id, problem, tree, node):
@@ -261,6 +274,7 @@ class BranchAndCutAlgorithm:
         self._cuts_generators_manager.before_start_at_node(run_id, problem, relaxed_problem.relaxed)
         solution = self._solve_problem_at_node(run_id, problem, relaxed_problem, tree, node)
         self._cuts_generators_manager.after_end_at_node(run_id, problem, relaxed_problem.relaxed, solution)
+        self._ctx = None
         return solution
 
     def _build_convex_relaxation(self, problem):
@@ -319,6 +333,9 @@ class BranchAndCutAlgorithm:
             problem.unfix(v)
         return solution
 
+    def _solve_convex_problem(self, problem):
+        solution = self._nlp_solver.solve(problem)
+        return NodeSolution(solution, solution)
 
     def _cuts_converged(self, state):
         """Termination criteria for cut generation loop.
@@ -343,6 +360,7 @@ class BranchAndCutAlgorithm:
 
     def _perform_fbbt(self, run_id, problem, tree, node):
         ctx = detect_special_structure(problem, max_iter=self.fbbt_maxiter)
+        self._ctx = ctx
         for v in problem.variables:
             vv = problem.variable_view(v)
             new_bound = ctx.bounds[v]
@@ -411,3 +429,18 @@ def _safe_ub(domain, a, b):
         return np.floor(ub)
 
     return ub
+
+
+def _is_convex(problem, cvx_map):
+    are_objectives_cvx = all(
+        cvx_map[obj.root_expr].is_convex()
+        for obj in problem.objectives
+    )
+
+    if not are_objectives_cvx:
+        return False
+
+    return all(
+        cvx_map[cons.root_expr].is_convex()
+        for cons in problem.constraints
+    )
