@@ -93,6 +93,7 @@ def _print_output_table_as_json(table):
 def _write_output_table(writer, table, write_table_name=False):
     tt = Texttable()
     tt.set_deco(Texttable.HEADER)
+    tt.set_precision(10)
 
     if table.columns_type:
         tt.set_cols_dtype(table.columns_type)
