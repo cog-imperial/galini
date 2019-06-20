@@ -3,8 +3,8 @@ import numpy as np
 import pyomo.environ as aml
 from galini.pyomo import dag_from_pyomo_model
 from galini.galini import Galini
-from galini.abb.relaxation import AlphaBBRelaxation
 from galini.bab.branch_and_cut import BranchAndCutAlgorithm
+from galini.bab.relaxations import LinearRelaxation
 from galini.core import Constraint
 from galini.triangle_cuts.generator import TriangleCutsGenerator
 
@@ -44,9 +44,10 @@ def problem():
     return dag_from_pyomo_model(m)
 
 
-def test_triangle_cuts(problem):
-    galini = Galini()
-    galini.update_configuration({
+@pytest.fixture
+def galini():
+    galini_ = Galini()
+    galini_.update_configuration({
         'cuts_generator': {
             'generators': ['triangle'],
             'triangle': {
@@ -58,12 +59,16 @@ def test_triangle_cuts(problem):
             },
         }
     })
+    return galini_
+
+
+def test_adjacency_matrix(galini, problem):
     solver_ipopt = galini.instantiate_solver('ipopt')
     solver_mip = galini.instantiate_solver("mip")
 
     run_id = 'test_run'
     # Test adjacency matrix
-    triangle_cuts_gen = TriangleCutsGenerator(galini._config.cuts_generator.triangle)
+    triangle_cuts_gen = TriangleCutsGenerator(galini, galini._config.cuts_generator.triangle)
     triangle_cuts_gen.before_start_at_root(run_id, problem, None)
     assert (np.allclose(triangle_cuts_gen._get_adjacency_matrix(problem),
                         [
@@ -77,8 +82,17 @@ def test_triangle_cuts(problem):
                             [1, 1, 1, 1, 1, 1, 0, 1]
                         ]))
 
+
+def test_triange_cut_violations(galini, problem):
+    solver_ipopt = galini.instantiate_solver('ipopt')
+    solver_mip = galini.instantiate_solver("mip")
+
+    run_id = 'test_run'
+    triangle_cuts_gen = TriangleCutsGenerator(galini, galini._config.cuts_generator.triangle)
+    triangle_cuts_gen.before_start_at_root(run_id, problem, None)
+
     # Test triangle cut violations
-    relaxation = AlphaBBRelaxation()
+    relaxation = LinearRelaxation()
     relaxed_problem = relaxation.relax(problem)
     mip_solution = solver_mip.solve(relaxed_problem)
     assert mip_solution.status.is_success()
@@ -100,10 +114,16 @@ def test_triangle_cuts(problem):
                          [22, 1, 0.0], [22, 2, -0.5], [22, 3, 0.0], [23, 0, -0.5], [23, 1, 0.0], [23, 2, -0.5],
                          [23, 3, 0.0], [24, 0, 0.0], [24, 1, -0.5], [24, 2, 0.0], [24, 3, -0.5]]))
 
+
+def test_at_root_node(galini, problem):
+    solver_ipopt = galini.instantiate_solver('ipopt')
+    solver_mip = galini.instantiate_solver("mip")
+    run_id = 'test_run'
+
     # Test at root node
     algo = BranchAndCutAlgorithm(galini, FakeSolver())
     algo._cuts_generators_manager.before_start_at_root(run_id, problem, None)
-    algo._cuts_generators_manager.before_start_at_node(run_id, problem, None)
+    relaxation = LinearRelaxation()
     relaxed_problem = relaxation.relax(problem)
     nbs_cuts = []
     mip_sols = []
@@ -112,7 +132,7 @@ def test_triangle_cuts(problem):
         assert mip_solution.status.is_success()
         mip_sols.append(mip_solution.objectives[0].value)
         # Generate new cuts
-        new_cuts = algo._cuts_generators_manager.generate(run_id, problem, relaxed_problem, mip_solution, None, None)
+        new_cuts = algo._cuts_generators_manager.generate(run_id, problem, None, relaxed_problem, mip_solution, None, None)
         # Add cuts as constraints
         nbs_cuts.append(len(list(new_cuts)))
         for cut in new_cuts:
@@ -133,12 +153,10 @@ def test_triangle_cuts(problem):
         assert mip_solution.status.is_success()
         mip_sols.append(mip_solution.objectives[0].value)
         # Generate new cuts
-        new_cuts = algo._cuts_generators_manager.generate(run_id, problem, relaxed_problem, mip_solution, None, None)
+        new_cuts = algo._cuts_generators_manager.generate(run_id, problem, None, relaxed_problem, mip_solution, None, None)
         # Add cuts as constraints
         for cut in new_cuts:
             new_cons = Constraint(cut.name, cut.expr, cut.lower_bound, cut.upper_bound)
             relaxation._relax_constraint(problem, relaxed_problem, new_cons)
     assert(np.allclose(mip_sols,
            [-193.88095238095238, -187.96808510638297, -187.42857142857147, -187.10869565217394, -187.10869565217394]))
-    triangle_cuts_gen.after_end_at_node(run_id, problem, None, mip_solution)
-    triangle_cuts_gen.after_end_at_root(run_id, problem, None, mip_solution)

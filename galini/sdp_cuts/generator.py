@@ -119,7 +119,7 @@ class SdpCutsGenerator(CutsGenerator):
 
     def before_start_at_root(self, run_id, problem, relaxed_problem):
         self._nb_vars = problem.num_variables
-        self._add_missing_squares(problem)
+        # self._add_missing_squares(problem)
         if self._nn_used:
             self._nns = self._load_neural_nets()
         if self._agg_list is None:
@@ -129,7 +129,8 @@ class SdpCutsGenerator(CutsGenerator):
         for i in range(len(self._possible_dim)):
             self._Mat[i][0, 0] = 1
         self._inds = [(np.array([1 + x for x in np.triu_indices(dim, 0, dim)[0]]),
-                       np.array([1 + x for x in np.triu_indices(dim, 0, dim)[1]])) for dim in self._possible_dim]
+                       np.array([1 + x for x in np.triu_indices(dim, 0, dim)[1]]))
+                      for dim in self._possible_dim]
 
         self.before_start_at_node(run_id, problem, relaxed_problem)
 
@@ -149,12 +150,12 @@ class SdpCutsGenerator(CutsGenerator):
         self._dbs = None
         self._agg_list_rescaled = None
 
-    def generate(self, run_id, problem, linear_problem, solution, tree, node):
-        cuts = list(self._generate(run_id, problem, linear_problem, solution, tree, node))
+    def generate(self, run_id, problem, relaxed_problem, linear_problem, solution, tree, node):
+        cuts = list(self._generate(run_id, problem, relaxed_problem, linear_problem, solution, tree, node))
         self._cut_round += 1
         return cuts
 
-    def _generate(self, run_id, problem, linear_problem, solution, tree, node):
+    def _generate(self, run_id, problem, _relaxed_problem, linear_problem, solution, tree, node):
         rank_list = self._get_sdp_selection(linear_problem, solution)
         agg_list = self._agg_list_rescaled
         nb_sdp_cuts = 0
@@ -162,9 +163,9 @@ class SdpCutsGenerator(CutsGenerator):
         # Interpret selection size as % or absolute number and threshold the maximum number of SDP cuts per round
         nb_cuts = int(np.floor(self._sel_size * len(rank_list))) \
             if self._sel_size <= 1 else int(np.floor(self._sel_size))
-        max_sdp_cuts = min(
+        max_sdp_cuts = int(min(
             max(self._min_sdp_cuts, nb_cuts),
-            min(self._max_sdp_cuts, len(rank_list)))
+            min(self._max_sdp_cuts, len(rank_list))))
 
         # Generate and add selected cuts up to (sel_size) in number
         for ix in range(0, max_sdp_cuts):
@@ -206,6 +207,8 @@ class SdpCutsGenerator(CutsGenerator):
         lifted_mat = np.zeros((nb_vars, nb_vars))
         for var_sol in solution.variables[nb_vars:]:
             var = problem.variable(var_sol.name)
+            if not var.is_auxiliary:
+                continue
             var1 = var.reference.var1
             var2 = var.reference.var2
             lifted_mat[var1.idx, var2.idx] = var_sol.value
@@ -370,6 +373,7 @@ class SdpCutsGenerator(CutsGenerator):
                         adj_mat[quad_idxs[0], quad_idxs[1]] = 1
                         adj_mat[quad_idxs[1], quad_idxs[0]] = 1
                         quad_terms_per_con[con_idx].append((quad_idxs, term.coefficient))
+
         # Get only cliques up the the dimension of the SDP decomposition
         all_cliques_iterator = enumerate_all_cliques(from_numpy_matrix(adj_mat))
         for clique in all_cliques_iterator:

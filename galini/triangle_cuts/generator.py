@@ -88,13 +88,12 @@ class TriangleCutsGenerator(CutsGenerator):
         self._ubs = None
         self._dbs = None
 
-    def generate(self, run_id, problem, relaxed_problem, solution, tree, node):
-        cuts = list(self._generate(run_id, problem, relaxed_problem, solution, tree, node))
+    def generate(self, run_id, problem, relaxed_problem, linear_problem, solution, tree, node):
+        cuts = list(self._generate(run_id, problem, relaxed_problem, linear_problem, solution, tree, node))
         self._cut_round += 1
         return cuts
 
-
-    def _generate(self, run_id, problem, linear_problem, solution, tree, node):
+    def _generate(self, run_id, problem, _relaxed_problem, linear_problem, solution, tree, node):
         triple_cliques = self.__problem_info_triangle[1]
         rank_list_tri = self._get_triangle_violations(linear_problem, solution)
         # Remove non-violated constraints and sort by density first and then violation second as in manuscript
@@ -247,6 +246,8 @@ class TriangleCutsGenerator(CutsGenerator):
         lifted_mat = np.zeros((nb_vars, nb_vars))
         for var_sol in solution.variables[nb_vars:problem.num_variables]:
             var = problem.variable(var_sol.name)
+            if not var.is_auxiliary:
+                continue
             var1 = var.reference.var1
             var2 = var.reference.var2
             lifted_mat[var1.idx, var2.idx] = var_sol.value

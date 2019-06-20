@@ -83,11 +83,11 @@ def test_outer_approximation_cuts(problem):
         run_id=0,
         problem=None,
         relaxed_problem=problem,
+        linear_problem=None,
         mip_solution=solution,
         tree=None,
         node=None,
     )
-    print_problem(problem)
     assert len(cuts) == 8
     objective_cuts = [c for c in cuts if c.is_objective]
     constraint_cuts = [c for c in cuts if not c.is_objective]

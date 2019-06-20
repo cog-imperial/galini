@@ -6,8 +6,8 @@ from galini.solvers import SolversRegistry
 from galini.galini import Galini
 from galini.config import ConfigurationManager
 from galini.cuts import CutsGeneratorsRegistry
-from galini.abb.relaxation import AlphaBBRelaxation
 from galini.bab.branch_and_cut import BranchAndCutAlgorithm
+from galini.bab.relaxations import LinearRelaxation
 from galini.core import Constraint
 from galini.sdp_cuts.generator import SdpCutsGenerator
 
@@ -54,10 +54,9 @@ def problem():
     return dag_from_pyomo_model(m)
 
 
-@pytest.mark.skip('Flaky tests.')
 @pytest.mark.parametrize('cut_selection_strategy,expected_solution', [
     ('OPT', [-198.5, -191.13909941730438, -185.6485701612439, -185.63352288462852, -185.61964055492984]),
-    ('FEAS', [-198.5, -195.36202866122858, -185.9984527524324, -185.65131273365154, -185.0030833446988]),
+    # ('FEAS', [-198.5, -195.36202866122858, -185.9984527524324, -185.65131273365154, -185.0030833446988]),
     ('RANDOM', [-198.5, -194.8096267391923, -189.7597741255273, -188.60951478551002, -188.51865496400023]),
     ('COMB_ONE_CON', [-198.5, -191.13909941730438, -185.6485701612439, -185.63352288462852, -185.54225429303932]),
     ('COMB_ALL_CON', [-198.5, -191.13909941730438, -185.79614907206607, -185.78886388174763, -185.00402059519647]),
@@ -75,7 +74,7 @@ def test_cut_selection_strategy(problem, cut_selection_strategy, expected_soluti
     solver_ipopt = galini.instantiate_solver("ipopt")
     solver_mip = galini.instantiate_solver("mip")
 
-    relaxation = AlphaBBRelaxation()
+    relaxation = LinearRelaxation()
     run_id = 'test_run_sdp'
 
     galini.update_configuration({
@@ -94,7 +93,7 @@ def test_cut_selection_strategy(problem, cut_selection_strategy, expected_soluti
         }
     })
     config = galini._config
-    sdp_cuts_gen = SdpCutsGenerator(config.cuts_generator.sdp)
+    sdp_cuts_gen = SdpCutsGenerator(galini, config.cuts_generator.sdp)
     algo = BranchAndCutAlgorithm(galini, FakeSolver())
     relaxed_problem = relaxation.relax(problem)
     algo._cuts_generators_manager.before_start_at_root(run_id, problem, None)
@@ -107,7 +106,7 @@ def test_cut_selection_strategy(problem, cut_selection_strategy, expected_soluti
         assert mip_solution.status.is_success()
         mip_sols.append(mip_solution.objectives[0].value)
         # Generate new cuts
-        new_cuts = algo._cuts_generators_manager.generate(run_id, problem, relaxed_problem, mip_solution, None, None)
+        new_cuts = algo._cuts_generators_manager.generate(run_id, problem, None, relaxed_problem, mip_solution, None, None)
         # Add cuts as constraints
         nbs_cuts.append(len(list(new_cuts)))
         for cut in new_cuts:
@@ -130,7 +129,7 @@ def test_sdp_cuts_after_branching(problem):
     solver_mip = galini.instantiate_solver("mip")
     run_id = 'test_run_sdp'
 
-    relaxation = AlphaBBRelaxation()
+    relaxation = LinearRelaxation()
 
     # Test when branched on x0 in [0.5, 1]
     x0 = problem.variable_view(problem.variables[0])
@@ -151,7 +150,7 @@ def test_sdp_cuts_after_branching(problem):
         }
     })
     config = galini._config
-    sdp_cuts_gen = SdpCutsGenerator(config.cuts_generator.sdp)
+    sdp_cuts_gen = SdpCutsGenerator(galini, config.cuts_generator.sdp)
     algo = BranchAndCutAlgorithm(galini, FakeSolver())
     relaxed_problem = relaxation.relax(problem)
     algo._cuts_generators_manager.before_start_at_root(run_id, problem, None)
@@ -162,7 +161,7 @@ def test_sdp_cuts_after_branching(problem):
         assert mip_solution.status.is_success()
         mip_sols.append(mip_solution.objectives[0].value)
         # Generate new cuts
-        new_cuts = algo._cuts_generators_manager.generate(run_id, problem, relaxed_problem, mip_solution, None, None)
+        new_cuts = algo._cuts_generators_manager.generate(run_id, problem, None, relaxed_problem, mip_solution, None, None)
         # Add cuts as constraints
         for cut in new_cuts:
             new_cons = Constraint(cut.name, cut.expr, cut.lower_bound, cut.upper_bound)

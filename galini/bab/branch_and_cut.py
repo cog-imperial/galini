@@ -310,7 +310,7 @@ class BranchAndCutAlgorithm:
 
         # Generate new cuts
         new_cuts = self._cuts_generators_manager.generate(
-            run_id, problem, relaxed_problem, mip_solution, tree, node)
+            run_id, problem, relaxed_problem, linear_problem, mip_solution, tree, node)
         logger.debug(run_id, 'Round {}. Adding {} cuts.', cuts_state.round, len(new_cuts))
         return True, new_cuts, mip_solution
 

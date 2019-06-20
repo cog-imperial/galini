@@ -115,22 +115,17 @@ def test_linear_relaxation_with_quadratic_and_linear():
     relaxed = relaxation.relax(dag)
     print_problem(relaxed)
     assert len(relaxed.objectives) == 1
-    assert len(relaxed.constraints) == 1 + 3*10
+    # 1 objective, 1 c0, 3 * 10 x^2
+    assert len(relaxed.constraints) == 1 + 1 + 3*10
 
     objective = relaxed.objectives[0]
     constraint = relaxed.constraint('c0')
 
-    assert isinstance(objective.root_expr, SumExpression)
+    assert isinstance(objective.root_expr, LinearExpression)
     assert isinstance(constraint.root_expr, SumExpression)
 
-
-    print(objective.root_expr.children)
-    c0, c1 = objective.root_expr.children
-
-    assert isinstance(c0, LinearExpression)
-    assert isinstance(c1, LinearExpression)
-    assert len(c0.children) == 10
-    assert len(c1.children) == 10
+    # Root is only objvar
+    assert len(objective.root_expr.children) == 1
 
     c0, c1 = constraint.root_expr.children
 

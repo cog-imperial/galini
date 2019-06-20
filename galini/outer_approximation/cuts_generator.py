@@ -85,7 +85,7 @@ class OuterApproximationCutsGenerator(CutsGenerator):
     def after_end_at_node(self, run_id, problem, relaxed_problem, solution):
         pass
 
-    def generate(self, run_id, problem, relaxed_problem, mip_solution, tree, node):
+    def generate(self, run_id, problem, relaxed_problem, linear_problem, mip_solution, tree, node):
         logger.debug(run_id, 'Starting cut round={}', self._round)
         logger.debug(run_id, 'Compute points for non integer variables')
         f_x_solution = self._solve_nlp_with_integer_fixed(run_id, relaxed_problem, mip_solution)

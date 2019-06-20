@@ -20,7 +20,7 @@ def test_relaxed_problem():
 
     relaxed = RelaxedProblem(LinearRelaxation(), dag)
 
-    assert len(relaxed.relaxed.constraints) == 31
+    assert len(relaxed.relaxed.constraints) == 1 + 1 + 3*10
 
     linear_constraint = LinearExpression(
         [dag.variable(i) for i in m.I],
@@ -28,13 +28,13 @@ def test_relaxed_problem():
         0.0
     )
     relaxed.add_constraint('test_linear', linear_constraint, None, 0.0)
-    assert len(relaxed.relaxed.constraints) == 32
+    assert len(relaxed.relaxed.constraints) == 33
 
     quadratic_constraint = QuadraticExpression(
         [dag.variable(0)], [dag.variable(1)], [-2.0],
     )
     relaxed.add_constraint('test_quadratic', quadratic_constraint, 0.0, 0.0)
-    assert len(relaxed.relaxed.constraints) == 32 + 1 + 4
+    assert len(relaxed.relaxed.constraints) == 33 + 1 + 4
 
     relaxed.add_constraint('test_mixed', SumExpression([linear_constraint, quadratic_constraint]), 0.0, None)
-    assert len(relaxed.relaxed.constraints) == 38
+    assert len(relaxed.relaxed.constraints) == 39

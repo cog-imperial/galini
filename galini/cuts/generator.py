@@ -58,5 +58,5 @@ class CutsGenerator(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def generate(self, run_id, problem, relaxed_problem, mip_solution, tree, node):
+    def generate(self, run_id, problem, relaxed_problem, linear_problem, mip_solution, tree, node):
         pass
