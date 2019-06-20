@@ -138,7 +138,7 @@ class BabTree:
         # of their lower bounds.
         # If there are no open nodes, then the lower bound is the lowest
         # of the phatomed nodes lower bounds.
-        if upper_bound_solution is None:
+        if upper_bound_solution is None or not upper_bound_solution.status.is_success():
             new_upper_bound = None
         else:
             new_upper_bound = min(
