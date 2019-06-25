@@ -181,9 +181,9 @@ setup(
             'bab=galini.bab:BranchAndBoundSolver',
         ],
         'galini.cuts_generators': [
-            'triangle=galini.triangle_cuts:TriangleCutsGenerator',
+            'triangle=galini.triangle:TriangleCutsGenerator',
             'outer_approximation=galini.outer_approximation:OuterApproximationCutsGenerator',
-            'sdp=galini.sdp_cuts:SdpCutsGenerator',
+            'sdp=galini.sdp:SdpCutsGenerator',
         ],
     },
     ext_modules=extensions,

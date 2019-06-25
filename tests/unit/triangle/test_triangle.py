@@ -6,7 +6,7 @@ from galini.galini import Galini
 from galini.bab.branch_and_cut import BranchAndCutAlgorithm
 from galini.bab.relaxations import LinearRelaxation
 from galini.core import Constraint
-from galini.triangle_cuts.generator import TriangleCutsGenerator
+from galini.triangle.cuts_generator import TriangleCutsGenerator
 
 
 class FakeSolver:

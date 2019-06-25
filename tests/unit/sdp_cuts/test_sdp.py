@@ -9,7 +9,7 @@ from galini.cuts import CutsGeneratorsRegistry
 from galini.bab.branch_and_cut import BranchAndCutAlgorithm
 from galini.bab.relaxations import LinearRelaxation
 from galini.core import Constraint
-from galini.sdp_cuts.generator import SdpCutsGenerator
+from galini.sdp.cuts_generator import SdpCutsGenerator
 
 
 class FakeSolver:
