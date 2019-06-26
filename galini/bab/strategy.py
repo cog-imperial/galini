@@ -14,6 +14,7 @@
 
 """Branch & Bound branching strategies."""
 import numpy as np
+from galini.math import mc
 from galini.bab.node import BranchingPoint
 
 
@@ -23,16 +24,15 @@ class BranchingStrategy(object):
 
 
 def range_ratio(problem, root_problem):
-    # TODO: handle infinity better
     assert problem.num_variables == root_problem.num_variables
     lower_bounds = np.array(problem.lower_bounds)
     upper_bounds = np.array(problem.upper_bounds)
     root_lower_bounds = np.array(root_problem.lower_bounds)
     root_upper_bounds = np.array(root_problem.upper_bounds)
-    denominator = np.abs(root_upper_bounds - root_lower_bounds) + 1e-5
+    denominator = np.abs(root_upper_bounds - root_lower_bounds) + mc.epsilon
     numerator = upper_bounds - lower_bounds
-    finite_numerator = np.ones(problem.num_variables) * (numerator <= 1e19) * numerator
-    finite_denominator = np.ones(problem.num_variables) * (denominator <= 1e19) * denominator
+    finite_numerator = np.ones(problem.num_variables) * (numerator <= mc.infinity) * numerator
+    finite_denominator = np.ones(problem.num_variables) * (denominator <= mc.infinity) * denominator
     return np.nan_to_num(finite_numerator / finite_denominator)
 
 

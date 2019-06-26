@@ -16,6 +16,7 @@ from collections import namedtuple
 import warnings
 import numpy as np
 import pyomo.environ as pe
+from galini.math import mc
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.expr.current import identify_variables
 from coramin.domain_reduction.obbt import perform_obbt
@@ -74,9 +75,6 @@ class BranchAndCutAlgorithm:
         self._nlp_solver = galini.instantiate_solver('ipopt')
         self._mip_solver = galini.instantiate_solver('mip')
         self._cuts_generators_manager = galini.cuts_generators_manager
-
-        galini_config = galini.get_configuration_group('galini')
-        self._infinity = galini_config['infinity']
 
         bab_config = galini.get_configuration_group('bab')
 
@@ -385,9 +383,9 @@ class BranchAndCutAlgorithm:
 
             if np.isinf(new_lb):
                 msg = 'Variable {} Lower Bound is -infinity, replacing with {}'
-                warnings.warn(msg.format(v.name, -self._infinity))
-                logger.warning(run_id, msg, v.name, -self._infinity)
-                new_lb = -self._infinity
+                warnings.warn(msg.format(v.name, -mc.infinity))
+                logger.warning(run_id, msg, v.name, -mc.infinity)
+                new_lb = -mc.infinity
 
             new_ub = _safe_ub(
                 v.domain,
@@ -397,9 +395,9 @@ class BranchAndCutAlgorithm:
 
             if np.isinf(new_ub):
                 msg = 'Variable {} Upper Bound is infinity, replacing with {}'
-                warnings.warn(msg.format(v.name, self._infinity))
-                logger.warning(run_id, msg, v.name, self._infinity)
-                new_ub = self._infinity
+                warnings.warn(msg.format(v.name, mc.infinity))
+                logger.warning(run_id, msg, v.name, mc.infinity)
+                new_ub = mc.infinity
 
             vv.set_lower_bound(new_lb)
             vv.set_upper_bound(new_ub)

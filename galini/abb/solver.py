@@ -20,6 +20,7 @@ from galini.config import (
     IntegerOption,
     EnumOption,
 )
+from galini.math import mc
 from galini.solvers import (
     Solver,
     SolversRegistry,
@@ -52,10 +53,10 @@ class AlphaBBSolver(Solver):
             new_bound = ctx.bounds[v]
             lower_bound = new_bound.lower_bound
             if not np.isfinite(lower_bound):
-                lower_bound = -1e20
+                lower_bound = -mc.infinity
             upper_bound = new_bound.upper_bound
             if not np.isfinite(upper_bound):
-                upper_bound = 1e20
+                upper_bound = mc.infinity
 
             vv.set_lower_bound(lower_bound)
             vv.set_upper_bound(upper_bound)

@@ -85,6 +85,7 @@ def _galini_group():
     return OptionsGroup('galini', [
         NumericOption('timelimit', min_value=0, default=86400),
         NumericOption('infinity', min_value=0, default=1e20),
+        NumericOption('epsilon', min_value=0, default=1e-6),
     ])
 
 

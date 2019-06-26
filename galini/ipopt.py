@@ -15,6 +15,7 @@
 import numpy as np
 from galini.logging import get_logger, DEBUG, WARNING
 from galini.util import expr_to_str
+from galini.math import mc
 from galini.config.options import (
     SolverOptions,
     ExternalSolverOptions,
@@ -112,6 +113,8 @@ class IpoptNLPSolver(Solver):
             self._configure_ipopt_logger(app, config, run_id)
 
         xi, xl, xu = self.get_starting_point_and_bounds(run_id, problem)
+        diff = np.abs(xu - xl) < mc.epsilon
+        xl[diff] = xu[diff]
         gl, gu = self.get_constraints_bounds(run_id, problem)
         logger.debug(run_id, 'Calling in IPOPT')
 
