@@ -86,6 +86,8 @@ def _linear_expression_to_pulp(variables, expr):
             result += expr.constant_term
             for child in expr.children:
                 result += expr.coefficient(child) * variables[child.idx]
+        elif expr.expression_type == ExpressionType.Constant:
+            result += expr.value
         else:
             assert expr.expression_type == ExpressionType.Variable
     return result
