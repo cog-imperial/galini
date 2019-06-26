@@ -46,7 +46,7 @@ class AlphaBBRelaxation(Relaxation):
 
     def relax_objective(self, problem, objective):
         result = self.relax_expression(problem, objective.root_expr)
-        new_objective = Objective(objective.name, result.expression, objective.sense)
+        new_objective = Objective(objective.name, result.expression, objective.original_sense)
         return RelaxationResult(new_objective, result.constraints)
 
     def relax_constraint(self, problem, constraint):

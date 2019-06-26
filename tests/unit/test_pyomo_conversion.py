@@ -315,9 +315,8 @@ class TestConvertObjective(object):
         assert len(dag.objectives) == 1
         obj = dag.objective('obj')
         assert isinstance(obj.root_expr, core.LinearExpression)
-        assert obj.sense == core.Sense.MINIMIZE
+        assert obj.original_sense == core.Sense.MINIMIZE
 
-    @pytest.mark.skip('Not decided how to handle max')
     def test_max(self):
         m = aml.ConcreteModel()
         m.I = range(10)
@@ -328,4 +327,4 @@ class TestConvertObjective(object):
         assert len(dag.objectives) == 1
         obj = dag.objective('obj')
         assert isinstance(obj.root_expr, core.LinearExpression)
-        assert obj.sense == core.Sense.MAXIMIZE
+        assert obj.original_sense == core.Sense.MAXIMIZE

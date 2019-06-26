@@ -29,7 +29,7 @@ class TransformCommand(CliCommandWithProblem):
         for obj in problem.objectives:
             result = transformation.apply(obj.root_expr, ctx)
             new_expr = insert_tree(problem, relaxed, result.expression, memo)
-            relaxed.add_objective(obj.name, new_expr, obj.sense)
+            relaxed.add_objective(obj.name, new_expr, obj.original_sense)
             for new_cons in result.constraints:
                 new_expr = insert_tree(problem, relaxed, new_cons.root_expr, memo)
                 relaxed.add_constraint(

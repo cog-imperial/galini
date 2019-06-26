@@ -42,7 +42,7 @@ class _RelaxationBase(Relaxation):
 
     def relax_objective(self, problem, objective):
         result = self.relax_expression(problem, objective.root_expr)
-        new_objective = Objective(objective.name, result.expression, objective.sense)
+        new_objective = Objective(objective.name, result.expression, objective.original_sense)
         return RelaxationResult(new_objective, result.constraints)
 
     def relax_constraint(self, problem, constraint):
@@ -101,7 +101,7 @@ class LinearRelaxation(_RelaxationBase):
             raise ValueError('Apply LinearRelaxation to multi-objective problem')
         new_variable = Variable('_objvar', None, None, Domain.REAL)
         new_objective_expr = LinearExpression([new_variable], [1.0], 0.0)
-        new_objective = Objective(objective.name, new_objective_expr, objective.sense)
+        new_objective = Objective(objective.name, new_objective_expr, objective.original_sense)
 
         under_result = self.relax_expression(problem, objective.root_expr)
 

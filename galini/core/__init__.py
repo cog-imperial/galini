@@ -49,6 +49,12 @@ class Sense(Enum):
     MINIMIZE = 0
     MAXIMIZE = 1
 
+    def is_minimization(self):
+        return self == self.MINIMIZE
+
+    def is_maximization(self):
+        return not self.is_minimization()
+
 
 BilinearTermReference = namedtuple('BilinearTermReference', ['var1', 'var2'])
 ExpressionReference = namedtuple('ExpressionReference', ['expression'])

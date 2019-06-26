@@ -32,7 +32,6 @@ def dag_to_pulp(problem):
     """Convert GALINI DAG to pulp model."""
     assert len(problem.objectives) == 1
     objective = problem.objectives[0]
-    assert objective.sense == Sense.MINIMIZE
 
     lp = pulp.LpProblem(problem.name, pulp.LpMinimize)
 

@@ -140,7 +140,7 @@ class Relaxation(metaclass=ABCMeta):
         relaxed_problem.add_objective(
             new_obj.name,
             new_expr,
-            new_obj.sense,
+            new_obj.original_sense,
         )
         self._insert_constraints(result.constraints, problem, relaxed_problem)
 

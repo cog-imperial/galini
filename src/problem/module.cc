@@ -131,7 +131,7 @@ void init_module(py::module& m) {
     .def_property_readonly("problem", &Objective::problem)
     .def_property_readonly("name", &Objective::name)
     .def_property_readonly("root_expr", &Objective::root_expr)
-    .def_property_readonly("sense", &Objective::sense)
+    .def_property_readonly("original_sense", &Objective::sense)
     .def_property_readonly("uid", &Objective::uid);
 }
 

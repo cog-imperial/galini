@@ -110,20 +110,19 @@ class _ComponentFactory(object):
     def add_objective(self, omo_obj):
         """Convert and add objective to the problem."""
 
-        sense = core.Sense.MINIMIZE
         if omo_obj.is_minimizing():
             sign = 1.0
-            # sense = core.Sense.MINIMIZE
+            original_sense = core.Sense.MINIMIZE
         else:
             sign = -1.0
-            # sense = core.Sense.MAXIMIZE
+            original_sense = core.Sense.MAXIMIZE
 
         root_expr = self._expression(sign * omo_obj.expr)
         self.dag.insert_tree(root_expr)
         obj = self.dag.add_objective(
             omo_obj.name,
             root_expr,
-            sense,
+            original_sense,
         )
         return obj
 
