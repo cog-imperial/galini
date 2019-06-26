@@ -151,7 +151,7 @@ class BabTree:
             return self._set_new_state(new_lower_bound, new_upper_bound)
 
         if self.phatomed_nodes:
-            new_lower_bound = self.phatomed_nodes(new_upper_bound)
+            new_lower_bound = self._phatomed_nodes_lower_bound(new_upper_bound)
             return self._set_new_state(new_lower_bound, new_upper_bound)
 
         return self._set_new_state(None, new_upper_bound)
