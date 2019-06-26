@@ -127,7 +127,6 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         return relaxed_problem.expression_tree_data().eval(x_k, f_idx + g_idx)
 
     def _solve_nlp_with_integer_fixed(self, run_id, relaxed_problem, mip_solution):
-
         with fixed_integer_variables(run_id, relaxed_problem, mip_solution) as problem:
             nlp_solution = self._nlp_solver.solve(problem)
             assert nlp_solution.status.is_success()

@@ -115,33 +115,33 @@ class BranchAndCutAlgorithm:
         ])
 
     def before_solve(self, model, problem):
-        relaxed_model = relax(model)
-
-        for obj in relaxed_model.component_data_objects(ctype=pe.Objective):
-            relaxed_model.del_component(obj)
-
-        solver = pe.SolverFactory('cplex_persistent')
-        solver.set_instance(relaxed_model)
-        obbt_simplex_maxiter = self.solver.config['obbt_simplex_maxiter']
-        solver._solver_model.parameters.simplex.limits.iterations.set(obbt_simplex_maxiter)
-        # collect variables in nonlinear constraints
-        nonlinear_variables = ComponentSet()
-        for constraint in model.component_data_objects(ctype=pe.Constraint):
-            # skip linear constraint
-            if constraint.body.polynomial_degree() == 1:
-                continue
-
-            for var in identify_variables(constraint.body, include_fixed=False):
-                nonlinear_variables.add(var)
-
-        relaxed_vars = [getattr(relaxed_model, v.name) for v in nonlinear_variables]
-
-        for var in relaxed_vars:
-            var.domain = pe.Reals
-
-        logger.info(0, 'Performaning OBBT on {} variables: {}', len(relaxed_vars), [v.name for v in relaxed_vars])
-
         try:
+            relaxed_model = relax(model)
+
+            for obj in relaxed_model.component_data_objects(ctype=pe.Objective):
+                relaxed_model.del_component(obj)
+
+            solver = pe.SolverFactory('cplex_persistent')
+            solver.set_instance(relaxed_model)
+            obbt_simplex_maxiter = self.solver.config['obbt_simplex_maxiter']
+            solver._solver_model.parameters.simplex.limits.iterations.set(obbt_simplex_maxiter)
+            # collect variables in nonlinear constraints
+            nonlinear_variables = ComponentSet()
+            for constraint in model.component_data_objects(ctype=pe.Constraint):
+                # skip linear constraint
+                if constraint.body.polynomial_degree() == 1:
+                    continue
+
+                for var in identify_variables(constraint.body, include_fixed=False):
+                    nonlinear_variables.add(var)
+
+            relaxed_vars = [getattr(relaxed_model, v.name) for v in nonlinear_variables]
+
+            for var in relaxed_vars:
+                var.domain = pe.Reals
+
+            logger.info(0, 'Performaning OBBT on {} variables: {}', len(relaxed_vars), [v.name for v in relaxed_vars])
+
             result = perform_obbt(relaxed_model, solver, relaxed_vars)
             if result is None:
                 return
