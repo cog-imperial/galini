@@ -189,6 +189,11 @@ class BranchAndCutAlgorithm:
             'Using cuts generators: {}',
             ', '.join([g.name for g in self._cuts_generators_manager.generators]))
 
+        logger.debug(run_id, 'Variables bounds of problem')
+        for v in problem.variables:
+            vv = problem.variable_view(v)
+            logger.debug(run_id, '\t{}\t({}, {})', v.name, vv.lower_bound(), vv.upper_bound())
+
         # Check if problem is convex in current domain, in that case
         # use IPOPT to solve it (if all variables are reals)
         if _is_convex(problem, self._ctx.convexity):
@@ -398,6 +403,9 @@ class BranchAndCutAlgorithm:
                 warnings.warn(msg.format(v.name, mc.infinity))
                 logger.warning(run_id, msg, v.name, mc.infinity)
                 new_ub = mc.infinity
+
+            if np.abs(new_ub - new_lb) < mc.epsilon:
+                new_lb = new_ub
 
             vv.set_lower_bound(new_lb)
             vv.set_upper_bound(new_ub)
