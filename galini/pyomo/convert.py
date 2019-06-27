@@ -67,6 +67,14 @@ def dag_from_pyomo_model(model):
     for omo_obj in model_objectives(model):
         factory.add_objective(omo_obj)
 
+    if not dag.objectives:
+        # Add constant objective
+        dag.add_objective(
+            '_constant_objective',
+            core.Constant(0.0),
+            core.Sense.MINIMIZE,
+        )
+
     return dag
 
 
