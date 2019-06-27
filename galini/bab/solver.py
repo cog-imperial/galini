@@ -19,6 +19,7 @@ from galini.config import (
     NumericOption,
     IntegerOption,
     EnumOption,
+    BoolOption,
 )
 from galini.bab.tree import BabTree
 from galini.solvers import Solver
@@ -38,6 +39,8 @@ class BranchAndBoundSolver(Solver):
 
     def __init__(self, galini):
         super().__init__(galini)
+        config = galini.get_configuration_group('bab')
+        self._catch_keyboard_interrupt = config.get('catch_keyboard_interrupt', True)
         self._algo = BranchAndCutAlgorithm(galini, solver=self)
         self._tree = None
         self._solution = None
@@ -50,6 +53,7 @@ class BranchAndBoundSolver(Solver):
             IntegerOption('node_limit', default=100000000),
             IntegerOption('fbbt_maxiter', default=10),
             IntegerOption('obbt_simplex_maxiter', default=1000),
+            BoolOption('catch_keyboard_interrupt', default=True),
             BranchAndCutAlgorithm.algorithm_options(),
         ])
 
@@ -58,10 +62,13 @@ class BranchAndBoundSolver(Solver):
 
     def actual_solve(self, problem, run_id, **kwargs):
         # Run bab loop, catch keyboard interrupt from users
-        try:
+        if self._catch_keyboard_interrupt:
+            try:
+                self._bab_loop(problem, run_id, **kwargs)
+            except KeyboardInterrupt:
+                pass
+        else:
             self._bab_loop(problem, run_id, **kwargs)
-        except KeyboardInterrupt:
-            pass
         assert self._tree is not None
         return self._solution_from_tree(self._tree)
 
