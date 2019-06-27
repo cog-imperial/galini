@@ -114,6 +114,9 @@ class BranchAndCutAlgorithm:
 
     def before_solve(self, model, problem):
         try:
+            for var in model.component_data_objects(ctype=pe.Var):
+                var.domain = pe.Reals
+
             relaxed_model = relax(model)
 
             for obj in relaxed_model.component_data_objects(ctype=pe.Objective):
@@ -134,9 +137,6 @@ class BranchAndCutAlgorithm:
                     nonlinear_variables.add(var)
 
             relaxed_vars = [getattr(relaxed_model, v.name) for v in nonlinear_variables]
-
-            for var in relaxed_vars:
-                var.domain = pe.Reals
 
             logger.info(0, 'Performaning OBBT on {} variables: {}', len(relaxed_vars), [v.name for v in relaxed_vars])
 
@@ -455,7 +455,7 @@ def _safe_lb(domain, a, b):
     else:
         lb = max(a, b)
 
-    if domain.is_integer():
+    if domain.is_integer() and lb is not None:
         return np.ceil(lb)
 
     return lb
@@ -467,7 +467,7 @@ def _safe_ub(domain, a, b):
     else:
         ub = min(a, b)
 
-    if domain.is_integer():
+    if domain.is_integer() and ub is not None:
         return np.floor(ub)
 
     return ub
