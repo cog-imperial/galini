@@ -25,7 +25,7 @@ from galini.bab.tree import BabTree
 from galini.solvers import Solver
 from galini.cuts import CutsGeneratorsRegistry
 from galini.bab.branch_and_cut import BranchAndCutAlgorithm
-from galini.bab.solution import BabSolution
+from galini.bab.solution import BabSolution, BabStatusInterrupted
 from galini.util import print_problem
 
 
@@ -164,12 +164,21 @@ class BranchAndBoundSolver(Solver):
         logger.info(run_id, 'Branch & Bound Finished: {}', tree.state)
 
     def _solution_from_tree(self, tree):
+        nodes_visited = tree.nodes_visited
+
         if len(tree.solution_pool) == 0:
+            # Return lower bound only
+            return BabSolution(
+                BabStatusInterrupted(),
+                None,
+                None,
+                dual_bound=tree.state.lower_bound,
+                nodes_visited=nodes_visited,
+            )
             return None
 
         primal_solution = tree.solution_pool.head
 
-        nodes_visited = tree.nodes_visited
         return BabSolution(
             primal_solution.status,
             primal_solution.objectives,

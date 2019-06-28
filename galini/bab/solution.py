@@ -35,6 +35,20 @@ class BabStatusSuccess(BabStatus):
         return 'Success'
 
 
+class BabStatusInterrupted(BabStatus):
+    def is_success(self):
+        return False
+
+    def is_infeasible(self):
+        return False
+
+    def is_unbounded(self):
+        return False
+
+    def description(self):
+        return 'Interrupted'
+
+
 class BabSolution(Solution):
     """Solution of the Branch & Bound algorithm."""
     def __init__(self, status, optimal_obj, optimal_vars, dual_bound,
