@@ -30,14 +30,15 @@ class _RelaxationBase(Relaxation):
         self._ctx = None
         self._underestimator = self._root_underestimator()
 
-    def before_relax(self, problem):
-        self._ctx = detect_special_structure(problem)
+    def before_relax(self, problem, **kwargs):
+        fbbt_maxiter = kwargs.get('fbbt_maxiter', 10)
+        self._ctx = detect_special_structure(problem, maxiter=fbbt_maxiter)
         self._before_relax(problem)
 
     def _before_relax(self, problem):
         pass
 
-    def after_relax(self, problem, relaxed_problem):
+    def after_relax(self, problem, relaxed_problem, **kwargs):
         pass
 
     def relax_objective(self, problem, objective):

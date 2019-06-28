@@ -22,6 +22,7 @@ from pyomo.core.expr.current import identify_variables
 from coramin.domain_reduction.obbt import perform_obbt
 from coramin.relaxations.auto_relax import relax
 from suspect.expression import ExpressionType
+from suspect.interval import Interval
 from galini.bab.node import NodeSolution
 from galini.bab.strategy import KSectionBranchingStrategy
 from galini.bab.selection import BestLowerBoundSelectionStrategy
@@ -306,10 +307,10 @@ class BranchAndCutAlgorithm:
         return solution
 
     def _build_convex_relaxation(self, problem):
-        return RelaxedProblem(ConvexRelaxation(), problem)
+        return RelaxedProblem(ConvexRelaxation(), problem, fbbt_maxiter=self.fbbt_maxiter)
 
     def _build_linear_relaxation(self, problem):
-        return RelaxedProblem(LinearRelaxation(), problem)
+        return RelaxedProblem(LinearRelaxation(), problem, fbbt_maxiter=self.fbbt_maxiter)
 
     def _perform_cut_round(self, run_id, problem, relaxed_problem, linear_problem, cuts_state, tree, node):
         logger.debug(run_id, 'Round {}. Solving linearized problem.', cuts_state.round)
@@ -387,7 +388,7 @@ class BranchAndCutAlgorithm:
         return state.round > self.cuts_maxiter
 
     def _perform_fbbt(self, run_id, problem, tree, node):
-        ctx = detect_special_structure(problem, max_iter=self.fbbt_maxiter)
+        ctx = detect_special_structure(problem, maxiter=self.fbbt_maxiter)
         self._ctx = ctx
         for v in problem.variables:
             vv = problem.variable_view(v)
