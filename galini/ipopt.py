@@ -74,10 +74,9 @@ class IpoptSolution(Solution):
         self.lambda_ = lambda_
 
     def __str__(self):
-        return 'IpoptSolution(status={}, objective={}, variables={})'.format(
+        return 'IpoptSolution(status={}, objective={})'.format(
             self.status.description(),
             self.objectives,
-            self.variables,
         )
 
     def __repr__(self):
