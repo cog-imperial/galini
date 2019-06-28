@@ -117,6 +117,12 @@ class BranchAndCutAlgorithm:
             for var in model.component_data_objects(ctype=pe.Var):
                 var.domain = pe.Reals
 
+                if not (var.lb is None or np.isfinite(var.lb)):
+                    var.setlb(None)
+
+                if not (var.ub is None or np.isfinite(var.ub)):
+                    var.setub(None)
+
             relaxed_model = relax(model)
 
             for obj in relaxed_model.component_data_objects(ctype=pe.Objective):
@@ -148,12 +154,21 @@ class BranchAndCutAlgorithm:
                 vv = problem.variable_view(v.name)
                 if new_lb is None or new_ub is None:
                     logger.warning(0, 'Could not tighten variable {}', v.name)
-                new_lb = _safe_lb(vv.domain, new_lb, vv.lower_bound())
-                new_ub = _safe_ub(vv.domain, new_ub, vv.upper_bound())
+                old_lb = vv.lower_bound()
+                old_ub = vv.upper_bound()
+                new_lb = _safe_lb(vv.domain, new_lb, old_lb)
+                new_ub = _safe_ub(vv.domain, new_ub, old_ub)
+                if not new_lb is None and not new_ub is None:
+                    if np.isclose(new_lb, new_ub):
+                        if old_lb is not None and np.isclose(new_lb, old_lb):
+                            new_ub = new_lb
+                        else:
+                            new_lb = new_ub
                 vv.set_lower_bound(new_lb)
                 vv.set_upper_bound(new_ub)
         except Exception as ex:
             logger.warning(0, 'Error performing OBBT: {}', ex)
+            raise
 
     def _has_converged(self, state):
         rel_gap = relative_gap(state.lower_bound, state.upper_bound)
@@ -452,8 +467,10 @@ def _convert_linear_expr(linear_problem, expr, objvar=None):
 def _safe_lb(domain, a, b):
     if b is None:
         lb = a
-    else:
+    elif a is not None:
         lb = max(a, b)
+    else:
+        return None
 
     if domain.is_integer() and lb is not None:
         return np.ceil(lb)
@@ -464,8 +481,10 @@ def _safe_lb(domain, a, b):
 def _safe_ub(domain, a, b):
     if b is None:
         ub = a
-    else:
+    elif a is not None:
         ub = min(a, b)
+    else:
+        return None
 
     if domain.is_integer() and ub is not None:
         return np.floor(ub)

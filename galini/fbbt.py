@@ -30,6 +30,7 @@ _expr_to_prop[core.LinearExpression] = prop.LinearRule()
 _expr_to_prop[core.QuadraticExpression] = prop.QuadraticRule()
 _expr_to_prop[core.SumExpression] = prop.SumRule()
 _expr_to_prop[core.NegationExpression] = prop.NegationRule()
+_expr_to_prop[core.ProductExpression] = prop.ProductRule()
 
 class _GaliniBoundsPropagationVisitor(BoundsPropagationVisitor):
     def visit_expression(self, expr, bounds):
