@@ -141,13 +141,20 @@ class BranchAndCutAlgorithm:
                     continue
 
                 for var in identify_variables(constraint.body, include_fixed=False):
-                    nonlinear_variables.add(var)
+                    # Coramin will complain about variables that are fixed
+                    # Note: Coramin uses an hard-coded 1e-6 tolerance
+                    if var.lb is None or var.ub is None:
+                        nonlinear_variables.add(var)
+                    else:
+                        if not (var.ub - var.lb < 1e-6):
+                            nonlinear_variables.add(var)
 
             relaxed_vars = [getattr(relaxed_model, v.name) for v in nonlinear_variables]
 
-            logger.info(0, 'Performaning OBBT on {} variables: {}', len(relaxed_vars), [v.name for v in relaxed_vars])
+            logger.info(0, 'Performaning OBBT on {} variables', len(relaxed_vars))
 
             result = perform_obbt(relaxed_model, solver, relaxed_vars)
+
             if result is None:
                 return
 
@@ -174,8 +181,14 @@ class BranchAndCutAlgorithm:
     def _has_converged(self, state):
         rel_gap = relative_gap(state.lower_bound, state.upper_bound)
         abs_gap = absolute_gap(state.lower_bound, state.upper_bound)
-        assert (state.lower_bound <= state.upper_bound or
-                np.isclose(state.lower_bound, state.upper_bound))
+
+        bounds_close = np.isclose(
+            state.lower_bound,
+            state.upper_bound,
+            rtol=self.relative_tolerance,
+            atol=self.tolerance,
+        )
+        assert (state.lower_bound <= state.upper_bound or bounds_close)
         return (
             rel_gap <= self.relative_tolerance or
             abs_gap <= self.tolerance
