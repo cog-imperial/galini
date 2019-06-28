@@ -502,6 +502,20 @@ def _is_convex(problem, cvx_map):
         return False
 
     return all(
-        cvx_map[cons.root_expr].is_convex()
+        _constraint_is_convex(cvx_map, cons)
         for cons in problem.constraints
     )
+
+
+def _constraint_is_convex(cvx_map, cons):
+    cvx = cvx_map[cons.root_expr]
+    # g(x) <= UB
+    if cons.lower_bound is None:
+        return cvx.is_convex()
+
+    # g(x) >= LB
+    if cons.upper_bound is None:
+        return cvx.is_concave()
+
+    # LB <= g(x) <= UB
+    return cvx.is_linear()
