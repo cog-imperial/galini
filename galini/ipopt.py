@@ -146,13 +146,21 @@ class IpoptNLPSolver(Solver):
 
     def _build_solution(self, problem, solution):
         status = IpoptStatus(solution.status)
-        opt_obj = OptimalObjective(
-            name=problem.objectives[0].name,
-            value=solution.objective_value)
-        opt_vars = [
-            OptimalVariable(name=variable.name, value=solution.x[i])
-            for i, variable in enumerate(problem.variables)
-        ]
+
+        if solution.x:
+            opt_obj = OptimalObjective(
+                name=problem.objectives[0].name,
+                value=solution.objective_value,
+            )
+
+            opt_vars = [
+                OptimalVariable(name=variable.name, value=solution.x[i])
+                for i, variable in enumerate(problem.variables)
+            ]
+        else:
+            opt_obj = None
+            opt_vars = None
+
         return IpoptSolution(
             status,
             optimal_obj=opt_obj,
