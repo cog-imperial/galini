@@ -106,6 +106,7 @@ class TriangleCutsGenerator(CutsGenerator):
         max_tri_cuts = min(
             max(self._min_tri_cuts, nb_cuts),
             min(self._max_tri_cuts, len(rank_list_tri_viol)))
+        max_tri_cuts = int(max_tri_cuts)
         l = self._lbs
         d = self._dbs
 
