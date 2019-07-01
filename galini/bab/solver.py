@@ -175,7 +175,6 @@ class BranchAndBoundSolver(Solver):
                 dual_bound=tree.state.lower_bound,
                 nodes_visited=nodes_visited,
             )
-            return None
 
         primal_solution = tree.solution_pool.head
 
