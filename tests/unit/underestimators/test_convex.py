@@ -28,7 +28,7 @@ class TestConvexUnderestimator:
         ctx = ProblemContext(problem)
         r = ConvexUnderestimator()
 
-        constraint_expr = problem.objective('obj').root_expr
+        constraint_expr = problem.objective.root_expr
         ctx.set_convexity(constraint_expr, Convexity.Convex)
         assert r.can_underestimate(problem, constraint_expr, ctx)
 

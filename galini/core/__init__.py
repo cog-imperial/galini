@@ -25,7 +25,7 @@ __all__ = [
     'SqrtExpression', 'ExpExpression', 'LogExpression', 'SinExpression', 'CosExpression',
     'TanExpression', 'AsinExpression', 'AcosExpression', 'AtanExpression', 'QuadraticExpression',
     'BilinearTermReference', 'ExpressionReference',
-    'RootProblem', 'ChildProblem', 'RelaxedProblem', 'VariableView',
+    'ChildProblem', 'RelaxedProblem', 'VariableView',
     'ipopt_solve', 'IpoptSolution', 'IpoptApplication', 'PythonJournal',
 ]
 
@@ -59,6 +59,13 @@ class Sense(Enum):
 BilinearTermReference = namedtuple('BilinearTermReference', ['var1', 'var2'])
 ExpressionReference = namedtuple('ExpressionReference', ['expression'])
 
+from galini.core.problem import (
+    Problem,
+    ChildProblem,
+    RelaxedProblem,
+    Constraint,
+    Objective,
+)
 
 # pylint: disable=no-name-in-module
 from galini_core import (
@@ -94,10 +101,10 @@ from galini_core import (
 
 # pylint: disable=no-name-in-module
 from galini_core import (
-    Problem,
-    RootProblem,
-    ChildProblem,
-    RelaxedProblem,
+    # Problem,
+    # RootProblem,
+    # ChildProblem,
+    # RelaxedProblem,
 
     ipopt_solve,
     IpoptSolution,

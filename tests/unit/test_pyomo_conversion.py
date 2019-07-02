@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 import pyomo.environ as aml
 import galini.core as core
-from galini.pyomo.convert import _ComponentFactory, dag_from_pyomo_model
+from galini.pyomo.convert import _ComponentFactory, problem_from_pyomo_model
 from galini.pyomo.util import model_variables, model_constraints
 from suspect.math import inf
 
@@ -14,7 +14,7 @@ class TestConvertVariable(object):
         # 10 continuous variables in [-inf, inf]
         m.x = aml.Var(range(10))
 
-        dag = core.RootProblem('test')
+        dag = core.Problem('test')
         factory = _ComponentFactory(dag)
         count = 0
         for omo_var in model_variables(m):
@@ -30,7 +30,7 @@ class TestConvertVariable(object):
         # 5 integer variables in [-10, 5]
         m.y = aml.Var(range(5), bounds=(-10, 5), domain=aml.Integers)
 
-        dag = core.RootProblem('test')
+        dag = core.Problem('test')
         factory = _ComponentFactory(dag)
         count = 0
         for omo_var in model_variables(m):
@@ -46,7 +46,7 @@ class TestConvertVariable(object):
         # 10 binary variables
         m.b = aml.Var(range(10), domain=aml.Binary)
 
-        dag = core.RootProblem('test')
+        dag = core.Problem('test')
         factory = _ComponentFactory(dag)
         count = 0
         for omo_var in model_variables(m):
@@ -66,7 +66,7 @@ class TestConvertExpression(object):
 
         m.c = aml.Constraint(m.I, rule=lambda m, i: m.x[i] + 2 >= 0)
 
-        dag = dag_from_pyomo_model(m)
+        dag = problem_from_pyomo_model(m)
 
         assert len(dag.constraints) == 10
         for constraint in dag.constraints:
@@ -88,7 +88,7 @@ class TestConvertExpression(object):
 
         m.c = aml.Constraint(m.I, rule=lambda m, i: aml.sin(2*m.x[i] - m.y[i]) / (m.x[i] + 1) <= 100)
 
-        dag = dag_from_pyomo_model(m)
+        dag = problem_from_pyomo_model(m)
 
         assert len(dag.constraints) == 10
         for constraint in dag.constraints:
@@ -114,7 +114,7 @@ class TestConvertExpression(object):
 
         m.c = aml.Constraint(range(9), rule=lambda m, i: aml.sin(m.x[i]) * aml.cos(m.x[i+1]) >= 0)
 
-        dag = dag_from_pyomo_model(m)
+        dag = problem_from_pyomo_model(m)
 
         assert len(dag.constraints) == 9
         for constraint in dag.constraints:
@@ -133,7 +133,7 @@ class TestConvertExpression(object):
 
         m.c = aml.Constraint(range(9), rule=lambda m, i: 2*m.x[i] * 3*m.x[i+1] >= 0)
 
-        dag = dag_from_pyomo_model(m)
+        dag = problem_from_pyomo_model(m)
 
         assert len(dag.constraints) == 9
         for constraint in dag.constraints:
@@ -154,7 +154,7 @@ class TestConvertExpression(object):
 
         m.c = aml.Constraint(range(8), rule=lambda m, j: sum(m.x[i]*m.x[i+1] for i in range(j+2)) >= 0)
 
-        dag = dag_from_pyomo_model(m)
+        dag = problem_from_pyomo_model(m)
 
         assert len(dag.constraints) == 8
         for constraint in dag.constraints:
@@ -168,9 +168,9 @@ class TestConvertExpression(object):
         m.x = aml.Var(m.I)
 
         m.c = aml.Objective(expr=2*m.x[0]*m.x[1] + 3*m.x[1]*m.x[0])
-        dag = dag_from_pyomo_model(m)
+        dag = problem_from_pyomo_model(m)
 
-        root_expr = dag.objectives[0].root_expr
+        root_expr = dag.objective.root_expr
         assert isinstance(root_expr, core.QuadraticExpression)
         assert len(root_expr.terms) == 1
         term = root_expr.terms[0]
@@ -184,9 +184,9 @@ class TestConvertExpression(object):
         m.x = aml.Var(m.I)
 
         m.c = aml.Objective(expr=m.x[0]**2 + m.x[1]**2 + m.x[0])
-        dag = dag_from_pyomo_model(m)
+        dag = problem_from_pyomo_model(m)
 
-        root_expr = dag.objectives[0].root_expr
+        root_expr = dag.objective.root_expr
         assert isinstance(root_expr, core.SumExpression)
         expr = [ex for ex in root_expr.children if isinstance(ex, core.QuadraticExpression)][0]
         assert len(expr.terms) == 2
@@ -200,9 +200,9 @@ class TestConvertExpression(object):
 
         m.c = aml.Objective(expr=m.x[0] + 2.0*m.x[1] + aml.sin(m.x[2]) + m.x[1])
 
-        dag = dag_from_pyomo_model(m)
+        dag = problem_from_pyomo_model(m)
 
-        root_expr = dag.objectives[0].root_expr
+        root_expr = dag.objective.root_expr
         assert isinstance(root_expr, core.SumExpression)
         assert len(root_expr.children) == 2
         linear_expr = [ex for ex in root_expr.children if isinstance(ex, core.LinearExpression)][0]
@@ -216,9 +216,9 @@ class TestConvertExpression(object):
 
         m.c = aml.Objective(expr=2*m.x[0]*m.x[1] + 3*m.x[0]*m.x[1] + m.x[3]*m.x[4] + m.x[5] + aml.sin(m.x[6]))
 
-        dag = dag_from_pyomo_model(m)
+        dag = problem_from_pyomo_model(m)
 
-        root_expr = dag.objectives[0].root_expr
+        root_expr = dag.objective.root_expr
         assert isinstance(root_expr, core.SumExpression)
         assert len(root_expr.children) == 3
         assert len([expr for expr in root_expr.children if isinstance(expr, core.QuadraticExpression)]) == 1
@@ -231,7 +231,7 @@ class TestConvertExpression(object):
 
         m.c = aml.Constraint(range(8), rule=lambda m, j: sum(aml.sin(m.x[i+1]) for i in range(j+2)) >= 0)
 
-        dag = dag_from_pyomo_model(m)
+        dag = problem_from_pyomo_model(m)
 
         assert len(dag.constraints) == 8
         for constraint in dag.constraints:
@@ -248,7 +248,7 @@ class TestConvertExpression(object):
 
         m.c = aml.Constraint(expr=-aml.cos(m.x[0]) >= 0)
 
-        dag = dag_from_pyomo_model(m)
+        dag = problem_from_pyomo_model(m)
 
         constraint = dag.constraint('c')
         root = constraint.root_expr
@@ -262,7 +262,7 @@ class TestConvertExpression(object):
 
         m.c = aml.Constraint(expr=abs(m.x[0]) >= 0)
 
-        dag = dag_from_pyomo_model(m)
+        dag = problem_from_pyomo_model(m)
 
         constraint = dag.constraint('c')
         root = constraint.root_expr
@@ -277,7 +277,7 @@ class TestConvertExpression(object):
         m.c0 = aml.Constraint(expr=aml.cos(m.x[0])**2.0 >= 1)
         m.c1 = aml.Constraint(expr=2**aml.sin(m.x[1]) >= 1)
 
-        dag = dag_from_pyomo_model(m)
+        dag = problem_from_pyomo_model(m)
 
         c0 = dag.constraint('c0')
         root_c0 = c0.root_expr
@@ -311,9 +311,9 @@ class TestConvertObjective(object):
         m.x = aml.Var(m.I)
         m.obj = aml.Objective(expr=sum(m.x[i] for i in m.I))
 
-        dag = dag_from_pyomo_model(m)
-        assert len(dag.objectives) == 1
-        obj = dag.objective('obj')
+        dag = problem_from_pyomo_model(m)
+        assert dag.num_objectives == 1
+        obj = dag.objective
         assert isinstance(obj.root_expr, core.LinearExpression)
         assert obj.original_sense == core.Sense.MINIMIZE
 
@@ -323,8 +323,8 @@ class TestConvertObjective(object):
         m.x = aml.Var(m.I)
         m.obj = aml.Objective(expr=sum(m.x[i] for i in m.I), sense=aml.maximize)
 
-        dag = dag_from_pyomo_model(m)
-        assert len(dag.objectives) == 1
-        obj = dag.objective('obj')
+        dag = problem_from_pyomo_model(m)
+        assert dag.num_objectives == 1
+        obj = dag.objective
         assert isinstance(obj.root_expr, core.LinearExpression)
         assert obj.original_sense == core.Sense.MAXIMIZE

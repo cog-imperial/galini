@@ -121,6 +121,7 @@ extensions = [
             'src/expression/unary_function_expression.cc',
             'src/expression/binary_expression.cc',
             'src/expression/nary_expression.cc',
+            'src/expression/graph.cc',
             'src/problem/problem_base.cc',
             'src/problem/root_problem.cc',
             'src/problem/child_problem.cc',

@@ -1,76 +1,60 @@
 # pylint: skip-file
 import pytest
 import numpy as np
-from galini.core import *
+from galini.core import Domain
+from galini.core._core import *
 from suspect.expression import ExpressionType, UnaryFunctionType
 
 
 @pytest.fixture
-def problem():
-    return RootProblem('test')
+def graph():
+    return Graph()
 
 
-def test_problem_creation(problem):
-    assert problem.size == 0
-    assert problem.max_depth() == 0
+def test_problem_creation(graph):
+    assert len(graph) == 0
+    assert list(graph) == []
 
 
-def test_insert_variable(problem):
-    problem.add_variable('x', None, None, Domain.REAL)
-    assert problem.max_depth() == 0
-    with pytest.raises(Exception):
-        problem.add_variable('x', v, None, None, Domain.INTEGER)
+def test_insert_variable(graph):
+    graph.insert_vertex(Variable('x', None, None, Domain.REAL))
+    assert graph.max_depth() == 0
 
 
-def test_insert_constraint(problem):
-    v = problem.add_variable('x', None, None, Domain.REAL)
-    problem.add_constraint('c0', v, None, None)
-    problem.add_constraint('c1', v, 0.0, 1.0)
-    assert problem.num_constraints == 2
-    with pytest.raises(Exception):
-        problem.add_constraint('c0', v, None, None)
+def test_constants_minimum_depth(graph):
+    graph.insert_vertex(Constant(1.234))
+    assert graph.max_depth() == 2
 
 
-def test_insert_objective(problem):
-    v = problem.add_variable('x', None, None, Domain.REAL)
-    problem.add_objective('o0', v, Sense.MINIMIZE)
-    problem.add_objective('o1', v, Sense.MAXIMIZE)
-    assert problem.num_objectives == 2
-    with pytest.raises(Exception):
-        problem.add_objective('o0', v, Sense.MINIMIZE)
-
-
-def test_constants_minimum_depth(problem):
-    problem.insert_vertex(Constant(1.234))
-    assert problem.max_depth() == 2
-
-
-def test_vertex_index_is_updated(problem):
+def test_vertex_index_is_updated(graph):
     cs = [Constant(i) for i in range(10)]
     for c in cs:
-        problem.insert_vertex(c)
-    assert problem.max_depth() == 2
-    assert problem.size == 10
+        graph.insert_vertex(c)
+    assert graph.max_depth() == 2
+    assert len(graph) == 10
     for i, c in enumerate(cs):
         assert c.idx == i
 
 
-def test_children_are_updated(problem):
+def test_children_are_updated(graph):
     c0 = Constant(1.234)
-    v0 = problem.add_variable('x', None, None, Domain.REAL)
-    problem.insert_vertex(c0)
+    v0 = Variable('x', None, None, Domain.REAL)
+    graph.insert_vertex(c0)
+    graph.insert_vertex(v0)
     s0 = SumExpression([c0, v0])
-    problem.insert_vertex(s0)
+    graph.insert_vertex(s0)
     assert s0.idx == 2
     assert s0.nth_children(0) == c0
     assert s0.nth_children(1) == v0
-    problem.add_variable('y', None, None, Domain.REAL)
+    v1 = Variable('y', None, None, Domain.REAL)
+    graph.insert_vertex(v1)
     assert s0.idx == 3
     assert s0.nth_children(0) == c0
     assert s0.nth_children(1) == v0
-    assert problem.vertex_depth(s0.idx) == 3
-    assert problem.vertex_depth(c0.idx) == 2
-    assert problem.size == 4
+    vertices = list(graph)
+    assert vertices[s0.idx].depth == 3
+    assert vertices[c0.idx].depth == 2
+    assert len(graph) == 4
 
 
 VARIABLE = Variable('x', None, None, None)

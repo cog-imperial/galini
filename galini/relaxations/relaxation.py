@@ -138,9 +138,11 @@ class Relaxation(metaclass=ABCMeta):
         new_obj = result.objective
         new_expr = self._insert_expression(new_obj.root_expr, problem, relaxed_problem)
         relaxed_problem.add_objective(
-            new_obj.name,
-            new_expr,
-            new_obj.original_sense,
+            Objective(
+                new_obj.name,
+                new_expr,
+                new_obj.original_sense,
+            ),
         )
         self._insert_constraints(result.constraints, problem, relaxed_problem)
 
@@ -151,17 +153,19 @@ class Relaxation(metaclass=ABCMeta):
         new_cons = result.constraint
         new_expr = self._insert_expression(new_cons.root_expr, problem, relaxed_problem)
         added_cons = relaxed_problem.add_constraint(
-            new_cons.name,
-            new_expr,
-            new_cons.lower_bound,
-            new_cons.upper_bound,
+            Constraint(
+                new_cons.name,
+                new_expr,
+                new_cons.lower_bound,
+                new_cons.upper_bound,
+            ),
         )
         self._insert_constraints(result.constraints, problem, relaxed_problem)
         return added_cons
 
     def _insert_variable(self, expr, problem, relaxed_problem, use_problem_bounds=False):
         assert expr.expression_type == ExpressionType.Variable
-        if use_problem_bounds and expr.problem is not None:
+        if use_problem_bounds and expr.graph is not None:
             lower_bound = problem.lower_bound(expr)
             upper_bound = problem.upper_bound(expr)
             domain = problem.domain(expr)
@@ -172,9 +176,14 @@ class Relaxation(metaclass=ABCMeta):
 
         if isinstance(expr, AuxiliaryVariable):
             new_var = relaxed_problem.add_aux_variable(
-                expr.name, lower_bound, upper_bound, domain, expr.reference)
+                AuxiliaryVariable(
+                    expr.name, lower_bound, upper_bound, domain, expr.reference
+                )
+            )
         else:
-            new_var = relaxed_problem.add_variable(expr.name, lower_bound, upper_bound, domain)
+            new_var = relaxed_problem.add_variable(
+                Variable(expr.name, lower_bound, upper_bound, domain)
+            )
 
         self._problem_expr[expr.uid] = new_var
         return new_var
@@ -188,7 +197,7 @@ class Relaxation(metaclass=ABCMeta):
                 return self._problem_expr[expr.uid]
 
             if expr.expression_type == ExpressionType.Variable:
-                if expr.problem:
+                if expr.graph:
                     existing_var = relaxed_problem.variable(expr.idx)
                     assert existing_var.name == expr.name
                     return existing_var
@@ -199,17 +208,19 @@ class Relaxation(metaclass=ABCMeta):
                 self._problem_expr[expr.uid] = new_expr
                 return new_expr
         new_expr = _inner(expr)
-        relaxed_problem.insert_tree(new_expr)
+        # relaxed_problem.insert_tree(new_expr)
         return new_expr
 
     def _insert_constraints(self, new_constraints, problem, relaxed_problem):
         for constraint in new_constraints:
             new_expr = self._insert_expression(constraint.root_expr, problem, relaxed_problem)
             x = relaxed_problem.add_constraint(
-                constraint.name,
-                new_expr,
-                constraint.lower_bound,
-                constraint.upper_bound,
+                Constraint(
+                    constraint.name,
+                    new_expr,
+                    constraint.lower_bound,
+                    constraint.upper_bound,
+                ),
             )
 
 

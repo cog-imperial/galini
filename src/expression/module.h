@@ -27,6 +27,8 @@ limitations under the License.
 #include "auxiliary_variable.h"
 #include "constant.h"
 
+#include "graph.h"
+
 namespace galini {
 
 namespace expression {

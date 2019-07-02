@@ -13,6 +13,7 @@
 # limitations under the License.
 """Convert Pyomo problems to GALINI Problem."""
 from numbers import Number
+import warnings
 import numpy as np
 import pyomo.environ as aml
 from pyomo.core.expr.visitor import ExpressionValueVisitor
@@ -40,7 +41,27 @@ import galini.core as core
 
 
 def dag_from_pyomo_model(model):
-    """Convert the Pyomo ``model`` to GALINI DAG.
+    """Convert the Pyomo ``model`` to GALINI Problem.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        the Pyomo model.
+
+    Returns
+    -------
+    galini.core.Problem
+        GALINI problem.
+    """
+    warnings.warn(
+        "dag_from_pyomo_model is deprecated, use problem_from_pyomo_model instead",
+        DeprecationWarning,
+    )
+    return problem_from_pyomo_model(model)
+
+
+def problem_from_pyomo_model(model):
+    """Convert the Pyomo ``model`` to GALINI Problem.
 
     Parameters
     ----------
@@ -56,8 +77,8 @@ def dag_from_pyomo_model(model):
         name = model.name
     else:
         name = 'unknown'
-    dag = core.RootProblem(name)
-    factory = _ComponentFactory(dag)
+    problem = core.Problem(name)
+    factory = _ComponentFactory(problem)
     for omo_var in model_variables(model):
         factory.add_variable(omo_var)
 
@@ -67,22 +88,24 @@ def dag_from_pyomo_model(model):
     for omo_obj in model_objectives(model):
         factory.add_objective(omo_obj)
 
-    if not dag.objectives:
+    if not problem.objective:
         # Add constant objective
-        dag.add_objective(
-            '_constant_objective',
-            core.Constant(0.0),
-            core.Sense.MINIMIZE,
+        problem.add_objective(
+            core.Objective(
+                '_constant_objective',
+                core.Constant(0.0),
+                core.Sense.MINIMIZE,
+            ),
         )
 
-    return dag
+    return problem
 
 
 class _ComponentFactory(object):
-    def __init__(self, dag):
-        self.dag = dag
+    def __init__(self, problem):
+        self.problem = problem
         self._components = ExpressionDict(float_hasher=BTreeFloatHasher())
-        self._visitor = _ConvertExpressionVisitor(self._components, self.dag)
+        self._visitor = _ConvertExpressionVisitor(self._components, self.problem)
 
     def add_variable(self, omo_var):
         """Convert and add variable to the problem."""
@@ -90,9 +113,12 @@ class _ComponentFactory(object):
         if comp is not None:
             return comp
         domain = _convert_domain(omo_var.domain)
-        new_var = self.dag.add_variable(omo_var.name, omo_var.lb, omo_var.ub, domain)
+
+        new_var = self.problem.add_variable(
+            core.Variable(omo_var.name, omo_var.lb, omo_var.ub, domain)
+        )
         if omo_var.value:
-            self.dag.set_starting_point(new_var, omo_var.value)
+            self.problem.set_starting_point(new_var, omo_var.value)
         self._components[omo_var] = new_var
         return new_var
 
@@ -106,12 +132,13 @@ class _ComponentFactory(object):
         if upper_bound is not None:
             upper_bound = aml.value(upper_bound)
         root_expr = self._expression(expr)
-        self.dag.insert_tree(root_expr)
-        constraint = self.dag.add_constraint(
-            omo_cons.name,
-            root_expr,
-            lower_bound,
-            upper_bound,
+        constraint = self.problem.add_constraint(
+            core.Constraint(
+                omo_cons.name,
+                root_expr,
+                lower_bound,
+                upper_bound,
+            ),
         )
         return constraint
 
@@ -126,11 +153,12 @@ class _ComponentFactory(object):
             original_sense = core.Sense.MAXIMIZE
 
         root_expr = self._expression(sign * omo_obj.expr)
-        self.dag.insert_tree(root_expr)
-        obj = self.dag.add_objective(
-            omo_obj.name,
-            root_expr,
-            original_sense,
+        obj = self.problem.add_objective(
+            core.Objective(
+                omo_obj.name,
+                root_expr,
+                original_sense,
+            ),
         )
         return obj
 
@@ -366,7 +394,7 @@ _convert_expr_map[NegationExpression] = _convert_as(core.NegationExpression)
 
 
 class _ConvertExpressionVisitor(ExpressionValueVisitor):
-    def __init__(self, memo, dag):
+    def __init__(self, memo, _problem):
         self.memo = memo
 
     def get(self, expr):

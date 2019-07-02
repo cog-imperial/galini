@@ -14,8 +14,6 @@
 
 """GALINI"""
 
-__all__ = ['dag_from_pyomo_model', 'read_pyomo_model', 'read_osil']
-
-from .convert import dag_from_pyomo_model
+from .convert import dag_from_pyomo_model, problem_from_pyomo_model
 from .reader import read_pyomo_model
 from .osil_reader import read_osil

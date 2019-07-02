@@ -130,7 +130,7 @@ class TestMcCormickUnderestimator:
 
         new_variable_count = 0
         for ch in expr.children:
-            if ch.problem is None:
+            if ch.graph is None:
                 new_variable_count += 1
                 assert (ch.name == '_aux_bilinear_x_y' or ch.name == '_aux_bilinear_y_x')
 

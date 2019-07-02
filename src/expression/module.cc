@@ -33,6 +33,7 @@ void init_module(py::module& m) {
 
   py::class_<Expression, Expression::ptr>(m, "Expression")
     .def_property_readonly("problem", &Expression::problem)
+    .def_property_readonly("graph", &Expression::graph)
     .def_property_readonly("idx", &Expression::idx)
     .def_property_readonly("uid", &Expression::uid)
     .def_property("depth", &Expression::depth, &Expression::set_depth)
@@ -205,6 +206,20 @@ void init_module(py::module& m) {
     .def_readonly("var1", &BilinearTerm::var1)
     .def_readonly("var2", &BilinearTerm::var2)
     .def_readonly("coefficient", &BilinearTerm::coefficient);
+
+  py::class_<Graph, Graph::ptr>(m, "Graph")
+    .def(py::init())
+    .def("insert_tree", &Graph::insert_tree)
+    .def("insert_vertex", &Graph::insert_vertex)
+    .def("expression_tree_data", &Graph::expression_tree_data)
+    .def("max_depth", &Graph::max_depth)
+    .def("__len__", &Graph::size)
+    .def("__iter__",
+	 [](const Graph &g) { return py::make_iterator(g.begin(), g.end()); },
+	 py::keep_alive<0, 1>() /* keep alive while we iterate */)
+    .def("__reversed__",
+	 [](const Graph &g) { return py::make_iterator(g.rbegin(), g.rend()); },
+	 py::keep_alive<0, 1>() /* keep alive while we iterate */);
 }
 
 } // namespace expression

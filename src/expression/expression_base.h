@@ -36,6 +36,9 @@ class Problem;
 namespace expression {
 
 
+class Graph;
+
+
 using ADFloat = ad::ADFloat;
 using ADObject = ad::ADObject;
 using Problem = problem::Problem;
@@ -51,6 +54,9 @@ public:
   using const_ptr = std::shared_ptr<const Expression>;
   using problem_ptr = std::shared_ptr<Problem>;
   using problem_weak_ptr = std::weak_ptr<Problem>;
+
+  using graph_ptr = std::shared_ptr<Graph>;
+  using graph_weak_ptr = std::weak_ptr<Graph>;
 
   Expression(const std::shared_ptr<Problem>& problem, const index_t depth)
     : uid_(generate_uid()), problem_(problem), depth_(depth), num_children_(0), idx_(0) {}
@@ -96,6 +102,14 @@ public:
     problem_ = problem;
   }
 
+  graph_ptr graph() const {
+    return graph_.lock();
+  }
+
+  void set_graph(typename std::weak_ptr<Graph> graph) {
+    graph_ = graph;
+  }
+
   index_t idx() const {
     return idx_;
   }
@@ -129,6 +143,7 @@ public:
 protected:
   galini::uid_t uid_;
   problem_weak_ptr problem_;
+  graph_weak_ptr graph_;
   index_t depth_;
   index_t num_children_;
   index_t idx_;
