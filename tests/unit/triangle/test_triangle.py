@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import pyomo.environ as aml
-from galini.pyomo import dag_from_pyomo_model
+from galini.pyomo import problem_from_pyomo_model
 from galini.galini import Galini
 from galini.bab.branch_and_cut import BranchAndCutAlgorithm
 from galini.bab.relaxations import LinearRelaxation
@@ -41,7 +41,7 @@ def problem():
         expr=sum(-Q[i][j] * m.x[i] * m.x[j] for i in m.I for j in m.I) + sum(-C[i] * m.x[i] for i in m.I))
     m.c = aml.Constraint(expr=sum(Qc[i][j] * m.x[i] * m.x[j] for i in m.I[0:3] for j in m.I[0:3]) >= -10)
 
-    return dag_from_pyomo_model(m)
+    return problem_from_pyomo_model(m)
 
 
 @pytest.fixture

@@ -13,6 +13,7 @@
 # limitations under the License.
 """Base class for solutions."""
 import abc
+import warnings
 from collections import namedtuple
 
 
@@ -54,31 +55,37 @@ class Solution(object):
         if not isinstance(status, Status):
             raise TypeError('status must be subclass of Status')
 
-        if optimal_obj is None:
-            optimal_obj = []
         if optimal_vars is None:
             optimal_vars = []
 
-        if not isinstance(optimal_obj, list):
-            optimal_obj = [optimal_obj]
+        if isinstance(optimal_obj, list):
+            if len(optimal_obj) != 1:
+                raise ValueError('optimal_obj must be a list of length 1')
+            warnings.warn('Multiple objectives not supported. Pass single value', DeprecationWarning)
+            optimal_obj = optimal_obj[0]
 
-        for oo in optimal_obj:
-            if not isinstance(oo, OptimalObjective):
-                raise TypeError('optimal_obj must be collection of OptimalObjective')
+        if optimal_obj is not None and not isinstance(optimal_obj, OptimalObjective):
+            raise TypeError('optimal_obj must be OptimalObjective')
+
         for ov in optimal_vars:
             if not isinstance(ov, OptimalVariable):
                 raise TypeError('optimal_vars must be collection of OptimalVariable')
 
         self.status = status
-        self.objectives = optimal_obj
+        self.objective = optimal_obj
         self.variables = optimal_vars
 
+    @property
+    def objectives(self):
+        warnings.warn('Solution.objectives is deprecated. Use Solution.objective', DeprecationWarning)
+        return [self.objective]
+
     def __str__(self):
-        return 'Solution(status={}, objectives={})'.format(
-            self.status.description(), self.objectives
+        return 'Solution(status={}, objective={})'.format(
+            self.status.description(), self.objective
         )
 
     def objective_value(self):
-        if self.objectives is None:
+        if self.objective is None:
             return None
-        return self.objectives[0].value
+        return self.objective.value

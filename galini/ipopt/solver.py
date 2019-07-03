@@ -1,4 +1,4 @@
-# Copyright 2018 Francesco Ceccon
+# Copyright 2019 Francesco Ceccon
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """Solve NLP using Ipopt."""
+
 import numpy as np
 from galini.logging import get_logger, DEBUG, WARNING
 from galini.util import expr_to_str
@@ -22,65 +24,18 @@ from galini.config.options import (
     OptionsGroup,
     StringOption,
 )
-from galini.solvers import (
-    Solver,
-    Solution,
-    Status,
-    OptimalObjective,
-    OptimalVariable,
-)
+from galini.solvers import Solver
 from galini.core import (
     ipopt_solve,
-    IpoptSolution as CoreIpoptSolution,
     IpoptApplication,
     EJournalLevel,
     PythonJournal,
 )
+from galini.ipopt.solution import build_solution
+from galini.ipopt.logger import IpoptLoggerAdapter
 
 
 logger = get_logger(__name__)
-
-
-class IpoptStatus(Status):
-    def __init__(self, status):
-        self._status = status
-
-    def is_success(self):
-        return (
-            self._status == CoreIpoptSolution.StatusType.success or
-            self._status == CoreIpoptSolution.StatusType.stop_at_acceptable_point
-        )
-
-    def is_infeasible(self):
-        return self._status == CoreIpoptSolution.StatusType.local_infeasibility
-
-    def is_iterations_exceeded(self):
-        return self._status == CoreIpoptSolution.StatusType.maxiter_exceeded
-
-    def is_unbounded(self):
-        return False
-
-    def description(self):
-        return str(self._status)
-
-
-class IpoptSolution(Solution):
-    def __init__(self, status, optimal_obj=None, optimal_vars=None,
-                 zl=None, zu=None, g=None, lambda_=None):
-        super().__init__(status, optimal_obj, optimal_vars)
-        self.zl = zl
-        self.zu = zu
-        self.g = g
-        self.lambda_ = lambda_
-
-    def __str__(self):
-        return 'IpoptSolution(status={}, objective={})'.format(
-            self.status.description(),
-            self.objectives,
-        )
-
-    def __repr__(self):
-        return '<{} at {}>'.format(str(self), hex(id(self)))
 
 
 class IpoptNLPSolver(Solver):
@@ -117,10 +72,13 @@ class IpoptNLPSolver(Solver):
         gl, gu = self.get_constraints_bounds(run_id, problem)
         logger.debug(run_id, 'Calling in IPOPT')
 
+        tree_data = problem.expression_tree_data()
+        out_indexes = [problem.objective.root_expr.idx] + [c.root_expr.idx for c in problem.constraints]
+
         ipopt_solution = ipopt_solve(
-            app, problem, xi, xl, xu, gl, gu, _IpoptLoggerAdapter(logger, run_id, DEBUG)
+            app, tree_data, out_indexes, xi, xl, xu, gl, gu, IpoptLoggerAdapter(logger, run_id, DEBUG)
         )
-        solution = self._build_solution(problem, ipopt_solution)
+        solution = build_solution(problem, ipopt_solution, tree_data, out_indexes)
         logger.debug(run_id, 'IPOPT returned {}', solution)
         return solution
 
@@ -139,40 +97,10 @@ class IpoptNLPSolver(Solver):
         logging_config = config['logging']
         level_name = logging_config.get('level', 'J_ITERSUMMARY')
         level = getattr(EJournalLevel, level_name)
-        journal = PythonJournal('Default', level, _IpoptLoggerAdapter(logger, run_id, DEBUG))
+        journal = PythonJournal('Default', level, IpoptLoggerAdapter(logger, run_id, DEBUG))
         journalist = app.journalist()
         journalist.delete_all_journals()
         journalist.add_journal(journal)
-
-    def _build_solution(self, problem, solution):
-        status = IpoptStatus(solution.status)
-
-        if solution.x:
-            opt_obj = OptimalObjective(
-                name=problem.objectives[0].name,
-                value=solution.objective_value,
-            )
-
-            opt_vars = [
-                OptimalVariable(name=variable.name, value=solution.x[i])
-                for i, variable in enumerate(problem.variables)
-            ]
-        else:
-            opt_obj = None
-            opt_vars = None
-
-        return IpoptSolution(
-            status,
-            optimal_obj=opt_obj,
-            optimal_vars=opt_vars,
-            zl=np.array(solution.zl),
-            zu=np.array(solution.zu),
-            g=np.array(solution.g),
-            lambda_=np.array(solution.lambda_)
-        )
-
-    def _build_optimal_variable(self, i, variable, solution):
-        OptimalVariable(name=variable.name, value=solution.x[i])
 
     def get_starting_point_and_bounds(self, run_id, problem):
         nx = problem.num_variables
@@ -231,16 +159,3 @@ class IpoptNLPSolver(Solver):
             )
 
         return gl, gu
-
-
-class _IpoptLoggerAdapter(object):
-    def __init__(self, logger, run_id, level):
-        self._logger = logger
-        self._run_id = run_id
-        self._level = level
-
-    def write(self, msg):
-        self._logger.log(self._run_id, self._level, msg)
-
-    def flush(self):
-        pass

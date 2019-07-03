@@ -13,7 +13,7 @@
 # limitations under the License.
 """CLI commands base class."""
 import abc
-from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
+from galini.pyomo import read_pyomo_model, problem_from_pyomo_model
 
 
 class CliCommand(metaclass=abc.ABCMeta): # pragma: no cover
@@ -42,7 +42,7 @@ class CliCommandWithProblem(CliCommand):
             args.problem,
             objective_prefix=args.objective_prefix,
         )
-        problem = dag_from_pyomo_model(pyomo_model)
+        problem = problem_from_pyomo_model(pyomo_model)
         return self.execute_with_problem(pyomo_model, problem, args)
 
     @abc.abstractmethod

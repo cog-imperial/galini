@@ -4,7 +4,7 @@ import pathlib
 import numpy as np
 from galini.solvers import SolversRegistry
 from galini.config import ConfigurationManager
-from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
+from galini.pyomo import read_pyomo_model, problem_from_pyomo_model
 from galini.galini import Galini
 from galini.ipopt import IpoptNLPSolver
 
@@ -16,7 +16,7 @@ def test_ipopt_solver(model_name):
     current_dir = pathlib.Path(__file__).parent
     osil_file = current_dir / 'models' / (model_name + '.osil')
     pyomo_model = read_pyomo_model(osil_file)
-    problem = dag_from_pyomo_model(pyomo_model)
+    problem = problem_from_pyomo_model(pyomo_model)
 
     galini = Galini()
     solver = IpoptNLPSolver(galini)
@@ -27,10 +27,9 @@ def test_ipopt_solver(model_name):
     sol_file = current_dir / 'solutions' / (model_name + '.sol')
     expected_solution = read_solution(sol_file)
 
-    expected_objectives = expected_solution['objectives']
-    assert len(expected_objectives) == len(solution.objectives)
-    for objective, expected in zip(solution.objectives, expected_objectives):
-        assert np.isclose(expected, objective.value)
+    expected_objective = expected_solution['objective']
+    assert solution.objective is not None
+    assert np.isclose(expected_objective, solution.objective.value)
 
     if False:
         expected_variables = expected_solution['variables']
@@ -41,20 +40,20 @@ def test_ipopt_solver(model_name):
 
 def read_solution(filename):
     variables = []
-    objectives = []
+    objective = None
     with open(filename, 'r') as f:
         for line in f:
             parts = line.split()
             var_name = parts[0]
             var_value = float(parts[1])
             if var_name == 'objvar':
-                if len(objectives) > 0:
+                if objective is not None:
                     raise ValueError('Multiple objvar found')
-                objectives.append(var_value)
+                objective = var_value
             else:
                 variables.append(var_value)
 
     return {
-        'objectives': objectives,
+        'objective': objective,
         'variables': variables,
     }

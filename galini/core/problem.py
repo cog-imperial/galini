@@ -23,6 +23,10 @@ class VariableView:
         self.variable = variable
 
     @property
+    def name(self):
+        return self.variable.name
+
+    @property
     def idx(self):
         return self.variable.idx
 
@@ -193,6 +197,33 @@ class _ProblemBase:
         return self._graph.expression_tree_data()
 
 
+def _make_relaxed(parent, name, relaxation=None):
+    relaxed = RelaxedProblem(name, parent)
+    lb = parent.lower_bound
+    ub = parent.upper_bound
+    domain = parent.domain
+
+    # copy variables
+    for var in parent.variables:
+        if isinstance(var, core.Variable):
+            new_var = core.Variable(
+                var.name,
+                lb(var),
+                ub(var),
+                domain(var),
+            )
+        else:
+            new_var = core.AuxiliaryVariable(
+                var.name,
+                lb(var),
+                ub(var),
+                domain(var),
+                var.reference, # TODO(fra): reference new variables
+            )
+        relaxed.add_variable(new_var)
+    return relaxed
+
+
 class Problem(_ProblemBase):
     def __init__(self, name):
         super().__init__(name)
@@ -213,6 +244,10 @@ class Problem(_ProblemBase):
         """Access variable by index or name."""
         if isinstance(idx_or_name, str):
             return self._variables_map[idx_or_name]
+        if isinstance(idx_or_name, core.Variable):
+            idx_or_name = idx_or_name.idx
+        if isinstance(idx_or_name, VariableView):
+            idx_or_name = idx_or_name.idx
         idx = idx_or_name
         if idx >= len(self._variables):
             raise IndexError('variable index out of range')
@@ -310,26 +345,7 @@ class Problem(_ProblemBase):
         return ChildProblem(self)
 
     def make_relaxed(self, name, relaxation=None):
-        relaxed = RelaxedProblem(name, self)
-        # copy variables
-        for var in self._variables:
-            if isinstance(var, core.Variable):
-                new_var = core.Variable(
-                    var.name,
-                    var.lower_bound,
-                    var.upper_bound,
-                    var.domain,
-                )
-            else:
-                new_var = core.AuxiliaryVariable(
-                    var.name,
-                    var.lower_bound,
-                    var.upper_bound,
-                    var.domain,
-                    var.reference, # TODO(fra): reference new variables
-                )
-            relaxed.add_variable(new_var)
-        return relaxed
+        return _make_relaxed(self, name, relaxation)
 
     @property
     def _graph(self):
@@ -388,6 +404,9 @@ class ChildProblem(_ProblemBase):
 
     def make_child(self):
         return ChildProblem(self)
+
+    def make_relaxed(self, name, relaxation=None):
+        return _make_relaxed(self, name, relaxation)
 
     @property
     def _graph(self):

@@ -14,6 +14,8 @@ limitations under the License.
 ======================================================================== */
 #include <pybind11/stl.h>
 
+#include <memory>
+
 #include "module.h"
 #include "expression_tree_data.h"
 #include "func.h"
@@ -37,7 +39,7 @@ void init_module(py::module& m) {
   py::class_<AD<double>>(m, "AD[float]");
   py::class_<AD<py::object>>(m, "AD[object]");
 
-  py::class_<ExpressionTreeData>(m, "ExpressionTreeData")
+  py::class_<ExpressionTreeData, std::shared_ptr<ExpressionTreeData>>(m, "ExpressionTreeData")
     .def("vertices", &ExpressionTreeData::vertices)
     .def("eval", py::overload_cast<const std::vector<double>&>(&ExpressionTreeData::eval<double, double>, py::const_))
     .def("eval", py::overload_cast<const std::vector<double>&, const std::vector<index_t>&>(&ExpressionTreeData::eval<double, double>, py::const_))

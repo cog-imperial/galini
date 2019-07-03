@@ -4,7 +4,7 @@ import numpy as np
 import pyomo.environ as aml
 from suspect.interval import Interval
 from suspect.expression import ExpressionType, UnaryFunctionType
-from galini.pyomo import dag_from_pyomo_model
+from galini.pyomo import problem_from_pyomo_model
 from galini.special_structure import detect_special_structure
 from galini.transformations.nonlinear import ReplaceNonlinearTransformation
 from galini.suspect import ProblemContext
@@ -24,7 +24,7 @@ def problem():
     m.nonlinear_multiple_children = aml.Constraint(expr=aml.exp(m.x) + aml.log(m.y) >= 0)
     m.nonlinear_linear = aml.Constraint(expr=aml.exp(m.x) + (2.0*m.y + 3.0*m.z + 4.0*m.x + 2.0) >= 0)
 
-    return dag_from_pyomo_model(m)
+    return problem_from_pyomo_model(m)
 
 
 @pytest.mark.skip('Nonlinear disabled.')

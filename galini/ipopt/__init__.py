@@ -12,31 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""GALINI Math context."""
-import numpy as np
-
-
-class MathContext:
-    def __init__(self):
-        self.epsilon = 1e-5
-        self.infinity = 1e20
-        self.constraint_violation_tol = 1e-6
-
-
-mc = MathContext()
-
-
-def almost_ge(a, b, atol):
-    if a > b:
-        return True
-    if np.isclose(a, b, atol=atol):
-        return True
-    return False
-
-
-def almost_le(a, b, atol):
-    if a < b:
-        return True
-    if np.isclose(a, b, atol=atol):
-        return True
-    return False
+from galini.ipopt.solver import IpoptNLPSolver

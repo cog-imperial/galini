@@ -2,7 +2,7 @@
 import pytest
 import pyomo.environ as aml
 import numpy as np
-from galini.pyomo import dag_from_pyomo_model
+from galini.pyomo import problem_from_pyomo_model
 from galini.core import Domain
 from galini.outer_approximation.milp_relaxation import MilpRelaxation
 
@@ -17,7 +17,7 @@ def problem():
 
     m.obj = aml.Objective(expr=sum(m.x[i] + m.y[i] for i in m.I))
     m.c = aml.Constraint(m.I, rule=lambda m, i: aml.exp(m.y[i]) <= 0)
-    return dag_from_pyomo_model(m)
+    return problem_from_pyomo_model(m)
 
 
 @pytest.fixture

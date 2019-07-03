@@ -12,31 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""GALINI Math context."""
-import numpy as np
+"""Logger adapter for ipopt."""
 
 
-class MathContext:
-    def __init__(self):
-        self.epsilon = 1e-5
-        self.infinity = 1e20
-        self.constraint_violation_tol = 1e-6
+class IpoptLoggerAdapter:
+    def __init__(self, logger, run_id, level):
+        self._logger = logger
+        self._run_id = run_id
+        self._level = level
 
+    def write(self, msg):
+        self._logger.log(self._run_id, self._level, msg)
 
-mc = MathContext()
-
-
-def almost_ge(a, b, atol):
-    if a > b:
-        return True
-    if np.isclose(a, b, atol=atol):
-        return True
-    return False
-
-
-def almost_le(a, b, atol):
-    if a < b:
-        return True
-    if np.isclose(a, b, atol=atol):
-        return True
-    return False
+    def flush(self):
+        pass

@@ -34,14 +34,16 @@ class FGEval {
 public:
   using ADvector = std::vector<ad::AD<double>>;
 
-  FGEval(ad::ExpressionTreeData&& tree, std::vector<index_t>&& out_indexes)
-    : tree_(std::move(tree))
-    , out_indexes_(std::move(out_indexes)) {}
+  FGEval(const std::shared_ptr<ad::ExpressionTreeData> &tree,
+	 const std::vector<index_t> &out_indexes)
+    : tree_(tree)
+    , out_indexes_(out_indexes) {}
+
   void operator()(ADvector& fg, const ADvector &x) {
-    tree_.eval(fg, x, out_indexes_);
+    tree_->eval(fg, x, out_indexes_);
   }
 private:
-  ad::ExpressionTreeData tree_;
+  std::shared_ptr<ad::ExpressionTreeData> tree_;
   std::vector<index_t> out_indexes_;
 };
 
@@ -90,28 +92,12 @@ std::shared_ptr<IpoptSolution> solve(Ipopt::SmartPtr<Ipopt::IpoptApplication>& a
 
 std::shared_ptr<IpoptSolution>
 ipopt_solve(Ipopt::SmartPtr<Ipopt::IpoptApplication>& app,
-	    std::shared_ptr<galini::problem::Problem>& problem,
+	    const std::shared_ptr<ad::ExpressionTreeData> &expression_tree_data,
+	    const std::vector<index_t> &out_indexes,
 	    const std::vector<double>& xi, const std::vector<double> &xl,
 	    const std::vector<double>& xu, const std::vector<double> &gl,
 	    const std::vector<double>& gu, py::object stream) {
-  auto num_constraints = problem->num_constraints();
-  auto num_objectives = problem->num_objectives();
-
-  auto expression_tree_data = problem->expression_tree_data();
-
-  std::vector<index_t> out_indexes(num_objectives + num_constraints);
-  auto idx = 0;
-  for (auto objective : problem->objectives()) {
-    auto expr = objective->root_expr();
-    out_indexes[idx++] = expr->idx();
-  }
-
-  for (auto constraint : problem->constraints()) {
-    auto expr = constraint->root_expr();
-    out_indexes[idx++] = expr->idx();
-  }
-
-  detail::FGEval fg_eval(std::move(expression_tree_data), std::move(out_indexes));
+  detail::FGEval fg_eval(expression_tree_data, out_indexes);
   return detail::solve(app, xi, xl, xu, gl, gu, fg_eval, stream);
 }
 

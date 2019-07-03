@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import pyomo.environ as aml
-from galini.pyomo import dag_from_pyomo_model
+from galini.pyomo import problem_from_pyomo_model
 from galini.solvers import SolversRegistry
 from galini.galini import Galini
 from galini.config import ConfigurationManager
@@ -51,7 +51,7 @@ def problem():
     m.c = aml.Constraint(expr=sum(Qc[i][j] * m.x[i] * m.x[j] for i in m.I[0:3] for j in m.I[0:3]) >= -10)
     m.c2 = aml.Constraint(expr=sum(Qc2[i][j] * m.x[i] * m.x[j] for i in m.I[0:3] for j in m.I[0:3]) >= -10)
 
-    return dag_from_pyomo_model(m)
+    return problem_from_pyomo_model(m)
 
 
 @pytest.mark.parametrize('cut_selection_strategy,expected_solution', [

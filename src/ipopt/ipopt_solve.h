@@ -16,6 +16,7 @@ limitations under the License.
 
 #include <memory>
 #include <ad/ad.h>
+#include <ad/expression_tree_data.h>
 #include <cppad/ipopt/solve.hpp>
 #include <coin/IpIpoptApplication.hpp>
 #include <problem/problem_base.h>
@@ -54,7 +55,8 @@ public:
 
 std::shared_ptr<IpoptSolution>
 ipopt_solve(Ipopt::SmartPtr<Ipopt::IpoptApplication>& app,
-	    std::shared_ptr<galini::problem::Problem>& problem,
+	    const std::shared_ptr<ad::ExpressionTreeData> &tree_data,
+	    const std::vector<index_t> &out_vector,
 	    const std::vector<double>& xi, const std::vector<double> &xl,
 	    const std::vector<double>& xu, const std::vector<double> &gl,
 	    const std::vector<double>& gu, py::object stream);

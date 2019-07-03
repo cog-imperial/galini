@@ -18,7 +18,7 @@ class MockStatus(object):
 class MockSolution(Solution):
     def __init__(self, obj):
         self.status = MockStatus()
-        self.objectives = [OptimalObjective(name='obj', value=obj)]
+        self.objective = OptimalObjective(name='obj', value=obj)
         self.variables = []
 
 
