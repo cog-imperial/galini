@@ -23,6 +23,7 @@ from galini.core import (
     Objective,
 )
 import galini.core as core
+from galini.util import expr_to_str, print_problem
 
 
 class Relaxation(metaclass=ABCMeta):
@@ -190,7 +191,7 @@ class Relaxation(metaclass=ABCMeta):
 
     def _insert_expression(self, expr, problem, relaxed_problem):
         def _inner(expr):
-            if expr.problem == relaxed_problem:
+            if expr.graph == relaxed_problem._graph:
                 return expr
 
             if expr.uid in self._problem_expr:

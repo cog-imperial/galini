@@ -34,7 +34,6 @@ from galini.quantities import relative_gap, absolute_gap
 from galini.core import Constraint, LinearExpression, SumExpression, Domain, Sense
 from galini.cuts import CutsGeneratorsManager
 from galini.timelimit import seconds_left
-from galini.util import print_problem
 from galini.config import (
     OptionsGroup,
     NumericOption,
@@ -246,6 +245,11 @@ class BranchAndCutAlgorithm:
                 ref = v.reference
                 bilinear_aux_variables[(ref.var1.idx, ref.var2.idx)] = v
 
+        for v in relaxed_problem.relaxed.variables:
+            if v.is_auxiliary:
+                ref = v.reference
+                bilinear_aux_variables[(ref.var1.idx, ref.var2.idx)] = v
+
         cuts_state = CutsState()
 
         while (not self._cuts_converged(cuts_state) and
@@ -334,7 +338,7 @@ class BranchAndCutAlgorithm:
             run_id,
             'Round {}. Linearized problem solution is {}',
             cuts_state.round, mip_solution.status.description())
-        logger.debug(run_id, 'Objective is {}'.format(mip_solution.objectives))
+        logger.debug(run_id, 'Objective is {}'.format(mip_solution.objective))
         logger.debug(run_id, 'Variables are {}'.format(mip_solution.variables))
         if not mip_solution.status.is_success():
             return False, None, mip_solution
