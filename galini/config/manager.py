@@ -86,6 +86,7 @@ def _galini_group():
         NumericOption('timelimit', min_value=0, default=86400),
         NumericOption('infinity', min_value=0, default=1e20),
         NumericOption('epsilon', min_value=0, default=1e-6),
+        NumericOption('constraint_violation_tol', min_value=0, default=1e-6),
     ])
 
 

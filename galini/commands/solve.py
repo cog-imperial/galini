@@ -102,3 +102,4 @@ class SolveCommand(CliCommandWithProblem):
 def _update_math_context(galini):
     mc.epsilon = galini.epsilon
     mc.infinity = galini.infinity
+    mc.constraint_violation_tol = galini.constraint_violation_tol

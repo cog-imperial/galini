@@ -48,8 +48,8 @@ class BranchAndBoundSolver(Solver):
     @staticmethod
     def solver_options():
         return SolverOptions(BranchAndBoundSolver.name, [
-            NumericOption('tolerance', default=1e-8),
-            NumericOption('relative_tolerance', default=1e-8),
+            NumericOption('tolerance', default=1e-6),
+            NumericOption('relative_tolerance', default=1e-6),
             IntegerOption('node_limit', default=100000000),
             IntegerOption('fbbt_maxiter', default=10),
             IntegerOption('obbt_simplex_maxiter', default=1000),
