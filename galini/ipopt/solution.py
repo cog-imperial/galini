@@ -14,6 +14,7 @@
 
 """Ipopt solution and status."""
 import numpy as np
+from galini.logging import get_logger
 from galini.math import mc, almost_ge, almost_le
 from galini.core import (
     IpoptSolution as CoreIpoptSolution,
@@ -26,7 +27,10 @@ from galini.solvers import (
 )
 
 
-def build_solution(problem, solution, tree_data, out_indexes):
+logger = get_logger(__name__)
+
+
+def build_solution(run_id, problem, solution, tree_data, out_indexes):
         if solution.x:
             opt_obj = OptimalObjective(
                 name=problem.objectives[0].name,
@@ -41,7 +45,7 @@ def build_solution(problem, solution, tree_data, out_indexes):
             opt_obj = None
             opt_vars = None
 
-        if _solution_is_feasible(problem, solution, tree_data, out_indexes):
+        if _solution_is_feasible(run_id, problem, solution, tree_data, out_indexes):
             status = IpoptStatusSuccess(solution.status)
         else:
             status = IpoptStatusInfeasible(solution.status)
@@ -57,11 +61,12 @@ def build_solution(problem, solution, tree_data, out_indexes):
         )
 
 
-def _solution_is_feasible(problem, solution, tree_data, out_indexes):
+def _solution_is_feasible(run_id, problem, solution, tree_data, out_indexes):
     if not solution.x:
         return False
     fg = tree_data.eval(solution.x, out_indexes)
     fg_x = fg.forward(0, solution.x)
+    logger.debug(run_id, 'Checking infeasibility')
     for i, constraint in enumerate(problem.constraints):
         lb = constraint.lower_bound
         if lb is None:
@@ -69,6 +74,7 @@ def _solution_is_feasible(problem, solution, tree_data, out_indexes):
         ub = constraint.upper_bound
         if ub is None:
             ub = np.inf
+        logger.debug(run_id, 'Con {}: {} <= {} <= {}', constraint.name, lb, fg_x[i+1], ub)
         if not almost_le(lb, fg_x[i+1], atol=mc.constraint_violation_tol):
             return False
         if not almost_le(fg_x[i+1], ub, atol=mc.constraint_violation_tol):

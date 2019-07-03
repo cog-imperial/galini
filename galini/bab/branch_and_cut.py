@@ -491,6 +491,8 @@ def _safe_lb(domain, a, b):
         return None
 
     if domain.is_integer() and lb is not None:
+        if np.isclose(np.floor(lb), lb, atol=mc.epsilon, rtol=0.0):
+            return np.floor(lb)
         return np.ceil(lb)
 
     return lb
@@ -505,6 +507,8 @@ def _safe_ub(domain, a, b):
         return None
 
     if domain.is_integer() and ub is not None:
+        if np.isclose(np.ceil(ub), ub, atol=mc.epsilon, rtol=0.0):
+            return np.ceil(ub)
         return np.floor(ub)
 
     return ub

@@ -20,7 +20,7 @@ class MathContext:
     def __init__(self):
         self.epsilon = 1e-5
         self.infinity = 1e20
-        self.constraint_violation_tol = 1e-6
+        self.constraint_violation_tol = 1e-8
 
 
 mc = MathContext()
@@ -29,7 +29,7 @@ mc = MathContext()
 def almost_ge(a, b, atol):
     if a > b:
         return True
-    if np.isclose(a, b, atol=atol):
+    if np.isclose(a, b, atol=atol, rtol=0.0):
         return True
     return False
 
@@ -37,6 +37,6 @@ def almost_ge(a, b, atol):
 def almost_le(a, b, atol):
     if a < b:
         return True
-    if np.isclose(a, b, atol=atol):
+    if np.isclose(a, b, atol=atol, rtol=0.0):
         return True
     return False

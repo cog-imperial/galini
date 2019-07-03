@@ -78,7 +78,7 @@ class IpoptNLPSolver(Solver):
         ipopt_solution = ipopt_solve(
             app, tree_data, out_indexes, xi, xl, xu, gl, gu, IpoptLoggerAdapter(logger, run_id, DEBUG)
         )
-        solution = build_solution(problem, ipopt_solution, tree_data, out_indexes)
+        solution = build_solution(run_id, problem, ipopt_solution, tree_data, out_indexes)
         logger.debug(run_id, 'IPOPT returned {}', solution)
         return solution
 
