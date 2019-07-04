@@ -31,41 +31,45 @@ logger = get_logger(__name__)
 
 
 def build_solution(run_id, problem, solution, tree_data, out_indexes):
-        if solution.x:
-            opt_obj = OptimalObjective(
-                name=problem.objectives[0].name,
-                value=solution.objective_value,
-            )
+    if not solution.x:
+        status = IpoptStatusInfeasible(solution.status)
+        opt_obj = None
+        opt_vars = None
+    else:
 
-            opt_vars = [
-                OptimalVariable(name=variable.name, value=solution.x[i])
-                for i, variable in enumerate(problem.variables)
-            ]
-        else:
-            opt_obj = None
-            opt_vars = None
+        fg = tree_data.eval(solution.x, out_indexes)
+        fg_x = fg.forward(0, solution.x)
 
-        if _solution_is_feasible(run_id, problem, solution, tree_data, out_indexes):
+        obj_value = fg_x[0]
+
+        opt_obj = OptimalObjective(
+            name=problem.objectives[0].name,
+            value=obj_value,
+        )
+
+        opt_vars = [
+            OptimalVariable(name=variable.name, value=solution.x[i])
+            for i, variable in enumerate(problem.variables)
+        ]
+
+        if _solution_is_feasible(run_id, problem, solution, fg_x):
             status = IpoptStatusSuccess(solution.status)
         else:
             status = IpoptStatusInfeasible(solution.status)
 
-        return IpoptSolution(
-            status,
-            optimal_obj=opt_obj,
-            optimal_vars=opt_vars,
-            zl=np.array(solution.zl),
-            zu=np.array(solution.zu),
-            g=np.array(solution.g),
-            lambda_=np.array(solution.lambda_)
-        )
+
+    return IpoptSolution(
+        status,
+        optimal_obj=opt_obj,
+        optimal_vars=opt_vars,
+        zl=np.array(solution.zl),
+        zu=np.array(solution.zu),
+        g=np.array(solution.g),
+        lambda_=np.array(solution.lambda_)
+    )
 
 
-def _solution_is_feasible(run_id, problem, solution, tree_data, out_indexes):
-    if not solution.x:
-        return False
-    fg = tree_data.eval(solution.x, out_indexes)
-    fg_x = fg.forward(0, solution.x)
+def _solution_is_feasible(run_id, problem, solution, fg_x):
     logger.debug(run_id, 'Checking infeasibility')
     for i, constraint in enumerate(problem.constraints):
         lb = constraint.lower_bound
