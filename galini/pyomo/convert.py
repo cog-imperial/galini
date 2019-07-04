@@ -32,6 +32,7 @@ from pyomo.core.expr.numeric_expr import (
 )
 from suspect.pyomo.expr_dict import ExpressionDict
 from suspect.float_hash import BTreeFloatHasher
+from galini.pyomo.postprocess import detect_auxiliary_variables
 from galini.pyomo.util import (
     model_variables,
     model_objectives,
@@ -97,6 +98,8 @@ def problem_from_pyomo_model(model):
                 core.Sense.MINIMIZE,
             ),
         )
+
+    detect_auxiliary_variables(problem)
 
     return problem
 

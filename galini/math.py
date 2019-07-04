@@ -26,6 +26,10 @@ class MathContext:
 mc = MathContext()
 
 
+def is_close(a, b, atol):
+    return np.isclose(a, b, atol=atol, rtol=0.0)
+
+
 def almost_ge(a, b, atol):
     if a > b:
         return True
