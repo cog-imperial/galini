@@ -16,7 +16,6 @@
 # pylint: disable=no-name-in-module
 from galini_core import (
     Variable,
-    AuxiliaryVariable,
     Constant,
     Constraint,
     Objective,

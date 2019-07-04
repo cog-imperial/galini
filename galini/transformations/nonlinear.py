@@ -18,7 +18,6 @@ from suspect.expression import ExpressionType
 from galini.core import (
     LinearExpression,
     SumExpression,
-    AuxiliaryVariable,
     Constraint,
     Domain,
     ExpressionReference,
@@ -61,13 +60,13 @@ class ReplaceNonlinearTransformation(Transformation):
         expr_bounds = ctx.bounds(expr)
         reference = ExpressionReference(expr)
         # Use bounds
-        w = AuxiliaryVariable(
+        w = Variable(
             self._format_aux_name(expr),
             expr_bounds.lower_bound,
             expr_bounds.upper_bound,
             Domain.REAL,
-            reference,
         )
+        w.reference = reference
         new_expr = SumExpression([
             LinearExpression([w], [-1.0], 0.0),
             expr

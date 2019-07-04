@@ -213,13 +213,13 @@ def _make_relaxed(parent, name, relaxation=None):
                 domain(var),
             )
         else:
-            new_var = core.AuxiliaryVariable(
+            new_var = core.Variable(
                 var.name,
                 lb(var),
                 ub(var),
                 domain(var),
-                var.reference, # TODO(fra): reference new variables
             )
+            new_var.reference = var.reference
         relaxed.add_variable(new_var)
     return relaxed
 
@@ -296,12 +296,6 @@ class Problem(_ProblemBase):
         """Add variable to the problem."""
         if not isinstance(variable, core.Variable):
             raise ValueError('variable must be Variable')
-        return self._add_variable(variable)
-
-    def add_aux_variable(self, variable):
-        """Add auxiliary variable to the problem."""
-        if not isinstance(variable, core.AuxiliaryVariable):
-            raise ValueError('variable must be AuxiliaryVariable')
         return self._add_variable(variable)
 
     def _add_variable(self, variable):

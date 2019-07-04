@@ -18,7 +18,6 @@ from suspect.expression import ExpressionType
 from galini.core import (
     LinearExpression,
     SumExpression,
-    AuxiliaryVariable,
     Constraint,
     Domain,
     ExpressionReference,

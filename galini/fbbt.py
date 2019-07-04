@@ -24,7 +24,6 @@ import galini.core as core
 
 _expr_to_prop = dict()
 _expr_to_prop[core.Variable] = prop.VariableRule()
-_expr_to_prop[core.AuxiliaryVariable] = prop.VariableRule()
 _expr_to_prop[core.Constant] = prop.ConstantRule()
 _expr_to_prop[core.LinearExpression] = prop.LinearRule()
 _expr_to_prop[core.QuadraticExpression] = prop.QuadraticRule()

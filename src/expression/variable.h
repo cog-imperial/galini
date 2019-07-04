@@ -39,7 +39,8 @@ public:
     , name_(name)
     , lower_bound_(lower_bound)
     , upper_bound_(upper_bound)
-    , domain_(domain) {}
+    , domain_(domain)
+    , reference_(py::none()) {}
 
   Variable(const std::string& name, py::object lower_bound,
 	      py::object upper_bound, py::object domain)
@@ -73,7 +74,7 @@ public:
     return nullptr;
   }
 
-  virtual bool is_auxiliary() const { return false; }
+  virtual bool is_auxiliary() const { return !reference_.is_none(); }
   bool is_variable() const override { return true; }
   bool is_expression() const override { return false; }
 
@@ -85,11 +86,15 @@ public:
     return (*values)[self()];
   }
 
+  py::object reference() const { return reference_; }
+  void set_reference(const py::object &ref) { reference_ = ref; }
+
 private:
   std::string name_;
   py::object lower_bound_;
   py::object upper_bound_;
   py::object domain_;
+  py::object reference_;
 };
 
 

@@ -67,7 +67,6 @@ def detect_special_structure(problem, maxiter=10):
 
 _expr_to_mono = dict()
 _expr_to_mono[core.Variable] = mono_rules.VariableRule()
-_expr_to_mono[core.AuxiliaryVariable] = mono_rules.VariableRule()
 _expr_to_mono[core.Constant] = mono_rules.ConstantRule()
 _expr_to_mono[core.LinearExpression] = mono_rules.LinearRule()
 _expr_to_mono[core.QuadraticExpression] = mono_rules.QuadraticRule()
@@ -83,7 +82,6 @@ class _GaliniMonotonicityPropagationVisitor(MonotonicityPropagationVisitor):
 
 _expr_to_cvx = dict()
 _expr_to_cvx[core.Variable] = cvx_rules.VariableRule()
-_expr_to_cvx[core.AuxiliaryVariable] = cvx_rules.VariableRule()
 _expr_to_cvx[core.Constant] = cvx_rules.ConstantRule()
 _expr_to_cvx[core.LinearExpression] = cvx_rules.LinearRule()
 _expr_to_cvx[core.QuadraticExpression] = cvx_rules.QuadraticRule()

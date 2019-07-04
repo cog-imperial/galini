@@ -55,22 +55,14 @@ void init_module(py::module& m) {
   py::class_<Variable, Expression, Variable::ptr>(m, "Variable")
     .def(py::init<const std::string&, py::object, py::object, py::object>())
     .def(py::init<const Expression::problem_ptr&, const std::string&, py::object, py::object, py::object>())
+    .def_property("reference", &Variable::reference, &Variable::set_reference)
     .def_property_readonly("name", &Variable::name)
     .def_property_readonly("lower_bound", &Variable::lower_bound)
     .def_property_readonly("upper_bound", &Variable::upper_bound)
     .def_property_readonly("lb", &Variable::lower_bound)
     .def_property_readonly("ub", &Variable::upper_bound)
     .def_property_readonly("domain", &Variable::domain)
-    .def_property_readonly("is_auxiliary", [](const Variable&) { return false; })
-    .def_property_readonly("expression_type",
-			   [ExpressionType](const Variable&) { return ExpressionType.attr("Variable"); });
-
-  py::class_<AuxiliaryVariable, Variable, AuxiliaryVariable::ptr>(m, "AuxiliaryVariable")
-    .def(py::init<const std::string&, py::object, py::object, py::object, py::object>())
-    .def(py::init<const Expression::problem_ptr&, const std::string&, py::object, py::object,
-	 py::object, py::object>())
-    .def_property_readonly("reference", &AuxiliaryVariable::reference)
-    .def_property_readonly("is_auxiliary", [](const Variable&) { return true; })
+    .def_property_readonly("is_auxiliary", &Variable::is_auxiliary)
     .def_property_readonly("expression_type",
 			   [ExpressionType](const Variable&) { return ExpressionType.attr("Variable"); });
 

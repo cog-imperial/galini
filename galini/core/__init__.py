@@ -19,7 +19,7 @@ from collections import namedtuple
 
 __all__ = [
     'Domain', 'Sense', 'Problem', 'Variable', 'Constant', 'Constraint', 'Objective',
-    'Expression', 'UnaryExpression', 'BinaryExpression', 'NaryExpression', 'AuxiliaryVariable',
+    'Expression', 'UnaryExpression', 'BinaryExpression', 'NaryExpression',
     'ProductExpression', 'DivisionExpression', 'SumExpression', 'PowExpression',
     'LinearExpression', 'UnaryFunctionExpression', 'NegationExpression', 'AbsExpression',
     'SqrtExpression', 'ExpExpression', 'LogExpression', 'SinExpression', 'CosExpression',
@@ -70,7 +70,6 @@ from galini.core.problem import (
 # pylint: disable=no-name-in-module
 from galini_core import (
     Variable,
-    AuxiliaryVariable,
     Constant,
     Constraint,
     Objective,

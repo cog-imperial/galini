@@ -57,7 +57,6 @@ def build_solution(run_id, problem, solution, tree_data, out_indexes):
         else:
             status = IpoptStatusInfeasible(solution.status)
 
-
     return IpoptSolution(
         status,
         optimal_obj=opt_obj,

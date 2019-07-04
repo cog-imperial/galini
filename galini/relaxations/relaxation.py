@@ -18,7 +18,6 @@ from suspect.expression import ExpressionType, UnaryFunctionType
 from galini.core import (
     RelaxedProblem,
     Variable,
-    AuxiliaryVariable,
     Constraint,
     Objective,
 )
@@ -175,17 +174,9 @@ class Relaxation(metaclass=ABCMeta):
             upper_bound = expr.upper_bound
             domain = expr.domain
 
-        if isinstance(expr, AuxiliaryVariable):
-            new_var = relaxed_problem.add_aux_variable(
-                AuxiliaryVariable(
-                    expr.name, lower_bound, upper_bound, domain, expr.reference
-                )
-            )
-        else:
-            new_var = relaxed_problem.add_variable(
-                Variable(expr.name, lower_bound, upper_bound, domain)
-            )
-
+        new_var = Variable(expr.name, lower_bound, upper_bound, domain)
+        new_var.reference = expr.reference
+        new_var = relaxed_problem.add_variable(new_var)
         self._problem_expr[expr.uid] = new_var
         return new_var
 

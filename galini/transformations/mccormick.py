@@ -18,7 +18,6 @@ from suspect.interval import Interval
 from suspect.expression import ExpressionType
 from galini.core import (
     LinearExpression,
-    AuxiliaryVariable,
     Constraint,
     Domain,
     BilinearTermReference,
@@ -80,13 +79,13 @@ class McCormickTransformation(Transformation):
             w_bounds = Interval(x_l, x_u) * Interval(y_l, y_u)
 
         reference = BilinearTermReference(term.var1, term.var2)
-        w = AuxiliaryVariable(
+        w = Variable(
             self._format_aux_name(term.var1, term.var2),
             w_bounds.lower_bound,
             w_bounds.upper_bound,
             Domain.REAL,
-            reference,
         )
+        w.reference = reference
         self._aux_variables[xy_tuple] = w
 
         #  y     x     w   const

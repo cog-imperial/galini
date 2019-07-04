@@ -33,22 +33,14 @@ def _duplicate_expr(source, target, expr, memo):
         if expr.problem == source:
             return target.variable(expr.idx)
         else:
-            if isinstance(expr, core.Variable):
-                new_var = target.add_variable(
-                    expr.name,
-                    expr.lower_bound,
-                    expr.upper_bound,
-                    expr.domain,
-                )
-            else:
-                assert isinstance(expr, core.AuxiliaryVariable)
-                new_var = target.add_aux_variable(
-                    expr.name,
-                    expr.lower_bound,
-                    expr.upper_bound,
-                    expr.domain,
-                    expr.reference,
-                )
+
+            new_var = target.add_variable(
+                expr.name,
+                expr.lower_bound,
+                expr.upper_bound,
+                expr.domain,
+            )
+            new_var.reference = expr.reference
 
         memo[expr.uid] = new_var
         return new_var
