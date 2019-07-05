@@ -67,13 +67,12 @@ class IpoptNLPSolver(Solver):
             self._configure_ipopt_logger(app, config, run_id)
 
         xi, xl, xu = self.get_starting_point_and_bounds(run_id, problem)
-        diff = np.abs(xu - xl) < mc.epsilon
-        xl[diff] = xu[diff]
-        gl, gu = self.get_constraints_bounds(run_id, problem)
+        gl, gu, constraints_root_expr_idxs = \
+            self.get_constraints_bounds(run_id, problem)
         logger.debug(run_id, 'Calling in IPOPT')
 
         tree_data = problem.expression_tree_data()
-        out_indexes = [problem.objective.root_expr.idx] + [c.root_expr.idx for c in problem.constraints]
+        out_indexes = [problem.objective.root_expr.idx] + constraints_root_expr_idxs
 
         ipopt_solution = ipopt_solve(
             app, tree_data, out_indexes, xi, xl, xu, gl, gu, IpoptLoggerAdapter(logger, run_id, DEBUG)
@@ -145,10 +144,21 @@ class IpoptNLPSolver(Solver):
 
         gl = np.zeros(ng)
         gu = np.zeros(ng)
-        for i in range(ng):
-            c = problem.constraint(i)
-            gl[i] = c.lower_bound if c.lower_bound is not None else -2e19
-            gu[i] = c.upper_bound if c.upper_bound is not None else 2e19
+        out_indexes = []
+        count = 0
+        for i, c in enumerate(problem.constraints):
+            if c.metadata.get('rlt_constraint_info'):
+                (v, aux_vs) = c.metadata['rlt_constraint_info']
+                logger.debug(
+                    run_id,
+                    'Constraint {}: Skip RLT {} = {}',
+                    c.name,
+                    v.name,
+                    [v.name for v in aux_vs]
+                )
+                continue
+            gl[count] = c.lower_bound if c.lower_bound is not None else -2e19
+            gu[count] = c.upper_bound if c.upper_bound is not None else 2e19
             logger.debug(
                 run_id,
                 'Constraint {}: {} <= {} <= {}',
@@ -157,5 +167,7 @@ class IpoptNLPSolver(Solver):
                 expr_to_str(c.root_expr),
                 gu[i],
             )
+            out_indexes.append(c.root_expr.idx)
+            count += 1
 
-        return gl, gu
+        return gl[:count], gu[:count], out_indexes

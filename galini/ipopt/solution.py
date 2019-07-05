@@ -70,7 +70,10 @@ def build_solution(run_id, problem, solution, tree_data, out_indexes):
 
 def _solution_is_feasible(run_id, problem, solution, fg_x):
     logger.debug(run_id, 'Checking infeasibility')
-    for i, constraint in enumerate(problem.constraints):
+    i = 0
+    for _, constraint in enumerate(problem.constraints):
+        if constraint.metadata.get('rlt_constraint_info'):
+            continue
         lb = constraint.lower_bound
         if lb is None:
             lb = -np.inf
@@ -79,9 +82,12 @@ def _solution_is_feasible(run_id, problem, solution, fg_x):
             ub = np.inf
         logger.debug(run_id, 'Con {}: {} <= {} <= {}', constraint.name, lb, fg_x[i+1], ub)
         if not almost_le(lb, fg_x[i+1], atol=mc.constraint_violation_tol):
+            i += 1
             return False
         if not almost_le(fg_x[i+1], ub, atol=mc.constraint_violation_tol):
+            i += 1
             return False
+        i += 1
     return True
 
 

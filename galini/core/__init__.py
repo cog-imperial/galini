@@ -71,8 +71,6 @@ from galini.core.problem import (
 from galini_core import (
     Variable,
     Constant,
-    Constraint,
-    Objective,
     Expression,
     UnaryExpression,
     BinaryExpression,

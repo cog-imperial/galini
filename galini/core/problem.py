@@ -80,6 +80,7 @@ class Constraint:
         self.root_expr = root_expr
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
+        self.metadata = dict()
 
 
 class Objective:
@@ -87,6 +88,7 @@ class Objective:
         self.name = name
         self.root_expr = root_expr
         self.original_sense = original_sense
+        self.metadata = dict()
 
 
 class _ProblemBase:
@@ -101,6 +103,7 @@ class _ProblemBase:
         self._values = []
         self._values_mask = []
         self._fixed_mask = []
+        self.metadata = dict()
 
     @property
     def _graph(self):
