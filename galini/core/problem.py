@@ -94,6 +94,7 @@ class Objective:
 class _ProblemBase:
     def __init__(self, name):
         self.name = name
+        self.parent = None
 
         self._domains = []
         self._lower_bounds = []

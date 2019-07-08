@@ -234,22 +234,6 @@ class BranchAndCutAlgorithm:
 
         linear_problem = self._build_linear_relaxation(relaxed_problem.relaxed)
 
-        if 'bilinear_aux_variables' not in linear_problem.relaxation._ctx.metadata:
-            linear_problem.relaxation._ctx.metadata['bilinear_aux_variables'] = dict()
-
-        bilinear_aux_variables = \
-            linear_problem.relaxation._ctx.metadata['bilinear_aux_variables']
-
-        for v in linear_problem.relaxed.variables:
-            if v.is_auxiliary:
-                ref = v.reference
-                bilinear_aux_variables[(ref.var1.idx, ref.var2.idx)] = v
-
-        for v in relaxed_problem.relaxed.variables:
-            if v.is_auxiliary:
-                ref = v.reference
-                bilinear_aux_variables[(ref.var1.idx, ref.var2.idx)] = v
-
         cuts_state = CutsState()
 
         while (not self._cuts_converged(cuts_state) and
