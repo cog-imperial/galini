@@ -19,10 +19,10 @@ from suspect.monotonicity import MonotonicityPropagationVisitor
 import suspect.monotonicity.rules as mono_rules
 from suspect.convexity import ConvexityPropagationVisitor
 import suspect.convexity.rules as cvx_rules
-from suspect.fbbt import FBBTStopCriterion
 from suspect.interval import Interval
 import galini.core as core
-from galini.fbbt import BoundsTightener
+from galini.fbbt import BoundsTightener, FBBTStopCriterion
+
 from galini.suspect import (
     ProblemContext,
     ExpressionDict,
@@ -40,10 +40,10 @@ def detect_polynomial_degree(problem, ctx=None):
     return ctx
 
 
-def detect_special_structure(problem, maxiter=10):
+def detect_special_structure(problem, maxiter, timelimit):
     ctx = ProblemContext(problem)
     bounds_tightener = BoundsTightener(
-        FBBTStopCriterion(max_iter=maxiter),
+        FBBTStopCriterion(max_iter=maxiter, timelimit=timelimit),
     )
 
     # set bounds of root_expr to constraints bounds

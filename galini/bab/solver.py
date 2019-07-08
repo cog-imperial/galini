@@ -22,7 +22,7 @@ from galini.config import (
     BoolOption,
 )
 from galini.bab.tree import BabTree
-from galini.solvers import Solver
+from galini.solvers import Solver, OptimalObjective, OptimalVariable
 from galini.cuts import CutsGeneratorsRegistry
 from galini.bab.branch_and_cut import BranchAndCutAlgorithm
 from galini.bab.solution import BabSolution, BabStatusInterrupted
@@ -53,6 +53,9 @@ class BranchAndBoundSolver(Solver):
             IntegerOption('node_limit', default=100000000),
             IntegerOption('fbbt_maxiter', default=10),
             IntegerOption('obbt_simplex_maxiter', default=1000),
+            IntegerOption('obbt_timelimit', default=6000000),
+            IntegerOption('fbbt_timelimit', default=6000000),
+            IntegerOption('fbbt_max_quadratic_size', default=10000000),
             BoolOption('catch_keyboard_interrupt', default=True),
             BranchAndCutAlgorithm.algorithm_options(),
         ])
@@ -70,7 +73,7 @@ class BranchAndBoundSolver(Solver):
         else:
             self._bab_loop(problem, run_id, **kwargs)
         assert self._tree is not None
-        return self._solution_from_tree(self._tree)
+        return self._solution_from_tree(problem, self._tree)
 
     def _bab_loop(self, problem, run_id, **kwargs):
         branching_strategy = self._algo.branching_strategy
@@ -163,15 +166,22 @@ class BranchAndBoundSolver(Solver):
 
         logger.info(run_id, 'Branch & Bound Finished: {}', tree.state)
 
-    def _solution_from_tree(self, tree):
+    def _solution_from_tree(self, problem, tree):
         nodes_visited = tree.nodes_visited
 
         if len(tree.solution_pool) == 0:
             # Return lower bound only
+            optimal_obj = [
+                OptimalObjective(name=problem.objective.name, value=None)
+            ]
+            optimal_vars = [
+                OptimalVariable(name=v.name, value=None)
+                for v in problem.variables
+            ]
             return BabSolution(
                 BabStatusInterrupted(),
-                None,
-                None,
+                optimal_obj,
+                optimal_vars,
                 dual_bound=tree.state.lower_bound,
                 nodes_visited=nodes_visited,
             )

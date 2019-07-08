@@ -32,7 +32,12 @@ class _RelaxationBase(Relaxation):
 
     def before_relax(self, problem, **kwargs):
         fbbt_maxiter = kwargs.get('fbbt_maxiter', 10)
-        self._ctx = detect_special_structure(problem, maxiter=fbbt_maxiter)
+        fbbt_timelimit = kwargs.get('fbbt_timelimit', 10000)
+        self._ctx = detect_special_structure(
+            problem,
+            maxiter=fbbt_maxiter,
+            timelimit=fbbt_timelimit,
+        )
         self._before_relax(problem)
 
     def _before_relax(self, problem):

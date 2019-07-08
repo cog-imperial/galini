@@ -168,19 +168,20 @@ def _detect_rlt_expression_bilinear(root_expr):
 def _variable_and_quadratic(a, b):
     if isinstance(a, core.LinearExpression):
         if len(a.children) != 1:
-            return False, None, None
+            return False, None, None, None
 
         if not isinstance(b, core.QuadraticExpression):
-            return False, None, None
+            return False, None, None, None
 
         var = a.children[0]
         coef = a.coefficient(var)
 
         if not is_close(np.abs(coef), 1.0, atol=mc.epsilon):
-            return False, None, None
+            return False, None, None, None
 
         coef_sign = np.sign(coef)
         return True, var, coef_sign, b
+
     elif isinstance(a, core.Variable):
         if not isinstance(b, core.QuadraticExpression):
             return False, None, None

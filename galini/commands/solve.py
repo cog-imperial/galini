@@ -24,7 +24,7 @@ from galini.commands import (
     print_output_table,
     add_output_format_parser_arguments,
 )
-from galini.timelimit import timeout
+from galini.timelimit import start_timelimit
 from galini.logging import apply_config as apply_logging_config
 
 
@@ -55,9 +55,11 @@ class SolveCommand(CliCommandWithProblem):
         galini_group = galini.get_configuration_group('galini')
         _update_math_context(galini_group)
         timelimit = galini_group.get('timelimit')
-        with timeout(timelimit):
-            solver.before_solve(model, problem)
-            solution = solver.solve(problem)
+
+        start_timelimit()
+
+        solver.before_solve(model, problem)
+        solution = solver.solve(problem)
 
         if solution is None:
             raise RuntimeError('Solver did not return a solution')
@@ -66,11 +68,15 @@ class SolveCommand(CliCommandWithProblem):
             {'id': 'name', 'name': 'Objective', 'type': 't'},
             {'id': 'value', 'name': 'Value', 'type': 'f'},
         ])
+
         for sol, obj in zip(solution.objectives, problem.objectives):
             if obj.original_sense.is_minimization():
                 value = sol.value
             else:
-                value = -sol.value
+                if sol.value is not None:
+                    value = -sol.value
+                else:
+                    value = None
             obj_table.add_row({
                 'name': sol.name,
                 'value': value,

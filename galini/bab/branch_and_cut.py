@@ -33,7 +33,12 @@ from galini.special_structure import detect_special_structure
 from galini.quantities import relative_gap, absolute_gap
 from galini.core import Constraint, LinearExpression, SumExpression, Domain, Sense
 from galini.cuts import CutsGeneratorsManager
-from galini.timelimit import seconds_left
+from galini.timelimit import (
+    seconds_left,
+    current_time,
+    seconds_elapsed_since,
+    timeout,
+)
 from galini.config import (
     OptionsGroup,
     NumericOption,
@@ -82,6 +87,7 @@ class BranchAndCutAlgorithm:
         self.relative_tolerance = bab_config['relative_tolerance']
         self.node_limit = bab_config['node_limit']
         self.fbbt_maxiter = bab_config['fbbt_maxiter']
+        self.fbbt_timelimit = bab_config['fbbt_timelimit']
 
         bac_config = galini.get_configuration_group('bab.branch_and_cut')
 
@@ -114,6 +120,9 @@ class BranchAndCutAlgorithm:
 
     def before_solve(self, model, problem):
         try:
+            obbt_timelimit = self.solver.config['obbt_timelimit']
+            obbt_start_time = current_time()
+
             for var in model.component_data_objects(ctype=pe.Var):
                 var.domain = pe.Reals
 
@@ -152,7 +161,9 @@ class BranchAndCutAlgorithm:
 
             logger.info(0, 'Performaning OBBT on {} variables', len(relaxed_vars))
 
-            result = perform_obbt(relaxed_model, solver, relaxed_vars)
+            time_left = obbt_timelimit - seconds_elapsed_since(obbt_start_time)
+            with timeout(time_left, 'Timeout in OBBT'):
+                result = perform_obbt(relaxed_model, solver, relaxed_vars)
 
             if result is None:
                 return
@@ -173,6 +184,10 @@ class BranchAndCutAlgorithm:
                             new_lb = new_ub
                 vv.set_lower_bound(new_lb)
                 vv.set_upper_bound(new_ub)
+
+        except TimeoutError:
+            return
+
         except Exception as ex:
             logger.warning(0, 'Error performing OBBT: {}', ex)
             raise
@@ -308,10 +323,20 @@ class BranchAndCutAlgorithm:
         return solution
 
     def _build_convex_relaxation(self, problem):
-        return RelaxedProblem(ConvexRelaxation(), problem, fbbt_maxiter=self.fbbt_maxiter)
+        return RelaxedProblem(
+            ConvexRelaxation(),
+            problem,
+            fbbt_maxiter=self.fbbt_maxiter,
+            timelimit=self.fbbt_timelimit,
+        )
 
     def _build_linear_relaxation(self, problem):
-        return RelaxedProblem(LinearRelaxation(), problem, fbbt_maxiter=self.fbbt_maxiter)
+        return RelaxedProblem(
+            LinearRelaxation(),
+            problem,
+            fbbt_maxiter=self.fbbt_maxiter,
+            timelimit=self.fbbt_timelimit,
+        )
 
     def _perform_cut_round(self, run_id, problem, relaxed_problem, linear_problem, cuts_state, tree, node):
         logger.debug(run_id, 'Round {}. Solving linearized problem.', cuts_state.round)
@@ -389,7 +414,12 @@ class BranchAndCutAlgorithm:
         return state.round > self.cuts_maxiter
 
     def _perform_fbbt(self, run_id, problem, tree, node):
-        ctx = detect_special_structure(problem, maxiter=self.fbbt_maxiter)
+        fbbt_starttime = current_time()
+        ctx = detect_special_structure(
+            problem,
+            maxiter=self.fbbt_maxiter,
+            timelimit=self.fbbt_timelimit,
+        )
         self._ctx = ctx
         for v in problem.variables:
             vv = problem.variable_view(v)

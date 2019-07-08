@@ -13,12 +13,17 @@
 # limitations under the License.
 
 """Perform FBBT on a Galini problem."""
+from suspect.fbbt.main import FBBTStopCriterion as BaseFBBTStopCriterion
 from suspect.fbbt.initialization import BoundsInitializationVisitor
 from suspect.fbbt.propagation import BoundsPropagationVisitor
 import suspect.fbbt.propagation.rules as prop
 from suspect.fbbt.tightening import BoundsTighteningVisitor
 import suspect.fbbt.tightening.rules as tight
 from galini.suspect import ProblemForwardIterator, ProblemBackwardIterator
+from galini.timelimit import (
+    current_time,
+    seconds_elapsed_since,
+)
 import galini.core as core
 
 
@@ -30,6 +35,7 @@ _expr_to_prop[core.QuadraticExpression] = prop.QuadraticRule()
 _expr_to_prop[core.SumExpression] = prop.SumRule()
 _expr_to_prop[core.NegationExpression] = prop.NegationRule()
 _expr_to_prop[core.ProductExpression] = prop.ProductRule()
+
 
 class _GaliniBoundsPropagationVisitor(BoundsPropagationVisitor):
     def visit_expression(self, expr, bounds):
@@ -55,7 +61,7 @@ class _GaliniBoundsTighteningVisitor(BoundsTighteningVisitor):
         return False, None
 
 
-class BoundsTightener(object):
+class BoundsTightener:
     """Configure and run FBBT on a problem.
 
     Parameters
@@ -92,3 +98,15 @@ class BoundsTightener(object):
             if len(changes_prop) == 0 and len(changes_tigh) == 0:
                 return
             self._stop_criterion.iteration_end()
+
+
+class FBBTStopCriterion(BaseFBBTStopCriterion):
+    def __init__(self, max_iter, timelimit):
+        super().__init__(max_iter=max_iter)
+        self.timelimit = timelimit
+        self.start_time = current_time()
+
+    def should_stop(self):
+        iterations_exceeded = super().should_stop()
+        elapsed = seconds_elapsed_since(self.start_time)
+        return iterations_exceeded and elapsed > self.timelimit
