@@ -55,7 +55,8 @@ class BranchAndBoundSolver(Solver):
             IntegerOption('obbt_simplex_maxiter', default=1000),
             IntegerOption('obbt_timelimit', default=6000000),
             IntegerOption('fbbt_timelimit', default=6000000),
-            IntegerOption('fbbt_max_quadratic_size', default=10000000),
+            IntegerOption('fbbt_max_quadratic_size', default=1000),
+            IntegerOption('fbbt_max_expr_children', default=1000),
             BoolOption('catch_keyboard_interrupt', default=True),
             BranchAndCutAlgorithm.algorithm_options(),
         ])

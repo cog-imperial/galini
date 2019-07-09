@@ -22,7 +22,7 @@ import suspect.convexity.rules as cvx_rules
 from suspect.interval import Interval
 import galini.core as core
 from galini.fbbt import BoundsTightener, FBBTStopCriterion
-
+from galini.timelimit import timeout
 from galini.suspect import (
     ProblemContext,
     ExpressionDict,
@@ -38,6 +38,34 @@ def detect_polynomial_degree(problem, ctx=None):
     iterator = ProblemForwardIterator()
     iterator.iterate(problem, visitor, ctx)
     return ctx
+
+
+def perform_fbbt(problem, maxiter, timelimit):
+    bounds = ExpressionDict(problem)
+    bounds_tightener = BoundsTightener(
+        FBBTStopCriterion(max_iter=maxiter, timelimit=timelimit),
+    )
+
+    # set bounds of root_expr to constraints bounds
+    # since GALINI doesn't consider constraints as expression we have
+    # to do this manually.
+    for constraint in problem.constraints:
+        root_expr = constraint.root_expr
+        expr_bounds = Interval(constraint.lower_bound, constraint.upper_bound)
+        if root_expr not in bounds:
+            bounds[root_expr] = expr_bounds
+        else:
+            existing_bounds = bounds[root_expr]
+            new_bounds = existing_bounds.intersect(expr_bounds)
+            bounds[root_expr] = expr_bounds
+
+    try:
+        with timeout(timelimit, 'Timeout in FBBT'):
+            bounds_tightener.tighten(problem, bounds)
+    except TimeoutError:
+        pass
+
+    return bounds
 
 
 def detect_special_structure(problem, maxiter, timelimit):
@@ -116,10 +144,12 @@ class _GaliniSpecialStructurePropagationVisitor(SpecialStructurePropagationVisit
             self._cvx_visitors.append(cls(problem))
 
 
-def propagate_special_structure(problem, ctx=None):
-    if ctx is None:
-        ctx = ProblemContext(problem)
+def propagate_special_structure(problem, bounds=None):
+    if bounds is None:
+        bounds = ExpressionDict(problem)
     visitor = _GaliniSpecialStructurePropagationVisitor(problem)
     iterator = ProblemForwardIterator()
-    iterator.iterate(problem, visitor, ctx.convexity, ctx.monotonicity, ctx.bounds)
-    return ctx
+    convexity = ExpressionDict(problem)
+    monotonicity = ExpressionDict(problem)
+    iterator.iterate(problem, visitor, convexity, monotonicity, bounds)
+    return bounds, monotonicity, convexity

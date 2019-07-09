@@ -55,7 +55,6 @@ class FixedIntegerContinuousRelaxation(Relaxation):
             raise ValueError('"x_k" must have same size as problem variables')
 
         for i, variable in enumerate(relaxed.variables):
-            print(variable.graph, relaxed._graph)
             if variable.domain != Domain.REAL:
                 # compare bounds with original problem bounds
                 view = problem.variable_view(variable)

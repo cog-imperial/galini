@@ -29,7 +29,10 @@ from galini.bab.selection import BestLowerBoundSelectionStrategy
 from galini.bab.relaxations import ConvexRelaxation, LinearRelaxation
 from galini.relaxations.relaxed_problem import RelaxedProblem
 from galini.logging import get_logger
-from galini.special_structure import detect_special_structure
+from galini.special_structure import (
+    propagate_special_structure,
+    perform_fbbt,
+)
 from galini.quantities import relative_gap, absolute_gap
 from galini.core import Constraint, LinearExpression, SumExpression, Domain, Sense
 from galini.cuts import CutsGeneratorsManager
@@ -99,7 +102,9 @@ class BranchAndCutAlgorithm:
         self.branching_strategy = KSectionBranchingStrategy(2)
         self.node_selection_strategy = BestLowerBoundSelectionStrategy()
 
-        self._ctx = None
+        self._bounds = None
+        self._monotonicity = None
+        self._convexity = None
 
     @staticmethod
     def algorithm_options():
@@ -239,7 +244,7 @@ class BranchAndCutAlgorithm:
 
         # Check if problem is convex in current domain, in that case
         # use IPOPT to solve it (if all variables are reals)
-        if _is_convex(problem, self._ctx.convexity):
+        if self._convexity and _is_convex(problem, self._convexity):
             all_reals = all(
                 problem.variable_view(v).domain.is_real()
                 for v in problem.variables
@@ -310,7 +315,9 @@ class BranchAndCutAlgorithm:
         self._cuts_generators_manager.before_start_at_root(run_id, problem, relaxed_problem.relaxed)
         solution = self._solve_problem_at_node(run_id, problem, relaxed_problem, tree, node)
         self._cuts_generators_manager.after_end_at_root(run_id, problem, relaxed_problem.relaxed, solution)
-        self._ctx = None
+        self._bounds = None
+        self._convexity = None
+        self._monotonicity = None
         return solution
 
     def solve_problem_at_node(self, run_id, problem, tree, node):
@@ -319,24 +326,28 @@ class BranchAndCutAlgorithm:
         self._cuts_generators_manager.before_start_at_node(run_id, problem, relaxed_problem.relaxed)
         solution = self._solve_problem_at_node(run_id, problem, relaxed_problem, tree, node)
         self._cuts_generators_manager.after_end_at_node(run_id, problem, relaxed_problem.relaxed, solution)
-        self._ctx = None
+        self._bounds = None
+        self._convexity = None
+        self._monotonicity = None
         return solution
 
     def _build_convex_relaxation(self, problem):
-        return RelaxedProblem(
-            ConvexRelaxation(),
+        relaxation = ConvexRelaxation(
             problem,
-            fbbt_maxiter=self.fbbt_maxiter,
-            timelimit=self.fbbt_timelimit,
+            self._bounds,
+            self._monotonicity,
+            self._convexity,
         )
+        return RelaxedProblem(relaxation, problem)
 
     def _build_linear_relaxation(self, problem):
-        return RelaxedProblem(
-            LinearRelaxation(),
+        relaxation = LinearRelaxation(
             problem,
-            fbbt_maxiter=self.fbbt_maxiter,
-            timelimit=self.fbbt_timelimit,
+            self._bounds,
+            self._monotonicity,
+            self._convexity,
         )
+        return RelaxedProblem(relaxation, problem)
 
     def _perform_cut_round(self, run_id, problem, relaxed_problem, linear_problem, cuts_state, tree, node):
         logger.debug(run_id, 'Round {}. Solving linearized problem.', cuts_state.round)
@@ -414,16 +425,19 @@ class BranchAndCutAlgorithm:
         return state.round > self.cuts_maxiter
 
     def _perform_fbbt(self, run_id, problem, tree, node):
-        fbbt_starttime = current_time()
-        ctx = detect_special_structure(
+        bounds = perform_fbbt(
             problem,
             maxiter=self.fbbt_maxiter,
             timelimit=self.fbbt_timelimit,
         )
-        self._ctx = ctx
+
+        self._bounds, self._monotonicity, self._convexity = \
+            propagate_special_structure(problem, bounds)
+
         for v in problem.variables:
             vv = problem.variable_view(v)
-            new_bound = ctx.bounds[v]
+            new_bound = bounds[v]
+
             if new_bound is None:
                 new_bound = Interval(None, None)
 

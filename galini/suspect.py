@@ -43,11 +43,17 @@ class ExpressionDict(object):
 
 
 class ProblemContext(object):
-    def __init__(self, problem):
-        self.bounds = ExpressionDict(problem)
+    def __init__(self, problem, bounds=None, monotonicity=None, convexity=None):
+        if bounds is None:
+            bounds = ExpressionDict(problem)
+        if monotonicity is None:
+            monotonicity = ExpressionDict(problem)
+        if convexity is None:
+            convexity = ExpressionDict(problem)
+        self.bounds = bounds
         self.polynomial = ExpressionDict(problem)
-        self.monotonicity = ExpressionDict(problem)
-        self.convexity = ExpressionDict(problem)
+        self.monotonicity = monotonicity
+        self.convexity = convexity
         self.metadata = {}
 
     def get_bounds(self, expr):

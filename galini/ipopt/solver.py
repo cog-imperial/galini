@@ -59,7 +59,6 @@ class IpoptNLPSolver(Solver):
 
         if 'ipopt_application' in kwargs:
             app = kwargs.pop('ipopt_application')
-            print('Using app = ', app)
         else:
             app = IpoptApplication()
             config = self.galini.get_configuration_group('ipopt')

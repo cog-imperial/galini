@@ -45,7 +45,7 @@ class Timelimit(object):
 
 _timelimit = Timelimit(DEFAULT_TIMELIMIT)
 seconds_left = lambda: _timelimit.seconds_left()
-start_timelimit = lambda: _timelimit.start_now(),
+start_timelimit = lambda: _timelimit.start_now()
 
 
 def current_time():

@@ -16,6 +16,8 @@
 from galini.core import Domain, Objective, Constraint, Variable, LinearExpression, SumExpression
 from galini.special_structure import detect_special_structure
 from galini.relaxations import Relaxation, RelaxationResult
+from galini.timelimit import timeout
+from galini.suspect import ProblemContext
 from galini.underestimators import (
     McCormickUnderestimator,
     LinearUnderestimator,
@@ -25,19 +27,12 @@ from galini.underestimators import (
 
 
 class _RelaxationBase(Relaxation):
-    def __init__(self):
+    def __init__(self, problem, bounds, monotonicity, convexity):
         super().__init__()
-        self._ctx = None
+        self._ctx = ProblemContext(problem, bounds, monotonicity, convexity)
         self._underestimator = self._root_underestimator()
 
     def before_relax(self, problem, **kwargs):
-        fbbt_maxiter = kwargs.get('fbbt_maxiter', 10)
-        fbbt_timelimit = kwargs.get('fbbt_timelimit', 10000)
-        self._ctx = detect_special_structure(
-            problem,
-            maxiter=fbbt_maxiter,
-            timelimit=fbbt_timelimit,
-        )
         self._before_relax(problem)
 
     def _before_relax(self, problem):
@@ -85,8 +80,8 @@ class ConvexRelaxation(_RelaxationBase):
 
 
 class LinearRelaxation(_RelaxationBase):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, problem, bounds, monotonicity, convexity):
+        super().__init__(problem, bounds, monotonicity, convexity)
         self._objective_count = 0
 
     def _before_relax(self, problem):

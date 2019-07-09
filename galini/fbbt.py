@@ -48,6 +48,7 @@ _expr_to_tight[core.LinearExpression] = tight.LinearRule()
 _expr_to_tight[core.QuadraticExpression] = tight.QuadraticRule()
 _expr_to_tight[core.SumExpression] = tight.SumRule()
 
+
 class _GaliniBoundsTighteningVisitor(BoundsTighteningVisitor):
     def visit_expression(self, expr, bounds):
         rule = _expr_to_tight.get(type(expr))
