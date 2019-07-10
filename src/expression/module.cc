@@ -42,6 +42,7 @@ void init_module(py::module& m) {
     .def_property_readonly("children", &Expression::children)
     .def_property_readonly("args", &Expression::children)
     .def("expression_tree_data", &Expression::expression_tree_data)
+    .def("nargs", [](const Expression &ex) { return ex.num_children(); })
     .def("nth_children", &Expression::nth_children)
     .def("is_constant", &Expression::is_constant)
     .def("is_expression_type", &Expression::is_expression)
@@ -179,6 +180,9 @@ void init_module(py::module& m) {
     .def(py::init<const Expression::problem_ptr&, const std::vector<LinearExpression::ptr>&>())
     .def("coefficient", &LinearExpression::coefficient)
     .def_property_readonly("constant_term", &LinearExpression::constant)
+    .def_property_readonly("constant", &LinearExpression::constant)
+    .def_property_readonly("linear_vars", &Expression::children)
+    .def_property_readonly("linear_coefs", &LinearExpression::linear_coefs)
     .def_property_readonly("expression_type",
 			   [ExpressionType](const LinearExpression&) { return ExpressionType.attr("Linear"); });
 

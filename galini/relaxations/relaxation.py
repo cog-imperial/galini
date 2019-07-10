@@ -22,7 +22,6 @@ from galini.core import (
     Objective,
 )
 import galini.core as core
-from galini.util import expr_to_str, print_problem
 
 
 class Relaxation(metaclass=ABCMeta):

@@ -16,6 +16,6 @@ limitations under the License.
 
 namespace galini {
 
-using index_t = std::size_t;
+using index_t = int;
 
 } // namespace galini

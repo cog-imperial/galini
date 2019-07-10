@@ -71,14 +71,8 @@ class McCormickUnderestimator(Underestimator):
         )
 
     def _get_bilinear_aux_var(self, problem, xy_tuple):
-        original_problem = problem
-        while problem:
-            bilinear_aux_variables = problem.metadata.get('bilinear_aux_variables', {})
-            if xy_tuple in bilinear_aux_variables:
-                var = problem.metadata['bilinear_aux_variables'][xy_tuple]
-                return original_problem.variable(var.idx)
-            problem = problem.parent
-        return None
+        bilinear_aux_variables = problem.metadata.get('bilinear_aux_variables', {})
+        return bilinear_aux_variables.get(xy_tuple)
 
     def _underestimate_bilinear_term(self, problem, term, ctx):
         bilinear_aux_vars = problem.metadata['bilinear_aux_variables']
@@ -120,6 +114,7 @@ class McCormickUnderestimator(Underestimator):
             w_bounds = Interval(x_l, x_u) * Interval(y_l, y_u)
 
         reference = BilinearTermReference(term.var1, term.var2)
+
         w = Variable(
             self._format_aux_name(term.var1, term.var2),
             w_bounds.lower_bound,

@@ -113,6 +113,17 @@ public:
     return constant_;
   }
 
+  std::vector<double> linear_coefs() const {
+    auto size = children_.size();
+    std::vector<double> coefs(size);
+    for (index_t i = 0; i < size; ++i) {
+      const auto var = children_[i];
+      const auto coef = coefficients_.at(var->uid());
+      coefs[i] = coef;
+    }
+    return coefs;
+  }
+
 
   ADFloat eval(values_ptr<ADFloat>& values) const override;
   ADObject eval(values_ptr<ADObject>& values) const override;

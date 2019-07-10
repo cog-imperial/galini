@@ -225,6 +225,7 @@ def _make_relaxed(parent, name, relaxation=None):
             )
             new_var.reference = var.reference
         relaxed.add_variable(new_var)
+
     return relaxed
 
 
@@ -306,6 +307,11 @@ class Problem(_ProblemBase):
         if variable.name in self._variables_map:
             raise RuntimeError('Duplicate variable {}'.format(variable.name))
 
+        if variable.reference:
+            ref = variable.reference
+            if not self.metadata.get('bilinear_aux_variables'):
+                self.metadata['bilinear_aux_variables'] = {}
+            self.metadata['bilinear_aux_variables'][(ref.var1.idx, ref.var2.idx)] = variable
         new_var = self._dag.insert_vertex(variable)
         self._variables.append(new_var)
 

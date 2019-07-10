@@ -59,7 +59,7 @@ public:
   using graph_weak_ptr = std::weak_ptr<Graph>;
 
   Expression(const std::shared_ptr<Problem>& problem, const index_t depth)
-    : uid_(generate_uid()), problem_(problem), depth_(depth), num_children_(0), idx_(0) {}
+    : uid_(generate_uid()), problem_(problem), depth_(depth), num_children_(0), idx_(-1) {}
 
   Expression(const std::shared_ptr<Problem>& problem)
     : Expression(problem, Expression::DEFAULT_DEPTH) {}
