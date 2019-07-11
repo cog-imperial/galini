@@ -60,7 +60,7 @@ public:
 
   template<class B>
   void eval(std::vector<AD<B>>& fg, const std::vector<AD<B>>& x, const std::vector<index_t>& out_indexes) const {
-    if (x.size() != num_variables_) {
+    if (x.size() != static_cast<std::size_t>(num_variables_)) {
       throw std::runtime_error("Invalid variables size " + std::to_string(x.size()) + ", expected: " + std::to_string(num_variables_));
     }
 
@@ -88,7 +88,7 @@ public:
     }
 
     // Copy to output
-    for (index_t i = 0; i < out_indexes.size(); ++i) {
+    for (std::size_t i = 0; i < out_indexes.size(); ++i) {
       auto expr = vertices_[out_indexes[i]];
       fg[i] = (*values)[expr];
     }
@@ -99,11 +99,11 @@ public:
     std::vector<AD<B>> X(x.size());
     std::vector<AD<B>> Y(out_indexes.size());
 
-    if (x.size() != num_variables_) {
+    if (x.size() != static_cast<std::size_t>(num_variables_)) {
       throw std::runtime_error("Invalid variables size " + std::to_string(x.size()) + ", expected: " + std::to_string(num_variables_));
     }
 
-    for (index_t i = 0; i < x.size(); ++i) {
+    for (std::size_t i = 0; i < x.size(); ++i) {
       X[i] = AD<B>(x[i]);
     }
 
@@ -148,7 +148,7 @@ private:
 
   std::vector<Expression::const_ptr> vertices_;
   Storage storage_;
-  std::size_t num_variables_;
+  index_t num_variables_;
 };
 
 }  // namespace ad

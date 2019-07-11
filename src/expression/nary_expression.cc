@@ -48,7 +48,7 @@ LinearExpression::LinearExpression(const std::shared_ptr<Problem>& problem,
     throw std::runtime_error("children and coefficients must have the same size");
   }
 
-  for (index_t i = 0; i < coefficients.size(); ++i) {
+  for (std::size_t i = 0; i < coefficients.size(); ++i) {
     auto var = children[i];
     coefficients_[var->uid()] = coefficients[i];
   }
@@ -102,7 +102,7 @@ QuadraticExpression::QuadraticExpression(const std::shared_ptr<Problem>& problem
 
   std::set<Expression::ptr, detail::ExpressionCmp> unique_children;
 
-  for (index_t i = 0; i < vars1.size(); ++i) {
+  for (std::size_t i = 0; i < vars1.size(); ++i) {
     auto var1 = vars1[i];
     auto idx1 = var1->uid();
     auto var2 = vars2[i];

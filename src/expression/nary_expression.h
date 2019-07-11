@@ -116,7 +116,7 @@ public:
   std::vector<double> linear_coefs() const {
     auto size = children_.size();
     std::vector<double> coefs(size);
-    for (index_t i = 0; i < size; ++i) {
+    for (std::size_t i = 0; i < size; ++i) {
       const auto var = children_[i];
       const auto coef = coefficients_.at(var->uid());
       coefs[i] = coef;
@@ -132,7 +132,7 @@ private:
   template<class T>
   T eval_linear(values_ptr<T>& values) const {
     T result(constant_);
-    for (index_t i = 0; i < children_.size(); ++i) {
+    for (std::size_t i = 0; i < children_.size(); ++i) {
       const auto var = children_[i];
       const auto coeff = coefficients_.at(var->uid());
       result += (*values)[var] * T(coeff);
