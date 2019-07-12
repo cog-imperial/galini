@@ -34,6 +34,9 @@ class Timelimit(object):
     def start_now(self):
         self.start = datetime.datetime.utcnow()
 
+    def set_timelimit(self, t):
+        self.timelimit = t
+
     def seconds_left(self):
         if self.start is None:
             return DEFAULT_TIMELIMIT
@@ -44,6 +47,7 @@ class Timelimit(object):
 
 
 _timelimit = Timelimit(DEFAULT_TIMELIMIT)
+set_timelimit = lambda t: _timelimit.set_timelimit(t)
 seconds_left = lambda: _timelimit.seconds_left()
 start_timelimit = lambda: _timelimit.start_now()
 

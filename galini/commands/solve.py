@@ -24,7 +24,7 @@ from galini.commands import (
     print_output_table,
     add_output_format_parser_arguments,
 )
-from galini.timelimit import start_timelimit
+from galini.timelimit import start_timelimit, set_timelimit
 from galini.logging import apply_config as apply_logging_config
 
 
@@ -56,6 +56,7 @@ class SolveCommand(CliCommandWithProblem):
         _update_math_context(galini_group)
         timelimit = galini_group.get('timelimit')
 
+        set_timelimit(timelimit)
         start_timelimit()
 
         solver.before_solve(model, problem)

@@ -173,6 +173,7 @@ class BranchAndCutAlgorithm:
             if result is None:
                 return
 
+            logger.debug(0, 'New Bounds')
             for v, new_lb, new_ub in zip(relaxed_vars, *result):
                 vv = problem.variable_view(v.name)
                 if new_lb is None or new_ub is None:
@@ -189,6 +190,7 @@ class BranchAndCutAlgorithm:
                             new_lb = new_ub
                 vv.set_lower_bound(new_lb)
                 vv.set_upper_bound(new_ub)
+                logger.debug(0, '  {}: [{}, {}]', v.name, vv.lower_bound(), vv.upper_bound())
 
         except TimeoutError:
             return
@@ -425,6 +427,7 @@ class BranchAndCutAlgorithm:
         return state.round > self.cuts_maxiter
 
     def _perform_fbbt(self, run_id, problem, tree, node):
+        logger.debug(run_id, 'Performing FBBT')
         bounds = perform_fbbt(
             problem,
             maxiter=self.fbbt_maxiter,
@@ -434,6 +437,7 @@ class BranchAndCutAlgorithm:
         self._bounds, self._monotonicity, self._convexity = \
             propagate_special_structure(problem, bounds)
 
+        logger.debug(run_id, 'Set FBBT Bounds')
         for v in problem.variables:
             vv = problem.variable_view(v)
             new_bound = bounds[v]
@@ -468,6 +472,7 @@ class BranchAndCutAlgorithm:
             if np.abs(new_ub - new_lb) < mc.epsilon:
                 new_lb = new_ub
 
+            logger.debug(run_id, '  {}: [{}, {}]', v.name, new_lb, new_ub)
             vv.set_lower_bound(new_lb)
             vv.set_upper_bound(new_ub)
 
