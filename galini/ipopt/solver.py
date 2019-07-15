@@ -25,6 +25,7 @@ from galini.config.options import (
     StringOption,
 )
 from galini.solvers import Solver
+from galini.timelimit import seconds_left
 from galini.core import (
     ipopt_solve,
     IpoptApplication,
@@ -61,9 +62,10 @@ class IpoptNLPSolver(Solver):
             app = kwargs.pop('ipopt_application')
         else:
             app = IpoptApplication()
-            config = self.galini.get_configuration_group('ipopt')
-            self._configure_ipopt_application(app, config)
-            self._configure_ipopt_logger(app, config, run_id)
+
+        config = self.galini.get_configuration_group('ipopt')
+        self._configure_ipopt_application(app, config)
+        self._configure_ipopt_logger(app, config, run_id)
 
         xi, xl, xu = self.get_starting_point_and_bounds(run_id, problem)
         gl, gu, constraints_root_expr_idxs = \
@@ -90,6 +92,8 @@ class IpoptNLPSolver(Solver):
                 options.set_integer_value(key, value, True, False)
             elif isinstance(value, float):
                 options.set_numeric_value(key, value, True, False)
+        # set timelimit
+        options.set_integer_value('max_cpu_time', seconds_left(), True, False)
 
     def _configure_ipopt_logger(self, app, config, run_id):
         logging_config = config['logging']
