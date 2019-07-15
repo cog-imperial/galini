@@ -51,10 +51,11 @@ class BranchAndBoundSolver(Solver):
             NumericOption('tolerance', default=1e-6),
             NumericOption('relative_tolerance', default=1e-6),
             IntegerOption('node_limit', default=100000000),
+            NumericOption('root_node_feasible_solution_search_timelimit', default=6000000),
             IntegerOption('fbbt_maxiter', default=10),
             IntegerOption('obbt_simplex_maxiter', default=1000),
-            IntegerOption('obbt_timelimit', default=6000000),
-            IntegerOption('fbbt_timelimit', default=6000000),
+            NumericOption('obbt_timelimit', default=6000000),
+            NumericOption('fbbt_timelimit', default=6000000),
             IntegerOption('fbbt_max_quadratic_size', default=1000),
             IntegerOption('fbbt_max_expr_children', default=1000),
             BoolOption('catch_keyboard_interrupt', default=True),
@@ -99,6 +100,7 @@ class BranchAndBoundSolver(Solver):
         while not self._algo.should_terminate(tree.state):
             logger.info(run_id, 'Tree state at beginning of iteration: {}', tree.state)
             if not tree.has_nodes():
+                logger.info(run_id, 'No more nodes to visit.')
                 break
 
             current_node = tree.next_node()

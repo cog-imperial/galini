@@ -13,10 +13,11 @@
 # limitations under the License.
 """Branch & Cut algorithm."""
 from collections import namedtuple
+import datetime
 import warnings
 import numpy as np
 import pyomo.environ as pe
-from galini.math import mc
+from galini.math import mc, is_close
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.expr.current import identify_variables
 from coramin.domain_reduction.obbt import perform_obbt
@@ -91,6 +92,8 @@ class BranchAndCutAlgorithm:
         self.node_limit = bab_config['node_limit']
         self.fbbt_maxiter = bab_config['fbbt_maxiter']
         self.fbbt_timelimit = bab_config['fbbt_timelimit']
+        self.root_node_feasible_solution_search_timelimit = \
+            bab_config['root_node_feasible_solution_search_timelimit']
 
         bac_config = galini.get_configuration_group('bab.branch_and_cut')
 
@@ -254,6 +257,12 @@ class BranchAndCutAlgorithm:
             if all_reals:
                 return self._solve_convex_problem(problem)
 
+        if not node.has_parent:
+            # It's root node, try to find a feasible integer solution
+            feasible_solution = self._find_root_node_feasible_solution(run_id, problem)
+        else:
+            feasible_solution = None
+
         linear_problem = self._build_linear_relaxation(relaxed_problem.relaxed)
 
         cuts_state = CutsState()
@@ -308,6 +317,10 @@ class BranchAndCutAlgorithm:
             return NodeSolution(mip_solution, None)
 
         primal_solution = self._solve_primal(problem, mip_solution)
+
+        if not primal_solution.status.is_success() and feasible_solution is not None:
+            # Could not get primal solution, but have a feasible solution
+            return NodeSolution(mip_solution, feasible_solution)
 
         return NodeSolution(mip_solution, primal_solution)
 
@@ -372,6 +385,41 @@ class BranchAndCutAlgorithm:
         logger.debug(run_id, 'Round {}. Adding {} cuts.', cuts_state.round, len(new_cuts))
         return True, new_cuts, mip_solution
 
+    def _find_root_node_feasible_solution(self, run_id, problem):
+        logger.info(run_id, 'Finding feasible solution at root node')
+        feasible_solution = None
+        is_timeout = False
+        start_time = current_time()
+        end_time = start_time + datetime.timedelta(seconds=self.root_node_feasible_solution_search_timelimit)
+        while not feasible_solution and not is_timeout:
+            for v in problem.variables:
+                vv = problem.variable_view(v)
+                if not vv.domain.is_real():
+                    # check if it has starting point
+                    lb = vv.lower_bound()
+                    ub = vv.upper_bound()
+                    if is_close(lb, ub, atol=mc.epsilon):
+                        fixed_point = lb
+                    else:
+                        fixed_point = np.random.randint(lb, ub+1)
+                    vv.fix(fixed_point)
+
+            now = current_time()
+            if now > end_time:
+                is_timeout = True
+            else:
+                # Can't pass 0 as time limit to ipopt
+                time_left = max(1, (end_time - now).seconds)
+                solution = self._nlp_solver.solve(problem, timelimit=time_left)
+                if solution.status.is_success():
+                    feasible_solution = solution
+
+        # unfix all variables
+        for v in problem.variables:
+            problem.unfix(v)
+
+        return feasible_solution
+
     def _solve_primal(self, problem, mip_solution):
         # Solve original problem
         # Use mip solution as starting point
@@ -381,10 +429,10 @@ class BranchAndCutAlgorithm:
             if sv.value is None:
                 lb = view.lower_bound()
                 if lb is None:
-                    lb = -2e19
+                    lb = -mc.infinity
                 ub = view.upper_bound()
                 if ub is None:
-                    ub = 2e19
+                    ub = mc.infinity
 
                 value = lb + (ub - lb) / 2.0
             else:

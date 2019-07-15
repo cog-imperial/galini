@@ -63,8 +63,16 @@ class IpoptNLPSolver(Solver):
         else:
             app = IpoptApplication()
 
+        timelimit = kwargs.pop('timelimit', None)
+
+        if timelimit is None:
+            timelimit = seconds_left()
+        else:
+            # Respect global timelimit
+            timelimit = min(timelimit, seconds_left())
+
         config = self.galini.get_configuration_group('ipopt')
-        self._configure_ipopt_application(app, config)
+        self._configure_ipopt_application(app, config, timelimit)
         self._configure_ipopt_logger(app, config, run_id)
 
         xi, xl, xu = self.get_starting_point_and_bounds(run_id, problem)
@@ -82,7 +90,7 @@ class IpoptNLPSolver(Solver):
         logger.debug(run_id, 'IPOPT returned {}', solution)
         return solution
 
-    def _configure_ipopt_application(self, app, config):
+    def _configure_ipopt_application(self, app, config, timelimit):
         config = config['ipopt']
         options = app.options()
         for key, value in config.items():
@@ -93,7 +101,7 @@ class IpoptNLPSolver(Solver):
             elif isinstance(value, float):
                 options.set_numeric_value(key, value, True, False)
         # set timelimit
-        options.set_integer_value('max_cpu_time', seconds_left(), True, False)
+        options.set_numeric_value('max_cpu_time', timelimit, True, False)
 
     def _configure_ipopt_logger(self, app, config, run_id):
         logging_config = config['logging']
