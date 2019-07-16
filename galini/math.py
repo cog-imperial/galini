@@ -26,21 +26,42 @@ class MathContext:
 mc = MathContext()
 
 
-def is_close(a, b, atol):
-    return np.isclose(a, b, atol=atol, rtol=0.0)
+def is_close(a, b, atol=None, rtol=None):
+    if atol is None and rtol is None:
+        raise ValueError('One of atol and rtol must be specified')
+    if atol is None:
+        atol = 0.0
+    if rtol is None:
+        rtol = 0.0
+
+    return np.isclose(a, b, atol=atol, rtol=rtol)
 
 
-def almost_ge(a, b, atol):
+def almost_ge(a, b, atol=None, rtol=None):
+    if atol is None and rtol is None:
+        raise ValueError('One of atol and rtol must be specified')
+    if atol is None:
+        atol = 0.0
+    if rtol is None:
+        rtol = 0.0
+
     if a > b:
         return True
-    if np.isclose(a, b, atol=atol, rtol=0.0):
+    if np.isclose(a, b, atol=atol, rtol=rtol):
         return True
     return False
 
 
-def almost_le(a, b, atol):
+def almost_le(a, b, atol=None, rtol=None):
+    if atol is None and rtol is None:
+        raise ValueError('One of atol and rtol must be specified')
+    if atol is None:
+        atol = 0.0
+    if rtol is None:
+        rtol = 0.0
+
     if a < b:
         return True
-    if np.isclose(a, b, atol=atol, rtol=0.0):
+    if np.isclose(a, b, atol=atol, rtol=rtol):
         return True
     return False

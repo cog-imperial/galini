@@ -5,7 +5,7 @@ import operator as op
 from functools import reduce
 
 
-def pyomo_create_model():
+def get_pyomo_model():
     m = aml.ConcreteModel()
 
 

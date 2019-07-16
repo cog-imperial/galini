@@ -5,7 +5,7 @@ import operator as op
 from functools import reduce
 
 
-def pyomo_create_model(*args, **kwargs):
+def get_pyomo_model(*args, **kwargs):
     m = aml.ConcreteModel()
 
     m.I = range(5)

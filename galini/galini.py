@@ -14,6 +14,7 @@
 """GALINI root object. Contains global state."""
 from galini.cuts import CutsGeneratorsRegistry, CutsGeneratorsManager
 from galini.config import ConfigurationManager
+from galini.math import mc
 from galini.solvers import SolversRegistry
 from galini.logging import (
     get_logger,
@@ -35,6 +36,7 @@ class Galini(object):
         self._config = self._config_manager.configuration
         self.cuts_generators_manager = CutsGeneratorsManager(self)
         apply_log_config(self._config.logging)
+        _update_math_context(self.get_configuration_group('galini'))
 
     def get_solver(self, name):
         """Get solver from the registry."""
@@ -63,3 +65,9 @@ class Galini(object):
             if config is None:
                 raise ValueError('Invalid configuration group "{}"'.format(group))
         return config
+
+
+def _update_math_context(galini):
+    mc.epsilon = galini.epsilon
+    mc.infinity = galini.infinity
+    mc.constraint_violation_tol = galini.constraint_violation_tol

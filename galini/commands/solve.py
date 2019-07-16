@@ -17,7 +17,6 @@ import sys
 from argparse import ArgumentParser, Namespace
 import signal
 from galini.galini import Galini
-from galini.math import mc
 from galini.commands import (
     CliCommandWithProblem,
     OutputTable,
@@ -53,7 +52,6 @@ class SolveCommand(CliCommandWithProblem):
         solver = solver_cls(galini)
 
         galini_group = galini.get_configuration_group('galini')
-        _update_math_context(galini_group)
         timelimit = galini_group.get('timelimit')
 
         set_timelimit(timelimit)
@@ -104,9 +102,3 @@ class SolveCommand(CliCommandWithProblem):
         parser.add_argument('--config', help='Specify the configuration file')
 
         add_output_format_parser_arguments(parser)
-
-
-def _update_math_context(galini):
-    mc.epsilon = galini.epsilon
-    mc.infinity = galini.infinity
-    mc.constraint_violation_tol = galini.constraint_violation_tol

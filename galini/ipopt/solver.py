@@ -55,13 +55,14 @@ class IpoptNLPSolver(Solver):
         ])
 
     def actual_solve(self, problem, run_id, **kwargs):
-        if len(problem.objectives) != 1:
-            raise ValueError('Problem must have exactly 1 objective function.')
+
+        config = self.galini.get_configuration_group('ipopt')
 
         if 'ipopt_application' in kwargs:
             app = kwargs.pop('ipopt_application')
         else:
             app = IpoptApplication()
+            self._configure_ipopt_logger(app, config, run_id)
 
         timelimit = kwargs.pop('timelimit', None)
 
@@ -71,9 +72,7 @@ class IpoptNLPSolver(Solver):
             # Respect global timelimit
             timelimit = min(timelimit, seconds_left())
 
-        config = self.galini.get_configuration_group('ipopt')
         self._configure_ipopt_application(app, config, timelimit)
-        self._configure_ipopt_logger(app, config, run_id)
 
         xi, xl, xu = self.get_starting_point_and_bounds(run_id, problem)
         gl, gu, constraints_root_expr_idxs = \

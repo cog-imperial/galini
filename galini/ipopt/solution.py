@@ -43,7 +43,7 @@ def build_solution(run_id, problem, solution, tree_data, out_indexes):
         obj_value = fg_x[0]
 
         opt_obj = OptimalObjective(
-            name=problem.objectives[0].name,
+            name=problem.objective.name,
             value=obj_value,
         )
 
@@ -81,10 +81,11 @@ def _solution_is_feasible(run_id, problem, solution, fg_x):
         if ub is None:
             ub = np.inf
         logger.debug(run_id, 'Con {}: {} <= {} <= {}', constraint.name, lb, fg_x[i+1], ub)
-        if not almost_le(lb, fg_x[i+1], atol=mc.constraint_violation_tol):
+        logger.debug(run_id, '   {}', mc.constraint_violation_tol)
+        if not almost_le(lb, fg_x[i+1], atol=mc.constraint_violation_tol, rtol=mc.constraint_violation_tol):
             i += 1
             return False
-        if not almost_le(fg_x[i+1], ub, atol=mc.constraint_violation_tol):
+        if not almost_le(fg_x[i+1], ub, atol=mc.constraint_violation_tol, rtol=mc.constraint_violation_tol):
             i += 1
             return False
         i += 1
@@ -137,7 +138,7 @@ class IpoptSolution(Solution):
     def __str__(self):
         return 'IpoptSolution(status={}, objective={})'.format(
             self.status.description(),
-            self.objectives,
+            self.objective,
         )
 
     def __repr__(self):

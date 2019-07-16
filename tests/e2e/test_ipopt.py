@@ -19,6 +19,16 @@ def test_ipopt_solver(model_name):
     problem = problem_from_pyomo_model(pyomo_model)
 
     galini = Galini()
+    galini.update_configuration({
+        'galini': {
+            'constraint_violation_tol': 1e-2,
+        },
+        'ipopt': {
+            'ipopt': {
+                'acceptable_constr_viol_tol': 1e-3
+            },
+        },
+    })
     solver = IpoptNLPSolver(galini)
     solution = solver.solve(problem)
 

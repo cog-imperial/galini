@@ -4,8 +4,9 @@ import pathlib
 import io
 import pyomo.environ as aml
 from galini import GaliniConfig
-from galini.pyomo import read_pyomo_model, dag_from_pyomo_model
+from galini.pyomo import read_pyomo_model, problem_from_pyomo_model
 from galini.ipopt import IpoptNLPSolver
+from galini.galini import Galini
 from galini.core import (
     IpoptApplication,
     EJournalLevel,
@@ -14,21 +15,35 @@ from galini.core import (
 
 
 def derivative_check(model_name, model, order):
-    config = GaliniConfig()
-    config.update({
+    galini = Galini()
+    galini.update_configuration({
+        'galini': {
+            'constraint_violation_tol': 1e-2,
+        },
         'ipopt': {
-            'derivative_test': order,
-            'max_iter': 1,
+            'ipopt': {
+                'acceptable_constr_viol_tol': 1e-3,
+                'derivative_test': order,
+                'max_iter': 1,
+
+            },
+            'logging': {
+                'level': 'J_ITERSUMMARY',
+            }
+        },
+        'logging': {
+            'stdout': True,
+            'level': 'DEBUG',
         }
     })
-
-    solver = IpoptNLPSolver(config, None)
+    solver = IpoptNLPSolver(galini)
+    solver = IpoptNLPSolver(galini)
     # setup Ipopt journalist
     output_str = io.StringIO()
     app = IpoptApplication()
     journalist = app.journalist()
     journalist.delete_all_journals()
-    journalist.add_journal(PythonJournal('Default', EJournalLevel.J_WARNING, output_str))
+    journalist.add_journal(PythonJournal('Default', EJournalLevel.J_ITERSUMMARY, output_str))
 
     solver.solve(model, ipopt_application=app)
     output = output_str.getvalue()
@@ -40,7 +55,6 @@ def derivative_check(model_name, model, order):
         assert check_ok
 
 
-@pytest.mark.skip('Failing.')
 @pytest.mark.parametrize('order', ['first-order', 'only-second-order'])
 @pytest.mark.parametrize('model_name', [
     # simple derivative tests
@@ -53,11 +67,11 @@ def derivative_check(model_name, model, order):
     'polak1.py',
 ])
 def test_osil_model(order, model_name):
-    # if model_name in ['hatfldf.py']:
-    #     pytest.skip('Known derivative fail.')
+    if model_name in ['hatfldf.py']:
+        pytest.skip('Known derivative fail.')
     current_dir = pathlib.Path(__file__).parent
     osil_file = current_dir / 'models' / model_name
 
     pyomo_model = read_pyomo_model(osil_file)
-    dag = dag_from_pyomo_model(pyomo_model)
+    dag = problem_from_pyomo_model(pyomo_model)
     derivative_check(model_name, dag, order)
