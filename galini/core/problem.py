@@ -297,6 +297,13 @@ class Problem(_ProblemBase):
     def num_objectives(self):
         return len(self._objectives)
 
+    def has_integer_variables(self):
+        for v in self.variables:
+            domain = self.domain(v)
+            if domain.is_integer() or domain.is_binary():
+                return True
+        return False
+
     def add_variable(self, variable):
         """Add variable to the problem."""
         if not isinstance(variable, core.Variable):

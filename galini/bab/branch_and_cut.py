@@ -92,6 +92,9 @@ class BranchAndCutAlgorithm:
         self.node_limit = bab_config['node_limit']
         self.fbbt_maxiter = bab_config['fbbt_maxiter']
         self.fbbt_timelimit = bab_config['fbbt_timelimit']
+        self.root_node_feasible_solution_seed = \
+            bab_config['root_node_feasible_solution_seed']
+
         self.root_node_feasible_solution_search_timelimit = \
             bab_config['root_node_feasible_solution_search_timelimit']
 
@@ -387,6 +390,24 @@ class BranchAndCutAlgorithm:
 
     def _find_root_node_feasible_solution(self, run_id, problem):
         logger.info(run_id, 'Finding feasible solution at root node')
+
+        if self.root_node_feasible_solution_seed is not None:
+            seed = self.root_node_feasible_solution_seed
+            logger.info(run_id, 'Use numpy seed {}', seed)
+            np.random.seed(seed)
+
+        if problem.has_integer_variables():
+            return self._find_root_node_feasible_solution_continuous(run_id, problem)
+        return self._find_root_node_feasible_solution_mixed_integer(run_id, problem)
+
+    def _find_root_node_feasible_solution_continuous(self, run_id, problem):
+        start_time = current_time()
+        end_time = start_time + datetime.timedelta(seconds=self.root_node_feasible_solution_search_timelimit)
+        # Can't pass 0 as time limit to ipopt
+        time_left = max(1, (end_time - now).seconds)
+        return self._nlp_solver.solve(problem, timelimit=time_left)
+
+    def _find_root_node_feasible_solution_mixed_integer(self, run_id, problem):
         feasible_solution = None
         is_timeout = False
         start_time = current_time()

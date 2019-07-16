@@ -51,6 +51,7 @@ class BranchAndBoundSolver(Solver):
             NumericOption('tolerance', default=1e-6),
             NumericOption('relative_tolerance', default=1e-6),
             IntegerOption('node_limit', default=100000000),
+            IntegerOption('root_node_feasible_solution_seed', default=None),
             NumericOption('root_node_feasible_solution_search_timelimit', default=6000000),
             IntegerOption('fbbt_maxiter', default=10),
             IntegerOption('obbt_simplex_maxiter', default=1000),
