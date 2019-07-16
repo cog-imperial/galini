@@ -414,6 +414,7 @@ class BranchAndCutAlgorithm:
         is_timeout = False
         start_time = current_time()
         end_time = start_time + datetime.timedelta(seconds=self.root_node_feasible_solution_search_timelimit)
+        iteration = 1
         while not feasible_solution and not is_timeout:
             for v in problem.variables:
                 vv = problem.variable_view(v)
@@ -436,6 +437,9 @@ class BranchAndCutAlgorithm:
                 solution = self._nlp_solver.solve(problem, timelimit=time_left)
                 if solution.status.is_success():
                     feasible_solution = solution
+
+            logger.info(run_id, 'Iteration {}: Solution is {}', iteration, solution.status.description())
+            iteration += 1
 
         # unfix all variables
         for v in problem.variables:
