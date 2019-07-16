@@ -41,7 +41,7 @@ class MIPSolver(Solver):
         solver = mip_solver(logger, run_id, self.galini)
         if isinstance(problem, Problem):
             # Convert to pulp and then solve it.
-            assert len(problem.objectives) == 1
+            assert problem.objective
 
             pulp_problem, variables = dag_to_pulp(problem)
             status = pulp_problem.solve(solver)
@@ -57,7 +57,7 @@ class MIPSolver(Solver):
 
             return MIPSolution(
                 PulpStatus(status),
-                [OptimalObjective(problem.objectives[0].name, pulp.value(pulp_problem.objective))],
+                [OptimalObjective(problem.objective.name, pulp.value(pulp_problem.objective))],
                 optimal_variables,
                 dual_values,
             )

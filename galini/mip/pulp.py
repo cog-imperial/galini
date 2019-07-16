@@ -30,8 +30,8 @@ def mip_solver(logger, run_id, galini):
 
 def dag_to_pulp(problem):
     """Convert GALINI DAG to pulp model."""
-    assert len(problem.objectives) == 1
-    objective = problem.objectives[0]
+    assert problem.objective
+    objective = problem.objective
 
     lp = pulp.LpProblem(problem.name, pulp.LpMinimize)
 

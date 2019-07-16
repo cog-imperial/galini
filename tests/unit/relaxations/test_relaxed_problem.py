@@ -3,10 +3,23 @@ import pytest
 import numpy as np
 import pyomo.environ as pe
 from galini.core import LinearExpression, QuadraticExpression, SumExpression
-from galini.pyomo import dag_from_pyomo_model
+from galini.pyomo import problem_from_pyomo_model
 from galini.bab.relaxations import LinearRelaxation
 from galini.relaxations.relaxed_problem import RelaxedProblem
+from galini.special_structure import propagate_special_structure, perform_fbbt
 from galini.util import print_problem
+
+
+def _linear_relaxation(problem):
+    bounds = perform_fbbt(
+        problem,
+        maxiter=10,
+        timelimit=60,
+    )
+
+    bounds, monotonicity, convexity = \
+        propagate_special_structure(problem, bounds)
+    return LinearRelaxation(problem, bounds, monotonicity, convexity)
 
 
 def test_relaxed_problem():
@@ -16,9 +29,9 @@ def test_relaxed_problem():
     m.obj = pe.Objective(expr=sum(m.x[i]*m.x[i] for i in m.I))
     m.c0 = pe.Constraint(expr=sum(m.x[i]*m.x[i] for i in m.I) >= 0)
 
-    dag = dag_from_pyomo_model(m)
+    dag = problem_from_pyomo_model(m)
 
-    relaxed = RelaxedProblem(LinearRelaxation(), dag)
+    relaxed = RelaxedProblem(_linear_relaxation(dag), dag)
 
     assert len(relaxed.relaxed.constraints) == 1 + 1 + 3*10
 

@@ -21,10 +21,10 @@ def print_problem(problem, out=None):
     """Outputs the problem to console."""
     if out is None:
         out = sys.stdout
-    for objective in problem.objectives:
-        out.write('min ')
-        out.write(expr_to_str(objective.root_expr))
-        out.write('\n')
+    objective = problem.objective
+    out.write('min ')
+    out.write(expr_to_str(objective.root_expr))
+    out.write('\n')
 
     for constraint in problem.constraints:
         out.write('{}:\t'.format(constraint.name))

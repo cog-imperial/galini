@@ -8,6 +8,7 @@ from galini.config import ConfigurationManager
 from galini.cuts import CutsGeneratorsRegistry
 from galini.bab.branch_and_cut import BranchAndCutAlgorithm
 from galini.bab.relaxations import LinearRelaxation
+from galini.special_structure import propagate_special_structure, perform_fbbt
 from galini.core import Constraint
 from galini.sdp.cuts_generator import SdpCutsGenerator
 
@@ -16,6 +17,18 @@ class FakeSolver:
     config = {
         'obbt_simplex_maxiter': 100,
     }
+
+
+def _linear_relaxation(problem):
+    bounds = perform_fbbt(
+        problem,
+        maxiter=10,
+        timelimit=60,
+    )
+
+    bounds, monotonicity, convexity = \
+        propagate_special_structure(problem, bounds)
+    return LinearRelaxation(problem, bounds, monotonicity, convexity)
 
 
 @pytest.fixture()
@@ -74,7 +87,7 @@ def test_cut_selection_strategy(problem, cut_selection_strategy, expected_soluti
     solver_ipopt = galini.instantiate_solver("ipopt")
     solver_mip = galini.instantiate_solver("mip")
 
-    relaxation = LinearRelaxation()
+    relaxation = _linear_relaxation(problem)
     run_id = 'test_run_sdp'
 
     galini.update_configuration({
@@ -129,7 +142,7 @@ def test_sdp_cuts_after_branching(problem):
     solver_mip = galini.instantiate_solver("mip")
     run_id = 'test_run_sdp'
 
-    relaxation = LinearRelaxation()
+    relaxation = _linear_relaxation(problem)
 
     # Test when branched on x0 in [0.5, 1]
     x0 = problem.variable_view(problem.variables[0])

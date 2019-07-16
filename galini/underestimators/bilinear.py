@@ -38,8 +38,8 @@ class McCormickUnderestimator(Underestimator):
 
     def underestimate(self, problem, expr, ctx):
         assert expr.expression_type == ExpressionType.Quadratic
-        if problem.metadata.get('bilinear_aux_variables', None) is None:
-            problem.metadata['bilinear_aux_variables'] = {}
+        if ctx.metadata.get('bilinear_aux_variables', None) is None:
+            ctx.metadata['bilinear_aux_variables'] = dict()
         squares = []
         variables = []
         constraints = []
@@ -52,6 +52,7 @@ class McCormickUnderestimator(Underestimator):
                 constraints.extend(aux_var_constraints)
             else:
                 squares.append((term.coefficient, term.var1))
+
 
         if not squares:
             new_linear_expr = LinearExpression(variables)
@@ -70,17 +71,17 @@ class McCormickUnderestimator(Underestimator):
             constraints,
         )
 
-    def _get_bilinear_aux_var(self, problem, xy_tuple):
-        bilinear_aux_variables = problem.metadata.get('bilinear_aux_variables', {})
+    def _get_bilinear_aux_var(self, metadata, xy_tuple):
+        bilinear_aux_variables = metadata.get('bilinear_aux_variables', {})
         return bilinear_aux_variables.get(xy_tuple)
 
     def _underestimate_bilinear_term(self, problem, term, ctx):
-        bilinear_aux_vars = problem.metadata['bilinear_aux_variables']
+        bilinear_aux_vars = ctx.metadata['bilinear_aux_variables']
         x_expr = term.var1
         y_expr = term.var2
 
         xy_tuple = self._bilinear_tuple(x_expr, y_expr)
-        w = self._get_bilinear_aux_var(problem, xy_tuple)
+        w = self._get_bilinear_aux_var(ctx.metadata, xy_tuple)
         if w is not None:
             new_expr = LinearExpression([w], [term.coefficient], 0.0)
             return new_expr, []

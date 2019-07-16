@@ -193,7 +193,7 @@ class TriangleCutsGenerator(CutsGenerator):
     def _get_adjacency_matrix(self, problem):
         adj_mat = np.zeros((self._nb_vars, self._nb_vars))
         vars_dict = dict([(v.name, v_idx) for v_idx, v in enumerate(problem.variables)])
-        for constraint in [*problem.objectives, *problem.constraints]:
+        for constraint in [*[problem.objective], *problem.constraints]:
             root_expr = constraint.root_expr
             quadratic_expr = None
             if root_expr.expression_type == ExpressionType.Quadratic:
@@ -228,6 +228,7 @@ class TriangleCutsGenerator(CutsGenerator):
                 continue
             for idx, var_idx in enumerate(cl):
                 x_vals[idx] = solution.variables[var_idx].value
+                print(solution.variables[var_idx])
                 x_vals_scaled[idx] = (x_vals[idx] - l[var_idx])/d[var_idx]
             x01 = (lifted_mat[cl[0], cl[1]] - l[cl[0]]*x_vals[1] - l[cl[1]]*x_vals[0] + l[cl[0]]*l[cl[1]])\
                   /d[cl[0]]/d[cl[1]]

@@ -3,9 +3,34 @@ import pytest
 import numpy as np
 import pyomo.environ as pe
 from galini.core import LinearExpression, QuadraticExpression, SumExpression
-from galini.pyomo import dag_from_pyomo_model
+from galini.pyomo import problem_from_pyomo_model
 from galini.bab.relaxations import ConvexRelaxation, LinearRelaxation
+from galini.special_structure import propagate_special_structure, perform_fbbt
 from galini.util import print_problem
+
+
+def _convex_relaxation(problem):
+    bounds = perform_fbbt(
+        problem,
+        maxiter=10,
+        timelimit=60,
+    )
+
+    bounds, monotonicity, convexity = \
+        propagate_special_structure(problem, bounds)
+    return ConvexRelaxation(problem, bounds, monotonicity, convexity)
+
+
+def _linear_relaxation(problem):
+    bounds = perform_fbbt(
+        problem,
+        maxiter=10,
+        timelimit=60,
+    )
+
+    bounds, monotonicity, convexity = \
+        propagate_special_structure(problem, bounds)
+    return LinearRelaxation(problem, bounds, monotonicity, convexity)
 
 
 def test_convex_relaxation_of_linear_problem():
@@ -14,15 +39,15 @@ def test_convex_relaxation_of_linear_problem():
     m.x = pe.Var(m.I)
     m.obj = pe.Objective(expr=pe.quicksum(m.x[i] for i in m.I) + 2.0)
     m.c0 = pe.Constraint(expr=pe.quicksum(2 * m.x[i] for i in m.I) - 4.0 >= 0)
-    dag = dag_from_pyomo_model(m)
+    dag = problem_from_pyomo_model(m)
 
-    relaxation = ConvexRelaxation()
+    relaxation = _convex_relaxation(dag)
     relaxed = relaxation.relax(dag)
 
-    assert len(relaxed.objectives) == 1
+    assert relaxed.objective
     assert len(relaxed.constraints) == 1
 
-    objective = relaxed.objectives[0]
+    objective = relaxed.objective
     constraint = relaxed.constraints[0]
 
     assert isinstance(objective.root_expr, LinearExpression)
@@ -40,15 +65,15 @@ def test_convex_relaxation_with_quadratic_only():
     m.x = pe.Var(m.I)
     m.obj = pe.Objective(expr=pe.quicksum(m.x[i]*m.x[i] for i in m.I))
     m.c0 = pe.Constraint(expr=pe.quicksum(2 * m.x[i] * m.x[i] for i in m.I) >= 0)
-    dag = dag_from_pyomo_model(m)
+    dag = problem_from_pyomo_model(m)
 
-    relaxation = ConvexRelaxation()
+    relaxation = _convex_relaxation(dag)
     relaxed = relaxation.relax(dag)
 
-    assert len(relaxed.objectives) == 1
+    assert relaxed.objective
     assert len(relaxed.constraints) == 1
 
-    objective = relaxed.objectives[0]
+    objective = relaxed.objective
     constraint = relaxed.constraints[0]
 
     assert isinstance(objective.root_expr, QuadraticExpression)
@@ -68,15 +93,15 @@ def test_convex_relaxation_with_quadratic_and_linear():
     m.c0 = pe.Constraint(
         expr=pe.quicksum(2 * m.x[i] * m.x[i] for i in m.I) + pe.quicksum(m.x[i] for i in m.I) >= 0
     )
-    dag = dag_from_pyomo_model(m)
+    dag = problem_from_pyomo_model(m)
 
-    relaxation = ConvexRelaxation()
+    relaxation = _convex_relaxation(dag)
     relaxed = relaxation.relax(dag)
 
-    assert len(relaxed.objectives) == 1
+    assert relaxed.objective
     assert len(relaxed.constraints) == 1
 
-    objective = relaxed.objectives[0]
+    objective = relaxed.objective
     constraint = relaxed.constraints[0]
 
     assert isinstance(objective.root_expr, SumExpression)
@@ -109,16 +134,16 @@ def test_linear_relaxation_with_quadratic_and_linear():
     m.c0 = pe.Constraint(
         expr=pe.quicksum(2 * m.x[i] * m.x[i] for i in m.I) + pe.quicksum(m.x[i] for i in m.I) >= 0
     )
-    dag = dag_from_pyomo_model(m)
+    dag = problem_from_pyomo_model(m)
 
-    relaxation = LinearRelaxation()
+    relaxation = _linear_relaxation(dag)
     relaxed = relaxation.relax(dag)
     print_problem(relaxed)
-    assert len(relaxed.objectives) == 1
+    assert relaxed.objective
     # 1 objective, 1 c0, 3 * 10 x^2
     assert len(relaxed.constraints) == 1 + 1 + 3*10
 
-    objective = relaxed.objectives[0]
+    objective = relaxed.objective
     constraint = relaxed.constraint('c0')
 
     assert isinstance(objective.root_expr, LinearExpression)

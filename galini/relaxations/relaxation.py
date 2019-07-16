@@ -34,15 +34,15 @@ class Relaxation(metaclass=ABCMeta):
 
     def relax(self, problem, **kwargs):
         self._problem_expr = {}
-        self.before_relax(problem, **kwargs)
 
         relaxed_problem = problem.make_relaxed(self.relaxed_problem_name(problem));
+
+        self.before_relax(problem, relaxed_problem, **kwargs)
 
         for var in problem.variables:
             self._relax_variable(problem, relaxed_problem, var)
 
-        for obj in problem.objectives:
-            self._relax_objective(problem, relaxed_problem, obj)
+        self._relax_objective(problem, relaxed_problem, problem.objective)
 
         for cons in problem.constraints:
             self._relax_constraint(problem, relaxed_problem, cons)
@@ -108,7 +108,7 @@ class Relaxation(metaclass=ABCMeta):
         """
         pass
 
-    def before_relax(self, problem, **kwargs):
+    def before_relax(self, problem, relaxed_problem, **kwargs):
         """Callback executed before relaxing the problem."""
         pass
 
@@ -159,6 +159,7 @@ class Relaxation(metaclass=ABCMeta):
                 new_cons.upper_bound,
             ),
         )
+
         self._insert_constraints(result.constraints, problem, relaxed_problem)
         return added_cons
 

@@ -32,7 +32,8 @@ class _RelaxationBase(Relaxation):
         self._ctx = ProblemContext(problem, bounds, monotonicity, convexity)
         self._underestimator = self._root_underestimator()
 
-    def before_relax(self, problem, **kwargs):
+    def before_relax(self, problem, relaxed_problem, **kwargs):
+        self._ctx.metadata = relaxed_problem.metadata
         self._before_relax(problem)
 
     def _before_relax(self, problem):

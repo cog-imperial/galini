@@ -5,6 +5,7 @@ from galini.pyomo import problem_from_pyomo_model
 from galini.galini import Galini
 from galini.bab.branch_and_cut import BranchAndCutAlgorithm
 from galini.bab.relaxations import LinearRelaxation
+from galini.special_structure import propagate_special_structure, perform_fbbt
 from galini.core import Constraint
 from galini.triangle.cuts_generator import TriangleCutsGenerator
 
@@ -13,6 +14,18 @@ class FakeSolver:
     config = {
         'obbt_simplex_maxiter': 100,
     }
+
+
+def _linear_relaxation(problem):
+    bounds = perform_fbbt(
+        problem,
+        maxiter=10,
+        timelimit=60,
+    )
+
+    bounds, monotonicity, convexity = \
+        propagate_special_structure(problem, bounds)
+    return LinearRelaxation(problem, bounds, monotonicity, convexity)
 
 
 @pytest.fixture()
@@ -92,7 +105,7 @@ def test_triange_cut_violations(galini, problem):
     triangle_cuts_gen.before_start_at_root(run_id, problem, None)
 
     # Test triangle cut violations
-    relaxation = LinearRelaxation()
+    relaxation = _linear_relaxation(problem)
     relaxed_problem = relaxation.relax(problem)
     mip_solution = solver_mip.solve(relaxed_problem)
     assert mip_solution.status.is_success()
@@ -123,14 +136,14 @@ def test_at_root_node(galini, problem):
     # Test at root node
     algo = BranchAndCutAlgorithm(galini, FakeSolver())
     algo._cuts_generators_manager.before_start_at_root(run_id, problem, None)
-    relaxation = LinearRelaxation()
+    relaxation = _linear_relaxation(problem)
     relaxed_problem = relaxation.relax(problem)
     nbs_cuts = []
     mip_sols = []
     for iteration in range(5):
         mip_solution = solver_mip.solve(relaxed_problem, logger=None)
         assert mip_solution.status.is_success()
-        mip_sols.append(mip_solution.objectives[0].value)
+        mip_sols.append(mip_solution.objective.value)
         # Generate new cuts
         new_cuts = algo._cuts_generators_manager.generate(run_id, problem, None, relaxed_problem, mip_solution, None, None)
         # Add cuts as constraints
@@ -151,7 +164,7 @@ def test_at_root_node(galini, problem):
     for iteration in range(5):
         mip_solution = solver_mip.solve(relaxed_problem, logger=None)
         assert mip_solution.status.is_success()
-        mip_sols.append(mip_solution.objectives[0].value)
+        mip_sols.append(mip_solution.objective.value)
         # Generate new cuts
         new_cuts = algo._cuts_generators_manager.generate(run_id, problem, None, relaxed_problem, mip_solution, None, None)
         # Add cuts as constraints

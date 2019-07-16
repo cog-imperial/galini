@@ -36,7 +36,7 @@ class AlphaBBRelaxation(Relaxation):
     def relaxed_problem_name(self, problem):
         return problem.name + '_alphabb'
 
-    def before_relax(self, problem):
+    def before_relax(self, problem, relaxed_problem, **kwargs):
         ctx = detect_special_structure(problem)
         self._ctx = ctx
 

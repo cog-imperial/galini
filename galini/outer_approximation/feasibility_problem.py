@@ -34,7 +34,7 @@ class FeasibilityProblemRelaxation(Relaxation):
     def relaxed_problem_name(self, problem):
         return problem.name + '_feasibility_problem'
 
-    def before_relax(self, problem):
+    def before_relax(self, problem, relaxed_problem, **kwargs):
         def _make_variable(i):
             return Variable('u_%d' % i, 0.0, None, Domain.REAL)
         self._u = [_make_variable(i) for i in range(problem.num_constraints)]

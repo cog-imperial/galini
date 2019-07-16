@@ -64,7 +64,7 @@ class CutsState(object):
 
     def update(self, solution):
         self.round += 1
-        current_objective = solution.objectives[0].value
+        current_objective = solution.objective.value
         assert (current_objective >= self.lower_bound or
                 np.isclose(current_objective, self.lower_bound))
         self.lower_bound = current_objective
@@ -617,12 +617,10 @@ def _safe_ub(domain, a, b):
 
 
 def _is_convex(problem, cvx_map):
-    are_objectives_cvx = all(
-        cvx_map[obj.root_expr].is_convex()
-        for obj in problem.objectives
-    )
+    obj = problem.objective
+    is_objective_cvx = cvx_map[obj.root_expr].is_convex()
 
-    if not are_objectives_cvx:
+    if not is_objective_cvx:
         return False
 
     return all(
