@@ -174,7 +174,6 @@ setup(
             'info=galini.commands.info:InfoCommand',
             'plugins=galini.commands.plugins:PluginsCommand',
             'abb=galini.commands.abb:AbbCommand',
-            'transform=galini.commands.transform:TransformCommand',
         ],
         'galini.solvers': [
             'mip=galini.mip.solver:MIPSolver',

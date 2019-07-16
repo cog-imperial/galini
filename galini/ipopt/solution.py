@@ -81,7 +81,6 @@ def _solution_is_feasible(run_id, problem, solution, fg_x):
         if ub is None:
             ub = np.inf
         logger.debug(run_id, 'Con {}: {} <= {} <= {}', constraint.name, lb, fg_x[i+1], ub)
-        logger.debug(run_id, '   {}', mc.constraint_violation_tol)
         if not almost_le(lb, fg_x[i+1], atol=mc.constraint_violation_tol, rtol=mc.constraint_violation_tol):
             i += 1
             return False

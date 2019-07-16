@@ -396,7 +396,7 @@ class BranchAndCutAlgorithm:
             logger.info(run_id, 'Use numpy seed {}', seed)
             np.random.seed(seed)
 
-        if problem.has_integer_variables():
+        if not problem.has_integer_variables():
             return self._find_root_node_feasible_solution_continuous(run_id, problem)
         return self._find_root_node_feasible_solution_mixed_integer(run_id, problem)
 
@@ -404,6 +404,7 @@ class BranchAndCutAlgorithm:
         start_time = current_time()
         end_time = start_time + datetime.timedelta(seconds=self.root_node_feasible_solution_search_timelimit)
         # Can't pass 0 as time limit to ipopt
+        now = current_time()
         time_left = max(1, (end_time - now).seconds)
         return self._nlp_solver.solve(problem, timelimit=time_left)
 
