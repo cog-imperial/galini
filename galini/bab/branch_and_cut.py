@@ -263,6 +263,7 @@ class BranchAndCutAlgorithm:
         if not node.has_parent:
             # It's root node, try to find a feasible integer solution
             feasible_solution = self._find_root_node_feasible_solution(run_id, problem)
+            logger.info(run_id, 'Initial feasible solution: {}', feasible_solution)
         else:
             feasible_solution = None
 

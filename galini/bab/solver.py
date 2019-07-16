@@ -169,6 +169,9 @@ class BranchAndBoundSolver(Solver):
             )
 
         logger.info(run_id, 'Branch & Bound Finished: {}', tree.state)
+        logger.info(run_id, 'Branch & Bound Converged?: {}', self._algo._has_converged(tree.state))
+        logger.info(run_id, 'Branch & Bound Timeout?: {}', self._algo._timeout())
+        logger.info(run_id, 'Branch & Bound Node Limit Exceeded?: {}', self._algo._node_limit_exceeded(tree.state))
 
     def _solution_from_tree(self, problem, tree):
         nodes_visited = tree.nodes_visited
