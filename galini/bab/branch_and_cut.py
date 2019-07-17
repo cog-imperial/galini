@@ -411,9 +411,14 @@ class BranchAndCutAlgorithm:
 
     def _find_root_node_feasible_solution_continuous(self, run_id, problem):
         start_time = current_time()
-        end_time = start_time + datetime.timedelta(seconds=self.root_node_feasible_solution_search_timelimit)
+        end_time = min(
+            start_time + datetime.timedelta(seconds=self.root_node_feasible_solution_search_timelimit),
+            start_time + datetime.timedelta(seconds=seconds_left())
+        )
         # Can't pass 0 as time limit to ipopt
         now = current_time()
+        if end_time <= start_time:
+            return None
         time_left = max(1, (end_time - now).seconds)
         return self._nlp_solver.solve(problem, timelimit=time_left)
 
@@ -421,9 +426,18 @@ class BranchAndCutAlgorithm:
         feasible_solution = None
         is_timeout = False
         start_time = current_time()
-        end_time = start_time + datetime.timedelta(seconds=self.root_node_feasible_solution_search_timelimit)
+        end_time = min(
+            start_time + datetime.timedelta(seconds=self.root_node_feasible_solution_search_timelimit),
+            start_time + datetime.timedelta(seconds=seconds_left())
+        )
         iteration = 1
+        if end_time <= start_time:
+            return None
         while not feasible_solution and not is_timeout:
+            if self._timeout():
+                is_timeout = True
+                break
+
             for v in problem.variables:
                 vv = problem.variable_view(v)
                 if not vv.domain.is_real():
@@ -437,7 +451,7 @@ class BranchAndCutAlgorithm:
                     vv.fix(fixed_point)
 
             now = current_time()
-            if now > end_time:
+            if now > end_time or self._timeout():
                 is_timeout = True
             else:
                 # Can't pass 0 as time limit to ipopt
