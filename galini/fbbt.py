@@ -93,6 +93,11 @@ class BoundsTightener:
             changes_prop = self._forward_iterator.iterate(
                 problem, prop_visitor, bounds, starting_vertices=changes_tigh
             )
+
+            # Check timelimit again
+            if self._stop_criterion.should_stop():
+                return
+
             changes_tigh = self._backward_iterator.iterate(
                 problem, tigh_visitor, bounds, starting_vertices=changes_prop
             )
@@ -111,3 +116,12 @@ class FBBTStopCriterion(BaseFBBTStopCriterion):
         iterations_exceeded = super().should_stop()
         elapsed = seconds_elapsed_since(self.start_time)
         return iterations_exceeded and elapsed > self.timelimit
+
+
+def update_fbbt_settings(galini):
+    _expr_to_tight[core.LinearExpression].max_expr_children = \
+        galini.fbbt_linear_max_children
+    _expr_to_tight[core.QuadraticExpression].max_expr_children = \
+        galini.fbbt_quadratic_max_terms
+    _expr_to_tight[core.SumExpression].max_expr_children = \
+        galini.fbbt_linear_max_children

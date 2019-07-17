@@ -16,6 +16,7 @@ from galini.cuts import CutsGeneratorsRegistry, CutsGeneratorsManager
 from galini.config import ConfigurationManager
 from galini.math import mc
 from galini.solvers import SolversRegistry
+from galini.fbbt import update_fbbt_settings
 from galini.logging import (
     get_logger,
     apply_config as apply_log_config,
@@ -37,6 +38,7 @@ class Galini(object):
         self.cuts_generators_manager = CutsGeneratorsManager(self)
         apply_log_config(self._config.logging)
         _update_math_context(self.get_configuration_group('galini'))
+        update_fbbt_settings(self.get_configuration_group('galini'))
 
     def get_solver(self, name):
         """Get solver from the registry."""

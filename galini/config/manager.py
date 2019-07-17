@@ -20,6 +20,7 @@ from galini.config.options import (
     ExternalSolverOptions,
     EnumOption,
     NumericOption,
+    IntegerOption,
     StringOption,
     BoolOption,
 )
@@ -87,6 +88,9 @@ def _galini_group():
         NumericOption('infinity', min_value=0, default=1e20),
         NumericOption('epsilon', min_value=0, default=1e-6),
         NumericOption('constraint_violation_tol', min_value=0, default=1e-6),
+        IntegerOption('fbbt_quadratic_max_terms', min_value=1, default=100),
+        IntegerOption('fbbt_sum_max_children', min_value=1, default=200),
+        IntegerOption('fbbt_linear_max_children', min_value=1, default=200),
     ])
 
 
