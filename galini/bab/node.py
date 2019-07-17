@@ -122,7 +122,7 @@ class Node(object):
             strategy = self.tree.branching_strategy
 
         lower_bound_solution = self.state.lower_bound_solution
-        if not lower_bound_solution.status.is_success():
+        if lower_bound_solution is None or not lower_bound_solution.status.is_success():
             return None, None
 
         branching_point = strategy.branch(self, self.tree)

@@ -52,12 +52,16 @@ class BabStatusInterrupted(BabStatus):
 class BabSolution(Solution):
     """Solution of the Branch & Bound algorithm."""
     def __init__(self, status, optimal_obj, optimal_vars, dual_bound,
-                 nodes_visited=None, nodes_remaining=None, runtime=None):
+                 nodes_visited=None, nodes_remaining=None, runtime=None,
+                 is_timeout=None, has_converged=None, node_limit_exceeded=None):
         super().__init__(status, optimal_obj, optimal_vars)
         self.dual_bound = dual_bound
         self.nodes_visited = nodes_visited
         self.nodes_remaining = nodes_remaining
         self.runtime = runtime
+        self.is_timeout = is_timeout
+        self.has_converged = has_converged
+        self.node_limit_exceeded = node_limit_exceeded
 
 
 

@@ -201,6 +201,10 @@ class BranchAndBoundSolver(Solver):
             primal_solution.variables,
             dual_bound=tree.state.lower_bound,
             nodes_visited=nodes_visited,
+            nodes_remaining=len(tree.open_nodes),
+            is_timeout=self._algo._timeout(),
+            has_converged=self._algo._has_converged(tree.state),
+            node_limit_exceeded=self._algo._node_limit_exceeded(tree.state),
         )
 
     def _log_problem_information_at_node(self, run_id, problem, solution, node):

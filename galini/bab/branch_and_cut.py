@@ -271,7 +271,10 @@ class BranchAndCutAlgorithm:
 
         cuts_state = CutsState()
 
+        mip_solution = None
+
         while (not self._cuts_converged(cuts_state) and
+               not self._timeout() and
                not self._cuts_iterations_exceeded(cuts_state)):
             feasible, new_cuts, mip_solution = self._perform_cut_round(
                 run_id, problem, relaxed_problem.relaxed, linear_problem.relaxed, cuts_state, tree, node
@@ -316,8 +319,13 @@ class BranchAndCutAlgorithm:
             tree.upper_bound
         )
 
-        if cuts_state.lower_bound >= tree.upper_bound and not np.isclose(cuts_state.lower_bound, tree.upper_bound):
+        if (cuts_state.lower_bound >= tree.upper_bound and
+            not np.isclose(cuts_state.lower_bound, tree.upper_bound)):
             # No improvement
+            return NodeSolution(mip_solution, None)
+
+        if self._timeout():
+            # No time for finding primal solution
             return NodeSolution(mip_solution, None)
 
         primal_solution = self._solve_primal(problem, mip_solution)
