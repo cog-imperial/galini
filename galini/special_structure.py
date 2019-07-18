@@ -57,7 +57,12 @@ def perform_fbbt(problem, maxiter, timelimit):
         else:
             existing_bounds = bounds[root_expr]
             new_bounds = existing_bounds.intersect(expr_bounds)
-            bounds[root_expr] = expr_bounds
+            bounds[root_expr] = new_bounds
+
+    for variable in problem.variables:
+        lb = problem.lower_bound(variable)
+        ub = problem.upper_bound(variable)
+        bounds[variable] = Interval(lb, ub)
 
     try:
         with timeout(timelimit, 'Timeout in FBBT'):
