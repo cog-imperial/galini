@@ -84,7 +84,7 @@ class ConvexRelaxation(_RelaxationBase):
 
     def relax_expression(self, problem, expr):
         convexity = self._ctx.convexity(expr)
-        if convexity.is_convex():
+        if convexity and convexity.is_convex():
             return UnderestimatorResult(expr, [])
         return self._relax_expression(problem, expr)
 

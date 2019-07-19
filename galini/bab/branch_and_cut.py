@@ -525,14 +525,19 @@ class BranchAndCutAlgorithm:
 
     def _perform_fbbt(self, run_id, problem, tree, node):
         logger.debug(run_id, 'Performing FBBT')
-        bounds = perform_fbbt(
-            problem,
-            maxiter=self.fbbt_maxiter,
-            timelimit=self.fbbt_timelimit,
-        )
+        try:
+            bounds = perform_fbbt(
+                problem,
+                maxiter=self.fbbt_maxiter,
+                timelimit=self.fbbt_timelimit,
+            )
 
-        self._bounds, self._monotonicity, self._convexity = \
-            propagate_special_structure(problem, bounds)
+            self._bounds, self._monotonicity, self._convexity = \
+                propagate_special_structure(problem, bounds)
+
+        except:
+            logger.warning(run_id, 'FBBT Failed')
+            return
 
         logger.debug(run_id, 'Set FBBT Bounds')
         for v in problem.variables:
