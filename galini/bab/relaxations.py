@@ -33,6 +33,15 @@ class _RelaxationBase(Relaxation):
         self._underestimator = self._root_underestimator()
 
     def before_relax(self, problem, relaxed_problem, **kwargs):
+        if 'bilinear_aux_variables' in problem.metadata:
+            original_bilinear_aux = problem.metadata['bilinear_aux_variables']
+            relaxed_bilinear_aux =  dict()
+
+            for xy_tuple, var in original_bilinear_aux.items():
+                relaxed_var = relaxed_problem.variable(var)
+                relaxed_bilinear_aux[xy_tuple] = relaxed_var
+                relaxed_problem.metadata['bilinear_aux_variables'] = relaxed_bilinear_aux
+
         self._ctx.metadata = relaxed_problem.metadata
         self._before_relax(problem)
 
