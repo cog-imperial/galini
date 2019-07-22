@@ -540,10 +540,10 @@ class BranchAndCutAlgorithm:
             return
 
         logger.debug(run_id, 'Set FBBT Bounds')
+        cause_infeasibility = None
         for v in problem.variables:
             vv = problem.variable_view(v)
             new_bound = bounds[v]
-
             if new_bound is None:
                 new_bound = Interval(None, None)
 
@@ -553,30 +553,55 @@ class BranchAndCutAlgorithm:
                 vv.lower_bound()
             )
 
-            if np.isinf(new_lb):
-                msg = 'Variable {} Lower Bound is -infinity, replacing with {}'
-                warnings.warn(msg.format(v.name, -mc.infinity))
-                logger.warning(run_id, msg, v.name, -mc.infinity)
-                new_lb = -mc.infinity
-
             new_ub = _safe_ub(
                 v.domain,
                 new_bound.upper_bound,
                 vv.upper_bound()
             )
 
-            if np.isinf(new_ub):
-                msg = 'Variable {} Upper Bound is infinity, replacing with {}'
-                warnings.warn(msg.format(v.name, mc.infinity))
-                logger.warning(run_id, msg, v.name, mc.infinity)
-                new_ub = mc.infinity
+            if new_lb > new_ub:
+                cause_infeasibility = v
 
-            if np.abs(new_ub - new_lb) < mc.epsilon:
-                new_lb = new_ub
+        if cause_infeasibility is not None:
+            logger.info(run_id, 'Bounds on variable {} cause infeasibility', v.name)
+        else:
+            for v in problem.variables:
+                vv = problem.variable_view(v)
+                new_bound = bounds[v]
 
-            logger.debug(run_id, '  {}: [{}, {}]', v.name, new_lb, new_ub)
-            vv.set_lower_bound(new_lb)
-            vv.set_upper_bound(new_ub)
+                if new_bound is None:
+                    new_bound = Interval(None, None)
+
+                new_lb = _safe_lb(
+                    v.domain,
+                    new_bound.lower_bound,
+                    vv.lower_bound()
+                )
+
+                if np.isinf(new_lb):
+                    msg = 'Variable {} Lower Bound is -infinity, replacing with {}'
+                    warnings.warn(msg.format(v.name, -mc.infinity))
+                    logger.warning(run_id, msg, v.name, -mc.infinity)
+                    new_lb = -mc.infinity
+
+                new_ub = _safe_ub(
+                    v.domain,
+                    new_bound.upper_bound,
+                    vv.upper_bound()
+                )
+
+                if np.isinf(new_ub):
+                    msg = 'Variable {} Upper Bound is infinity, replacing with {}'
+                    warnings.warn(msg.format(v.name, mc.infinity))
+                    logger.warning(run_id, msg, v.name, mc.infinity)
+                    new_ub = mc.infinity
+
+                if np.abs(new_ub - new_lb) < mc.epsilon:
+                    new_lb = new_ub
+
+                logger.debug(run_id, '  {}: [{}, {}]', v.name, new_lb, new_ub)
+                vv.set_lower_bound(new_lb)
+                vv.set_upper_bound(new_ub)
 
         group_name = '_'.join([str(c) for c in node.coordinate])
         logger.tensor(run_id, group_name, 'lb', problem.lower_bounds)
