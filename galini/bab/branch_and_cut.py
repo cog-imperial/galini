@@ -431,6 +431,9 @@ class BranchAndCutAlgorithm:
             start_time + datetime.timedelta(seconds=seconds_left())
         )
         iteration = 1
+
+        max_int64 = 2**63 - 1
+
         if end_time <= start_time:
             return None
         while not feasible_solution and not is_timeout:
@@ -444,10 +447,14 @@ class BranchAndCutAlgorithm:
                     # check if it has starting point
                     lb = vv.lower_bound()
                     ub = vv.upper_bound()
+                    is_integer = vv.domain.is_integer()
                     if is_close(lb, ub, atol=mc.epsilon):
                         fixed_point = lb
                     else:
-                        fixed_point = np.random.randint(lb, ub+1)
+                        if is_integer:
+                            lb = min(lb, max_int64)
+                            ub = min(ub + 1, max_int64)
+                        fixed_point = np.random.randint(lb, ub)
                     vv.fix(fixed_point)
 
             now = current_time()
@@ -578,17 +585,17 @@ class BranchAndCutAlgorithm:
                     vv.lower_bound()
                 )
 
-                if np.isinf(new_lb):
-                    msg = 'Variable {} Lower Bound is -infinity, replacing with {}'
-                    warnings.warn(msg.format(v.name, -mc.infinity))
-                    logger.warning(run_id, msg, v.name, -mc.infinity)
-                    new_lb = -mc.infinity
-
                 new_ub = _safe_ub(
                     v.domain,
                     new_bound.upper_bound,
                     vv.upper_bound()
                 )
+
+                if np.isinf(new_lb):
+                    msg = 'Variable {} Lower Bound is -infinity, replacing with {}'
+                    warnings.warn(msg.format(v.name, -mc.infinity))
+                    logger.warning(run_id, msg, v.name, -mc.infinity)
+                    new_lb = -mc.infinity
 
                 if np.isinf(new_ub):
                     msg = 'Variable {} Upper Bound is infinity, replacing with {}'
