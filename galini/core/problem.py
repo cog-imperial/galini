@@ -323,8 +323,18 @@ class Problem(_ProblemBase):
         self._variables.append(new_var)
 
         self._domains.append(new_var.domain)
-        self._lower_bounds.append(new_var.lower_bound)
-        self._upper_bounds.append(new_var.upper_bound)
+
+        if new_var.lower_bound is None:
+            lower_bound = -np.inf
+        else:
+            lower_bound = new_var.lower_bound
+        if new_var.upper_bound is None:
+            upper_bound = np.inf
+        else:
+            upper_bound = new_var.upper_bound
+
+        self._lower_bounds.append(lower_bound)
+        self._upper_bounds.append(upper_bound)
         self._starting_points.append(0.0)
         self._starting_points_mask.append(False)
         self._values.append(0.0)
