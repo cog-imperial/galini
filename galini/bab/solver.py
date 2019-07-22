@@ -153,6 +153,7 @@ class BranchAndBoundSolver(Solver):
             else:
                 # We won't explore this part of the tree anymore. Add to phatomed
                 # nodes.
+                logger.info(run_id, 'Phatom node {}', current_node.coordinate)
                 tree.phatom_node(current_node)
 
             self._log_problem_information_at_node(

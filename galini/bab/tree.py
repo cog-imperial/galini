@@ -88,6 +88,7 @@ class BabTree:
 
     def phatom_node(self, node):
         self.phatomed_nodes.append(node)
+        self._update_lower_bound()
 
     def node(self, coord):
         if not isinstance(coord, list):
@@ -156,6 +157,15 @@ class BabTree:
 
         return self._set_new_state(None, new_upper_bound)
 
+    def _update_lower_bound(self):
+        if self.open_nodes:
+            new_lower_bound = self._open_nodes_lower_bound()
+            return self._set_new_state(new_lower_bound, None)
+
+        if self.phatomed_nodes:
+            new_lower_bound = self._phatomed_nodes_lower_bound()
+            return self._set_new_state(new_lower_bound, None)
+
     def _set_new_state(self, new_lower_bound, new_upper_bound):
         if new_lower_bound is None:
             new_lower_bound = self.state.lower_bound
@@ -185,6 +195,11 @@ class BabTree:
             new_lower_bound = upper_bound
 
         for node in nodes:
-            if node.parent.lower_bound < new_lower_bound:
+            if node.has_solution:
+                lower_bound = node.lower_bound
+            else:
+                lower_bound = node.parent.lower_bound
+
+            if lower_bound < new_lower_bound:
                 new_lower_bound = node.parent.lower_bound
         return new_lower_bound
