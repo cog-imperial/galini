@@ -20,6 +20,7 @@ class MathContext:
     def __init__(self):
         self.epsilon = 1e-5
         self.infinity = 1e20
+        self.integer_infinity = 2**63 - 1
         self.constraint_violation_tol = 1e-8
 
 

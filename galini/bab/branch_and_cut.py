@@ -432,8 +432,6 @@ class BranchAndCutAlgorithm:
         )
         iteration = 1
 
-        max_int64 = 2**63 - 1
-
         if end_time <= start_time:
             return None
         while not feasible_solution and not is_timeout:
@@ -452,8 +450,8 @@ class BranchAndCutAlgorithm:
                         fixed_point = lb
                     else:
                         if is_integer:
-                            lb = min(lb, max_int64)
-                            ub = min(ub + 1, max_int64)
+                            lb = min(lb, -mc.integer_infinity)
+                            ub = min(ub + 1, mc.integer_infinity)
                         fixed_point = np.random.randint(lb, ub)
                     vv.fix(fixed_point)
 
@@ -523,6 +521,7 @@ class BranchAndCutAlgorithm:
         # unfix all variables
         for v in problem.variables:
             problem.unfix(v)
+
         return solution
 
     def _solve_convex_problem(self, problem):
@@ -562,8 +561,8 @@ class BranchAndCutAlgorithm:
             self._bounds, self._monotonicity, self._convexity = \
                 propagate_special_structure(problem, bounds)
 
-        except:
-            logger.warning(run_id, 'FBBT Failed')
+        except Exception as ex:
+            logger.warning(run_id, 'FBBT Failed: {}', ex.message)
             return
 
         logger.debug(run_id, 'Set FBBT Bounds')
@@ -611,17 +610,30 @@ class BranchAndCutAlgorithm:
                     vv.upper_bound()
                 )
 
-                if np.isinf(new_lb):
-                    msg = 'Variable {} Lower Bound is -infinity, replacing with {}'
-                    warnings.warn(msg.format(v.name, -mc.infinity))
-                    logger.warning(run_id, msg, v.name, -mc.infinity)
-                    new_lb = -mc.infinity
+                if vv.domain.is_real():
+                    if np.isinf(new_lb):
+                        msg = 'Variable {} Lower Bound is -infinity, replacing with {}'
+                        warnings.warn(msg.format(v.name, -mc.infinity))
+                        logger.warning(run_id, msg, v.name, -mc.infinity)
+                        new_lb = -mc.infinity
 
-                if np.isinf(new_ub):
-                    msg = 'Variable {} Upper Bound is infinity, replacing with {}'
-                    warnings.warn(msg.format(v.name, mc.infinity))
-                    logger.warning(run_id, msg, v.name, mc.infinity)
-                    new_ub = mc.infinity
+                    if np.isinf(new_ub):
+                        msg = 'Variable {} Upper Bound is infinity, replacing with {}'
+                        warnings.warn(msg.format(v.name, mc.infinity))
+                        logger.warning(run_id, msg, v.name, mc.infinity)
+                        new_ub = mc.infinity
+                else:
+                    if new_lb < -mc.integer_infinity:
+                        msg = 'Integer Variable {} Lower Bound is -infinity, replacing with {}'
+                        warnings.warn(msg.format(v.name, -mc.integer_infinity))
+                        logger.warning(run_id, msg, v.name, -mc.integer_infinity)
+                        new_lb = -mc.integer_infinity
+
+                    if new_ub > mc.integer_infinity:
+                        msg = 'Integer Variable {} Upper Bound is infinity, replacing with {}'
+                        warnings.warn(msg.format(v.name, mc.integer_infinity))
+                        logger.warning(run_id, msg, v.name, mc.integer_infinity)
+                        new_ub = mc.integer_infinity
 
                 if np.abs(new_ub - new_lb) < mc.epsilon:
                     new_lb = new_ub
