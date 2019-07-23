@@ -477,6 +477,21 @@ class BranchAndCutAlgorithm:
         return feasible_solution
 
     def _solve_primal(self, problem, mip_solution):
+        solution = self._solve_primal_with_solution(problem, mip_solution)
+        if solution.status.is_success():
+            return solution
+        # Try solutions from mip solution pool, if avilable
+        if mip_solution.solution_pool is None:
+            return solution
+        for mip_solution_from_pool in mip_solution.solution_pool:
+            solution_from_pool = \
+                self._solve_primal_with_solution(problem, mip_solution_from_pool.inner)
+            if solution_from_pool.status.is_success():
+                return solution_from_pool
+        # No solution from pool was feasible, return original infeasible solution
+        return solution
+
+    def _solve_primal_with_solution(self, problem, mip_solution):
         # Solve original problem
         # Use mip solution as starting point
         for v, sv in zip(problem.variables, mip_solution.variables):

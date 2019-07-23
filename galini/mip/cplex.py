@@ -24,6 +24,7 @@ class CplexSolver:
         self._logger = logger
         self._run_id = run_id
         self._config = galini.get_configuration_group('mip.cplex')
+        self.solution_pool = None
 
     def available(self):
         """Predicate to check if the solver is available."""
@@ -66,6 +67,15 @@ class CplexSolver:
                 lp.assignConsPi(constraintpivalues)
         except cplex.exceptions.CplexSolverError:
             pass
+        cplex_pool = self._inner.solverModel.solution.pool
+        num_sol = cplex_pool.get_num()
+        if num_sol > 0:
+            pool = []
+            for i in range(num_sol):
+                x_i = cplex_pool.get_values(i)
+                obj_i = cplex_pool.get_objective_value(i)
+                pool.append((obj_i, x_i))
+            self.solution_pool = pool
         return solution_status
 
     def _setup_logs(self):

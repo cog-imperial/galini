@@ -13,7 +13,6 @@
 # limitations under the License.
 
 """Branch & Bound solution."""
-import heapq
 from galini.solvers import Solution, Status
 
 
@@ -62,50 +61,3 @@ class BabSolution(Solution):
         self.is_timeout = is_timeout
         self.has_converged = has_converged
         self.node_limit_exceeded = node_limit_exceeded
-
-
-
-class SolutionPool:
-    """Contains a (bounded) solution pool, sorted by objective value.
-
-    Parameters
-    ----------
-    n : int
-        solution pool size
-    """
-    def __init__(self, n=5):
-        self._pool = []
-        self._n = n
-
-    def add(self, solution):
-        self._pool.append(_SolutionPoolSolution(solution))
-        self._pool.sort()
-        if len(self._pool) >= self._n:
-            self._pool = self._pool[:self._n]
-
-    def __len__(self):
-        return len(self._pool)
-
-    def __getitem__(self, idx):
-        solution = self._pool[idx]
-        return solution.inner
-
-    @property
-    def head(self):
-        if self._pool:
-            return self._pool[0].inner
-        return None
-
-
-class _SolutionPoolSolution:
-    def __init__(self, solution):
-        self.inner = solution
-
-    def __lt__(self, other):
-        return self.inner.objective_value() < other.inner.objective_value()
-
-    def __str__(self):
-        return '_SolutionPoolSolution(objective_value={})'.format(self.inner.objective_value())
-
-    def __repr__(self):
-        return '<{} at {}>'.format(str(self), hex(id(self)))

@@ -19,6 +19,7 @@ from galini.config import SolverOptions, ExternalSolverOptions
 from galini.logging import get_logger
 from galini.mip.pulp import dag_to_pulp, mip_solver
 from galini.mip.solution import MIPSolution, PulpStatus
+from galini.solvers.solution import SolutionPool
 
 
 logger = get_logger(__name__)
@@ -55,11 +56,30 @@ class MIPSolver(Solver):
             if all(dv is None for dv in dual_values):
                 dual_values = None
 
+            if getattr(solver, 'solution_pool'):
+                pool = SolutionPool(10)
+                for (obj, x_i) in solver.solution_pool:
+                    pool_vars = [
+                        OptimalVariable(var.name, value)
+                        for var, value in zip(problem.variables, x_i)
+                    ]
+
+                    pool.add(
+                        MIPSolution(
+                            PulpStatus(pulp.LpStatusOptimal), # Not optimal, but feasible
+                            OptimalObjective(problem.objective.name, obj),
+                            pool_vars,
+                        )
+                    )
+            else:
+                pool = None
+
             return MIPSolution(
                 PulpStatus(status),
                 [OptimalObjective(problem.objective.name, pulp.value(pulp_problem.objective))],
                 optimal_variables,
                 dual_values,
+                pool=pool,
             )
 
         # Problem is a pulp model. Solve this instead.

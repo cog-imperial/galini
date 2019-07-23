@@ -16,7 +16,7 @@
 from collections import namedtuple
 import numpy as np
 from galini.bab.node import Node, NodeSolution
-from galini.bab.solution import SolutionPool
+from galini.solvers.solution import SolutionPool
 
 
 TreeState = namedtuple('TreeState', ['lower_bound', 'upper_bound', 'nodes_visited'])

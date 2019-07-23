@@ -43,6 +43,9 @@ class PulpStatus(Status):
 class MIPSolution(Solution):
     """Solution of a MIP problem."""
     def __init__(self, status, optimal_obj=None, optimal_vars=None,
-                 dual_values=None):
+                 dual_values=None, pool=None):
         super().__init__(status, optimal_obj, optimal_vars)
         self.dual_values = dual_values
+        if pool is None:
+            pool = []
+        self.solution_pool = pool
