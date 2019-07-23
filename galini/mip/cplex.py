@@ -36,6 +36,8 @@ class CplexSolver:
         self._inner.buildSolverModel(lp)
 
         self._setup_logs()
+        self._setup_config()
+        self._setup_timelimit()
 
         model = lp.solverModel
         # set problem as mip if all continuous variables
@@ -75,6 +77,10 @@ class CplexSolver:
         model.set_log_stream(_CplexLoggerAdapter(self._logger, self._run_id, INFO))
         model.set_results_stream(_CplexLoggerAdapter(self._logger, self._run_id, INFO))
 
+    def _setup_config(self):
+        if not self.available():
+            return
+        model = self._inner.solverModel
         for key, value in self._config.items():
             if isinstance(value, dict):
                 raise ValueError("Invalid CPLEX parameter '{}'".format(key))
@@ -88,6 +94,14 @@ class CplexSolver:
             for key_token in key.split('.'):
                 attr = getattr(attr, key_token)
             attr.set(value)
+
+    def _setup_timelimit(self):
+        if not self.available():
+            return
+        model = self._inner.solverModel
+        existing_timelimit = model.parameters.timelimit
+        new_timelimit = min(existing_timelimit.get(), seconds_left())
+        model.parameters.timelimit.set(new_timelimit)
 
 
 class _CplexLoggerAdapter:
