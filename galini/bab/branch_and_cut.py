@@ -508,7 +508,12 @@ class BranchAndCutAlgorithm:
                 value = lb + (ub - lb) / 2.0
             else:
                 value = sv.value
+
             if domain != Domain.REAL:
+                # Solution (from pool) can contain non integer values for
+                # integer variables. Simply round these values up
+                if np.trunc(value) != value:
+                    value = min(view.upper_bound(), np.ceil(value))
                 problem.fix(v, value)
             else:
                 problem.set_starting_point(v, value)
