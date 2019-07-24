@@ -90,6 +90,8 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         logger.debug(run_id, 'Compute points for non integer variables')
         f_x_solution = self._solve_nlp_with_integer_fixed(run_id, relaxed_problem, mip_solution)
         logger.debug(run_id, 'Solving NLP returned {}', f_x_solution)
+        if not f_x_solution:
+            return []
         assert f_x_solution.status.is_success()
 
         x_k = [v.value for v in f_x_solution.variables[:relaxed_problem.num_variables]]
@@ -129,7 +131,11 @@ class OuterApproximationCutsGenerator(CutsGenerator):
     def _solve_nlp_with_integer_fixed(self, run_id, relaxed_problem, mip_solution):
         with fixed_integer_variables(run_id, relaxed_problem, mip_solution) as problem:
             nlp_solution = self._nlp_solver.solve(problem)
-            assert nlp_solution.status.is_success()
+            logger.debug(run_id, 'NLP with integer fixed: {}', nlp_solution)
+            if nlp_solution.status.is_success():
+                return nlp_solution
+            return None
+            # assert nlp_solution.status.is_success()
             return nlp_solution
 
     def _generate_cut(self, i, constraint, x, x_k, fg, g_x, w, is_objective):

@@ -74,7 +74,7 @@ class CutsGeneratorsManager(object):
 
     def generate(self, run_id, problem, relaxed_problem, linear_problem, mip_solution, tree, node):
         all_cuts = []
-        logger.info(run_id, 'Generating cuts')
+        logger.info(run_id, 'Generating cuts: {}', [gen.name for gen in self._generators])
 
         for gen in self._generators:
             cuts = gen.generate(run_id, problem, relaxed_problem, linear_problem, mip_solution, tree, node)
