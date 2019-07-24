@@ -13,7 +13,7 @@
 # limitations under the License.
 """Wrapper around pulp cplex interface."""
 import pulp
-from galini.logging import INFO, WARNING, ERROR
+from galini.logging import INFO, DEBUG, WARNING, ERROR
 from galini.timelimit import seconds_left
 
 
@@ -84,7 +84,7 @@ class CplexSolver:
         model = self._inner.solverModel
         model.set_warning_stream(_CplexLoggerAdapter(self._logger, self._run_id, WARNING))
         model.set_error_stream(_CplexLoggerAdapter(self._logger, self._run_id, ERROR))
-        model.set_log_stream(_CplexLoggerAdapter(self._logger, self._run_id, INFO))
+        model.set_log_stream(_CplexLoggerAdapter(self._logger, self._run_id, DEBUG))
         model.set_results_stream(_CplexLoggerAdapter(self._logger, self._run_id, INFO))
 
     def _setup_config(self):
