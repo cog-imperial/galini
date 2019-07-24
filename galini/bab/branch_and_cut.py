@@ -285,7 +285,7 @@ class BranchAndCutAlgorithm:
             )
 
             if not feasible:
-                return NodeSolution(mip_solution, None)
+                return NodeSolution(mip_solution, feasible_solution)
 
             # Add cuts as constraints
             # TODO(fra): use problem global and local cuts

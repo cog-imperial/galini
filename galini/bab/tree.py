@@ -114,12 +114,21 @@ class BabTree:
 
         if upper_bound_solution is not None and upper_bound_solution.status.is_success():
             self.solution_pool.add(upper_bound_solution)
+            upper_bound_solution = upper_bound_solution
+            new_upper_bound = min(
+                upper_bound_solution.objective_value(),
+                self.state.upper_bound,
+            )
+        else:
+            # Don't consider upper bound solution if it's none
+            upper_bound_solution = None
+            new_upper_bound = None
 
         if lower_bound_solution is None:
-            return self._set_new_state(None, None)
+            return self._set_new_state(None, new_upper_bound)
 
         if not lower_bound_solution.status.is_success():
-            return self._set_new_state(None, None)
+            return self._set_new_state(None, new_upper_bound)
 
         if is_root_node:
             new_lower_bound = lower_bound_solution.objective_value()
