@@ -566,7 +566,7 @@ class BranchAndCutAlgorithm:
                 propagate_special_structure(problem, bounds)
 
         except Exception as ex:
-            logger.warning(run_id, 'FBBT Failed: {}', ex.message)
+            logger.warning(run_id, 'FBBT Failed: {}', str(ex))
             return
 
         logger.debug(run_id, 'Set FBBT Bounds')
