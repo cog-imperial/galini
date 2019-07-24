@@ -14,13 +14,13 @@
 """Branch & Cut algorithm."""
 from collections import namedtuple
 import datetime
-import warnings
+import logging
 import numpy as np
 import pyomo.environ as pe
 from galini.math import mc, is_close
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.expr.current import identify_variables
-from coramin.domain_reduction.obbt import perform_obbt
+import coramin.domain_reduction.obbt as coramin_obbt
 from coramin.relaxations.auto_relax import relax
 from suspect.expression import ExpressionType
 from suspect.interval import Interval
@@ -52,6 +52,9 @@ from galini.config import (
 
 
 logger = get_logger(__name__)
+
+coramin_logger = coramin_obbt.logger
+coramin_logger.disabled = True
 
 
 class CutsState(object):
@@ -170,11 +173,11 @@ class BranchAndCutAlgorithm:
 
             relaxed_vars = [getattr(relaxed_model, v.name) for v in nonlinear_variables]
 
-            logger.info(0, 'Performaning OBBT on {} variables', len(relaxed_vars))
+            logger.info(0, 'Performing OBBT on {} variables', len(relaxed_vars))
 
             time_left = obbt_timelimit - seconds_elapsed_since(obbt_start_time)
             with timeout(time_left, 'Timeout in OBBT'):
-                result = perform_obbt(relaxed_model, solver, relaxed_vars)
+                result = coramin_obbt.perform_obbt(relaxed_model, solver, relaxed_vars)
 
             if result is None:
                 return
@@ -189,8 +192,8 @@ class BranchAndCutAlgorithm:
                 new_lb = _safe_lb(vv.domain, new_lb, old_lb)
                 new_ub = _safe_ub(vv.domain, new_ub, old_ub)
                 if not new_lb is None and not new_ub is None:
-                    if np.isclose(new_lb, new_ub):
-                        if old_lb is not None and np.isclose(new_lb, old_lb):
+                    if is_close(new_lb, new_ub, atol=mc.epsilon):
+                        if old_lb is not None and is_close(new_lb, old_lb, atol=mc.epsilon):
                             new_ub = new_lb
                         else:
                             new_lb = new_ub
@@ -199,6 +202,7 @@ class BranchAndCutAlgorithm:
                 logger.debug(0, '  {}: [{}, {}]', v.name, vv.lower_bound(), vv.upper_bound())
 
         except TimeoutError:
+            logger.info(0, 'OBBT timed out')
             return
 
         except Exception as ex:
@@ -613,25 +617,21 @@ class BranchAndCutAlgorithm:
                 if vv.domain.is_real():
                     if np.isinf(new_lb):
                         msg = 'Variable {} Lower Bound is -infinity, replacing with {}'
-                        warnings.warn(msg.format(v.name, -mc.infinity))
                         logger.warning(run_id, msg, v.name, -mc.infinity)
                         new_lb = -mc.infinity
 
                     if np.isinf(new_ub):
                         msg = 'Variable {} Upper Bound is infinity, replacing with {}'
-                        warnings.warn(msg.format(v.name, mc.infinity))
                         logger.warning(run_id, msg, v.name, mc.infinity)
                         new_ub = mc.infinity
                 else:
                     if new_lb < -mc.integer_infinity:
                         msg = 'Integer Variable {} Lower Bound is -infinity, replacing with {}'
-                        warnings.warn(msg.format(v.name, -mc.integer_infinity))
                         logger.warning(run_id, msg, v.name, -mc.integer_infinity)
                         new_lb = -mc.integer_infinity
 
                     if new_ub > mc.integer_infinity:
                         msg = 'Integer Variable {} Upper Bound is infinity, replacing with {}'
-                        warnings.warn(msg.format(v.name, mc.integer_infinity))
                         logger.warning(run_id, msg, v.name, mc.integer_infinity)
                         new_ub = mc.integer_infinity
 
