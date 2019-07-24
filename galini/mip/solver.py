@@ -16,7 +16,8 @@ import pulp
 from galini.core import Problem
 from galini.solvers import Solver, OptimalVariable, OptimalObjective
 from galini.config import SolverOptions, ExternalSolverOptions
-from galini.logging import get_logger
+from galini.logging import get_logger, DEBUG
+from galini.util import expr_to_str
 from galini.mip.pulp import dag_to_pulp, mip_solver
 from galini.mip.solution import MIPSolution, PulpStatus
 from galini.solvers.solution import SolutionPool
@@ -43,6 +44,23 @@ class MIPSolver(Solver):
         if isinstance(problem, Problem):
             # Convert to pulp and then solve it.
             assert problem.objective
+            if logger.level <= DEBUG:
+                logger.debug(run_id, 'Solving (MI)LP')
+                logger.debug(run_id,  'Variables:')
+                for v in problem.variables:
+                    vv = problem.variable_view(v)
+                    logger.debug(run_id, '\t{}: [{}, {}] c {}', v.name, vv.lower_bound(), vv.upper_bound(), vv.domain)
+                logger.debug(run_id, 'Objective: {}', expr_to_str(problem.objective.root_expr))
+                logger.debug(run_id, 'Constraints:')
+                for constraint in problem.constraints:
+                    logger.debug(
+                        run_id,
+                        '{}: {} <= {} <= {}',
+                        constraint.name,
+                        constraint.lower_bound,
+                        expr_to_str(constraint.root_expr),
+                        constraint.upper_bound,
+                    )
 
             pulp_problem, variables = dag_to_pulp(problem)
             status = pulp_problem.solve(solver)
