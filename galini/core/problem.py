@@ -138,12 +138,16 @@ class _ProblemBase:
         return self._variable_value(var, self._lower_bounds)
 
     def set_lower_bound(self, var, value):
+        if value is None:
+            value = -np.inf
         return self._set_variable_value(var, value, self._lower_bounds)
 
     def upper_bound(self, var):
         return self._variable_value(var, self._upper_bounds)
 
     def set_upper_bound(self, var, value):
+        if value is None:
+            value = np.inf
         return self._set_variable_value(var, value, self._upper_bounds)
 
     def has_starting_point(self, var):

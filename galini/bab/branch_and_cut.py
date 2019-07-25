@@ -77,6 +77,12 @@ class CutsState(object):
             self.previous_solution = self.latest_solution
             self.latest_solution = current_objective
 
+    def __str__(self):
+        return 'CutsState(round={}, lower_bound={})'.format(self.round, self.lower_bound)
+
+    def __repr__(self):
+        return '<{} at {}>'.format(str(self), hex(id(self)))
+
 
 class BranchAndCutAlgorithm:
     name = 'branch_and_cut'
@@ -213,7 +219,7 @@ class BranchAndCutAlgorithm:
         rel_gap = relative_gap(state.lower_bound, state.upper_bound)
         abs_gap = absolute_gap(state.lower_bound, state.upper_bound)
 
-        bounds_close = np.isclose(
+        bounds_close = is_close(
             state.lower_bound,
             state.upper_bound,
             rtol=self.relative_tolerance,
@@ -312,6 +318,7 @@ class BranchAndCutAlgorithm:
                         0.0
                     )
 
+            logger.debug(run_id, 'Updating CutState: State={}, Solution={}', cuts_state, mip_solution)
             cuts_state.update(mip_solution)
             if len(new_cuts) == 0:
                 break
@@ -324,7 +331,7 @@ class BranchAndCutAlgorithm:
         )
 
         if (cuts_state.lower_bound >= tree.upper_bound and
-            not np.isclose(cuts_state.lower_bound, tree.upper_bound)):
+            not is_close(cuts_state.lower_bound, tree.upper_bound, atol=mc.epsilon)):
             # No improvement
             return NodeSolution(mip_solution, None)
 
@@ -543,7 +550,7 @@ class BranchAndCutAlgorithm:
             state.latest_solution is None):
             return False
 
-        if np.isclose(state.latest_solution, state.previous_solution):
+        if is_close(state.latest_solution, state.previous_solution, atol=mc.epsilon):
             return True
 
         improvement = state.latest_solution - state.previous_solution
@@ -690,7 +697,7 @@ def _safe_lb(domain, a, b):
         return None
 
     if domain.is_integer() and lb is not None:
-        if np.isclose(np.floor(lb), lb, atol=mc.epsilon, rtol=0.0):
+        if is_close(np.floor(lb), lb, atol=mc.epsilon, rtol=0.0):
             return np.floor(lb)
         return np.ceil(lb)
 
@@ -706,7 +713,7 @@ def _safe_ub(domain, a, b):
         return None
 
     if domain.is_integer() and ub is not None:
-        if np.isclose(np.ceil(ub), ub, atol=mc.epsilon, rtol=0.0):
+        if is_close(np.ceil(ub), ub, atol=mc.epsilon, rtol=0.0):
             return np.ceil(ub)
         return np.floor(ub)
 
