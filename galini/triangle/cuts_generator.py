@@ -109,6 +109,7 @@ class TriangleCutsGenerator(CutsGenerator):
             min(self._max_tri_cuts, len(rank_list_tri_viol)))
         max_tri_cuts = int(max_tri_cuts)
         l = self._lbs
+        u = self._ubs
         d = self._dbs
 
         # Add all triangle cuts (ranked by violation) within selection size
@@ -122,6 +123,7 @@ class TriangleCutsGenerator(CutsGenerator):
             logger.debug(run_id, 'Cut {} is of type {}', ix, ineq_type)
             logger.debug(run_id, 'd[i] = {}, d[j] = {}, d[k] = {}', d[i], d[j], d[k])
             logger.debug(run_id, 'l[i] = {}, l[j] = {}, l[k] = {}', l[i], l[j], l[k])
+            logger.debug(run_id, 'u[i] = {}, u[j] = {}, u[k] = {}', u[i], u[j], u[k])
             if is_close(d[i], 0.0, atol=mc.epsilon):
                 logger.warning(run_id, 'Skip Cut {}, d[i] is zero', ix)
                 continue
