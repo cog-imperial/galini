@@ -18,6 +18,7 @@ from suspect.expression import ExpressionType
 from galini.config import CutsGeneratorOptions, NumericOption
 from galini.core import LinearExpression, SumExpression, QuadraticExpression
 from galini.cuts import CutType, Cut, CutsGenerator
+from galini.math import mc, is_close
 from galini.logging import get_logger
 
 
@@ -119,6 +120,20 @@ class TriangleCutsGenerator(CutsGenerator):
             # Generate constraints for the 4 different triangle inequality types
             cut_lb = 0
             logger.debug(run_id, 'Cut {} is of type {}', ix, ineq_type)
+            logger.debug(run_id, 'd[i] = {}, d[j] = {}, d[k] = {}', d[i], d[j], d[k])
+            logger.debug(run_id, 'l[i] = {}, l[j] = {}, l[k] = {}', l[i], l[j], l[k])
+            if is_close(d[i], 0.0, atol=mc.epsilon):
+                logger.warning(run_id, 'Skip Cut {}, d[i] is zero', ix)
+                continue
+
+            if is_close(d[j], 0.0, atol=mc.epsilon):
+                logger.warning(run_id, 'Skip Cut {}, d[j] is zero', ix)
+                continue
+
+            if is_close(d[k], 0.0, atol=mc.epsilon):
+                logger.warning(run_id, 'Skip Cut {}, d[k] is zero', ix)
+                continue
+
             if ineq_type == 3:
                 sum_expr = SumExpression([
                     QuadraticExpression([xi, xj, xk], [xj, xk, xi],
@@ -228,7 +243,6 @@ class TriangleCutsGenerator(CutsGenerator):
                 continue
             for idx, var_idx in enumerate(cl):
                 x_vals[idx] = solution.variables[var_idx].value
-                print(solution.variables[var_idx])
                 x_vals_scaled[idx] = (x_vals[idx] - l[var_idx])/d[var_idx]
             x01 = (lifted_mat[cl[0], cl[1]] - l[cl[0]]*x_vals[1] - l[cl[1]]*x_vals[0] + l[cl[0]]*l[cl[1]])\
                   /d[cl[0]]/d[cl[1]]
