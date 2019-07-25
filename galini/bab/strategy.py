@@ -14,7 +14,7 @@
 
 """Branch & Bound branching strategies."""
 import numpy as np
-from galini.math import mc
+from galini.math import mc, is_inf
 from galini.bab.node import BranchingPoint
 
 

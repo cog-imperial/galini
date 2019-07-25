@@ -38,6 +38,14 @@ def is_close(a, b, atol=None, rtol=None):
     return np.isclose(a, b, atol=atol, rtol=rtol)
 
 
+def is_inf(n):
+    return (
+        np.isinf(n) or
+        n >= mc.infinity or
+        n <= -mc.infinity
+    )
+
+
 def almost_ge(a, b, atol=None, rtol=None):
     if atol is None and rtol is None:
         raise ValueError('One of atol and rtol must be specified')

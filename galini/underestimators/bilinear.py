@@ -25,6 +25,7 @@ from galini.core import (
     Domain,
     BilinearTermReference,
 )
+from galini.math import is_inf
 from galini.underestimators.underestimator import Underestimator, UnderestimatorResult
 
 
@@ -101,20 +102,14 @@ class McCormickUnderestimator(Underestimator):
             _is_inf(y_l) or
             _is_inf(y_u)
         )
-        if any_unbounded:
-            return None, None
-        assert not _is_inf(x_l)
-        assert not _is_inf(x_u)
-        assert not _is_inf(y_l)
-        assert not _is_inf(y_u)
+
+        reference = BilinearTermReference(term.var1, term.var2)
 
         if term.var1 == term.var2:
             assert np.isclose(x_l, y_l) and np.isclose(x_u, y_u)
             w_bounds = Interval(x_l, x_u) ** 2
         else:
             w_bounds = Interval(x_l, x_u) * Interval(y_l, y_u)
-
-        reference = BilinearTermReference(term.var1, term.var2)
 
         w = Variable(
             self._format_aux_name(term.var1, term.var2),
@@ -125,13 +120,21 @@ class McCormickUnderestimator(Underestimator):
         w.reference = reference
         bilinear_aux_vars[xy_tuple] = w
 
+        new_expr = LinearExpression([w], [term.coefficient], 0.0)
+
+        if any_unbounded:
+            return None, None
+
+        assert not _is_inf(x_l)
+        assert not _is_inf(x_u)
+        assert not _is_inf(y_l)
+        assert not _is_inf(y_u)
+
         #  y     x     w   const
         #  x^L   y^L  -1  -x^L y^L <= 0
         #  x^U   y^U  -1  -x^U y^U <= 0
         # -x^U  -y^L  +1  +x^U y^L <= 0
         # -x^L  -y^U  +1  +x^L y^U <= 0
-
-        new_expr = LinearExpression([w], [term.coefficient], 0.0)
 
         if term.var1 == term.var2:
             upper_bound_0 = Constraint(
