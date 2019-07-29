@@ -87,6 +87,8 @@ def _galini_group():
         NumericOption('timelimit', min_value=0, default=86400),
         NumericOption('infinity', min_value=0, default=1e20),
         NumericOption('integer_infinity', min_value=0, default=2**63 - 1),
+        NumericOption('user_upper_bound', min_value=0, default=1e9),
+        NumericOption('user_integer_upper_bound', min_value=0, default=1e5),
         NumericOption('epsilon', min_value=0, default=1e-6),
         NumericOption('constraint_violation_tol', min_value=0, default=1e-6),
         IntegerOption('fbbt_quadratic_max_terms', min_value=1, default=100),

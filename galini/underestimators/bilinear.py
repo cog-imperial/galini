@@ -123,7 +123,7 @@ class McCormickUnderestimator(Underestimator):
         new_expr = LinearExpression([w], [term.coefficient], 0.0)
 
         if any_unbounded:
-            return None, None
+            return new_expr, []
 
         assert not _is_inf(x_l)
         assert not _is_inf(x_u)

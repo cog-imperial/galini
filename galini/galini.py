@@ -74,3 +74,5 @@ def _update_math_context(galini):
     mc.infinity = galini.infinity
     mc.integer_infinity = galini.integer_infinity
     mc.constraint_violation_tol = galini.constraint_violation_tol
+    mc.user_upper_bound = galini.user_upper_bound
+    mc.user_integer_upper_bound = galini.user_integer_upper_bound

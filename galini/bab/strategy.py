@@ -31,8 +31,12 @@ def range_ratio(problem, root_problem):
     root_upper_bounds = np.array(root_problem.upper_bounds)
     denominator = np.abs(root_upper_bounds - root_lower_bounds) + mc.epsilon
     numerator = upper_bounds - lower_bounds
-    finite_numerator = np.ones(problem.num_variables) * (numerator <= mc.infinity) * numerator
-    finite_denominator = np.ones(problem.num_variables) * (denominator <= mc.infinity) * denominator
+    numerator_mask = ~is_inf(numerator)
+    denominator_mask = ~is_inf(denominator)
+    finite_numerator = np.zeros_like(numerator)
+    finite_denominator = np.zeros_like(denominator) + mc.epsilon
+    finite_numerator[numerator_mask] = numerator[numerator_mask]
+    finite_denominator[denominator_mask] = denominator[denominator_mask]
     return np.nan_to_num(finite_numerator / finite_denominator)
 
 
@@ -56,7 +60,20 @@ class KSectionBranchingStrategy(BranchingStrategy):
 
     def _branch_on_var(self, var):
         lower_bound = var.lower_bound()
+        domain =var.domain
+        if is_inf(lower_bound):
+            if domain.is_real():
+                lower_bound = -mc.user_upper_bound
+            else:
+                lower_bound = -mc.user_integer_upper_bound
+
         upper_bound = var.upper_bound()
+        if is_inf(upper_bound):
+            if domain.is_real():
+                upper_bound = mc.user_upper_bound
+            else:
+                upper_bound = mc.user_integer_upper_bound
+
         step = (upper_bound - lower_bound) / self.k
         points = step * (np.arange(self.k-1) + 1.0) + lower_bound
         assert np.all(np.isfinite(points))

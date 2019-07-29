@@ -17,7 +17,7 @@
 import numpy as np
 from galini.logging import get_logger, DEBUG, WARNING
 from galini.util import expr_to_str
-from galini.math import mc
+from galini.math import mc, is_inf
 from galini.config.options import (
     SolverOptions,
     ExternalSolverOptions,
@@ -128,19 +128,32 @@ class IpoptNLPSolver(Solver):
                 xi[i] = v.value()
             else:
                 lb = v.lower_bound()
-                lb = lb if lb is not None else -2e19
+                if is_inf(lb):
+                    lb = -mc.user_upper_bound
+                    logger.warning(
+                        run_id,
+                        'Variable {} lower bound is infinite: setting to {}', var.name, lb
+                    )
 
                 ub = v.upper_bound()
-                ub = ub if ub is not None else 2e19
+                if is_inf(ub):
+                    ub = mc.user_upper_bound
+                    logger.warning(
+                        run_id,
+                        'Variable {} upper bound is infinite: setting to {}', var.name, ub
+                    )
 
                 xl[i] = lb
                 xu[i] = ub
 
                 if v.has_starting_point():
-                    xi[i] = v.starting_point()
+                    starting_point = v.starting_point()
+                    if is_inf(starting_point):
+                        starting_point = max(lb, min(ub, 0))
+                    xi[i] = starting_point
                 else:
-
                     xi[i] = max(lb, min(ub, 0))
+
             logger.debug(
                 run_id,
                 'Variable: {} <= {} <= {}, starting {}',

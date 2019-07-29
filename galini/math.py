@@ -22,6 +22,8 @@ class MathContext:
         self.infinity = 1e20
         self.integer_infinity = 2**63 - 1
         self.constraint_violation_tol = 1e-8
+        self.user_upper_bound = 1e9
+        self.user_integer_upper_bound = 1e5
 
 
 mc = MathContext()
@@ -39,11 +41,16 @@ def is_close(a, b, atol=None, rtol=None):
 
 
 def is_inf(n):
-    return (
-        np.isinf(n) or
-        n >= mc.infinity or
-        n <= -mc.infinity
-    )
+    """Test elemnt-whise for positive and negative infinity.
+
+    This version of is_inf also tests for values greater than
+    `mc.infinity` or less than `-mc.infinity`.
+    """
+    return np.logical_or.reduce([
+        np.isinf(n),
+        n >= mc.infinity,
+        n <= -mc.infinity,
+    ])
 
 
 def almost_ge(a, b, atol=None, rtol=None):

@@ -621,26 +621,11 @@ class BranchAndCutAlgorithm:
                     vv.upper_bound()
                 )
 
-                if vv.domain.is_real():
-                    if np.isinf(new_lb):
-                        msg = 'Variable {} Lower Bound is -infinity, replacing with {}'
-                        logger.warning(run_id, msg, v.name, -mc.infinity)
-                        new_lb = -mc.infinity
+                if np.isinf(new_lb):
+                    new_lb = -np.inf
 
-                    if np.isinf(new_ub):
-                        msg = 'Variable {} Upper Bound is infinity, replacing with {}'
-                        logger.warning(run_id, msg, v.name, mc.infinity)
-                        new_ub = mc.infinity
-                else:
-                    if new_lb < -mc.integer_infinity:
-                        msg = 'Integer Variable {} Lower Bound is -infinity, replacing with {}'
-                        logger.warning(run_id, msg, v.name, -mc.integer_infinity)
-                        new_lb = -mc.integer_infinity
-
-                    if new_ub > mc.integer_infinity:
-                        msg = 'Integer Variable {} Upper Bound is infinity, replacing with {}'
-                        logger.warning(run_id, msg, v.name, mc.integer_infinity)
-                        new_ub = mc.integer_infinity
+                if np.isinf(new_ub):
+                    new_ub = np.inf
 
                 if np.abs(new_ub - new_lb) < mc.epsilon:
                     new_lb = new_ub
