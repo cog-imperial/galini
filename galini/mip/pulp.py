@@ -15,6 +15,7 @@
 import pulp
 from suspect.expression import ExpressionType
 from galini.core import Sense, Domain
+from galini.math import mc, is_inf
 from galini.mip.cplex import CplexSolver
 
 
@@ -53,8 +54,21 @@ def dag_to_pulp(problem):
 
 def _variable_to_pulp(problem, variable):
     view = problem.variable_view(variable)
+
     lower_bound = view.lower_bound()
+    if is_inf(lower_bound):
+        if view.domain.is_real():
+            lower_bound = -mc.user_upper_bound
+        else:
+            lower_bound = -mc.user_integer_upper_bound
+
     upper_bound = view.upper_bound()
+    if is_inf(upper_bound):
+        if view.domain.is_real():
+            upper_bound = mc.user_upper_bound
+        else:
+            upper_bound = mc.user_integer_upper_bound
+
     domain = pulp.LpContinuous
     if view.domain == Domain.INTEGER:
         domain = pulp.LpInteger
