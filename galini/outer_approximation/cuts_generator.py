@@ -19,6 +19,8 @@ from galini.config import CutsGeneratorOptions
 from galini.core import LinearExpression, Domain
 from galini.cuts import CutType, Cut, CutsGenerator
 from galini.logging import get_logger
+from galini.relaxations.relaxed_problem import RelaxedProblem
+from galini.outer_approximation.feasibility_problem import FeasibilityProblemRelaxation
 
 
 logger = get_logger(__name__)
@@ -67,6 +69,7 @@ class OuterApproximationCutsGenerator(CutsGenerator):
 
     def _reset_node_local_storage(self):
         self._round = 0
+        self._feasibility_problem = None
 
     @staticmethod
     def cuts_generator_options():
@@ -132,11 +135,24 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         with fixed_integer_variables(run_id, relaxed_problem, mip_solution) as problem:
             nlp_solution = self._nlp_solver.solve(problem)
             logger.debug(run_id, 'NLP with integer fixed: {}', nlp_solution)
-            if nlp_solution.status.is_success():
-                return nlp_solution
-            return None
-            # assert nlp_solution.status.is_success()
-            return nlp_solution
+
+        if not nlp_solution.status.is_success():
+            feasibility_nlp_solution = \
+                self._solve_feasibility_problem(run_id, relaxed_problem, mip_solution)
+            return feasibility_nlp_solution
+
+        return nlp_solution
+
+    def _solve_feasibility_problem(self, run_id, problem, mip_solution):
+        if self._feasibility_problem is None:
+            relaxation = FeasibilityProblemRelaxation()
+            self._feasibility_problem = RelaxedProblem(relaxation, problem)
+
+        with fixed_integer_variables(run_id, self._feasibility_problem.relaxed, mip_solution) as problem:
+            feasibility_nlp_solution = self._nlp_solver.solve(problem)
+            logger.debug(run_id, 'Feasibility NLP with integer fixed: {}', feasibility_nlp_solution)
+            assert feasibility_nlp_solution.status.is_success()
+            return feasibility_nlp_solution
 
     def _generate_cut(self, i, constraint, x, x_k, fg, g_x, w, is_objective):
         w[i] = 1.0

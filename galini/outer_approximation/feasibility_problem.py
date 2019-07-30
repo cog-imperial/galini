@@ -36,7 +36,7 @@ class FeasibilityProblemRelaxation(Relaxation):
 
     def before_relax(self, problem, relaxed_problem, **kwargs):
         def _make_variable(i):
-            return Variable('u_%d' % i, 0.0, None, Domain.REAL)
+            return Variable('u_%d' % i, None, None, Domain.REAL)
         self._u = [_make_variable(i) for i in range(problem.num_constraints)]
         self._constraint_idx = dict([(c.name, i) for i, c in enumerate(problem.constraints)])
 
