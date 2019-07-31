@@ -94,6 +94,7 @@ def _galini_group():
         IntegerOption('fbbt_quadratic_max_terms', min_value=1, default=100),
         IntegerOption('fbbt_sum_max_children', min_value=1, default=200),
         IntegerOption('fbbt_linear_max_children', min_value=1, default=200),
+        BoolOption('paranoid_mode', default=False),
     ])
 
 

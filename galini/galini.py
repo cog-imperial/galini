@@ -31,14 +31,17 @@ class Galini(object):
         self._config = self._config_manager.configuration
         self.logger = get_logger('galini')
         self.cuts_generators_manager = CutsGeneratorsManager(self)
+        self.paranoid_mode = False
 
     def update_configuration(self, user_config):
         self._config_manager.update_configuration(user_config)
         self._config = self._config_manager.configuration
         self.cuts_generators_manager = CutsGeneratorsManager(self)
         apply_log_config(self._config.logging)
-        _update_math_context(self.get_configuration_group('galini'))
-        update_fbbt_settings(self.get_configuration_group('galini'))
+        galini_group = self.get_configuration_group('galini')
+        _update_math_context(galini_group)
+        update_fbbt_settings(galini_group)
+        self.paranoid_mode = galini_group['paranoid_mode']
 
     def get_solver(self, name):
         """Get solver from the registry."""

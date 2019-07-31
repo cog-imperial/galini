@@ -65,11 +65,17 @@ class CutsState(object):
         self.latest_solution = None
         self.previous_solution = None
 
-    def update(self, solution):
+    def update(self, solution, paranoid=False, atol=None, rtol=None):
         self.round += 1
         current_objective = solution.objective.value
-        assert (current_objective >= self.lower_bound or
-                np.isclose(current_objective, self.lower_bound))
+        if paranoid:
+            increased = (
+                current_objective >= self.lower_bound or
+                is_close(current_objective, self.lower_bound, atol=atol, rtol=rtol)
+            )
+            if not increased:
+                msg = 'Lower bound in cuts phase decreased: {} to {}'
+                raise RuntimeError(msg.format(self.lower_bound, current_objective))
         self.lower_bound = current_objective
         if self.first_solution is None:
             self.first_solution = current_objective
@@ -319,7 +325,14 @@ class BranchAndCutAlgorithm:
                     )
 
             logger.debug(run_id, 'Updating CutState: State={}, Solution={}', cuts_state, mip_solution)
-            cuts_state.update(mip_solution)
+
+            cuts_state.update(
+                mip_solution,
+                paranoid=self.galini.paranoid_mode,
+                atol=self.tolerance,
+                rtol=self.relative_tolerance,
+            )
+
             if len(new_cuts) == 0:
                 break
 
