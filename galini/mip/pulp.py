@@ -103,4 +103,5 @@ def _linear_expression_to_pulp(variables, expr):
             result += expr.value
         else:
             assert expr.expression_type == ExpressionType.Variable
+            result += variables[expr.idx]
     return result
