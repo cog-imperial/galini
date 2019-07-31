@@ -52,7 +52,10 @@ def build_solution(run_id, problem, solution, tree_data, out_indexes):
             for i, variable in enumerate(problem.variables)
         ]
 
-        if _solution_is_feasible(run_id, problem, solution, fg_x):
+        ipopt_success = solution.status == CoreIpoptSolution.success
+        if ipopt_success:
+            status = IpoptStatusSuccess(solution.status)
+        elif _solution_is_feasible(run_id, problem, solution, fg_x):
             status = IpoptStatusSuccess(solution.status)
         else:
             status = IpoptStatusInfeasible(solution.status)
