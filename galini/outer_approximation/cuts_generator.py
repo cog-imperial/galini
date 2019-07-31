@@ -93,8 +93,10 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         logger.debug(run_id, 'Compute points for non integer variables')
         f_x_solution = self._solve_nlp_with_integer_fixed(run_id, relaxed_problem, mip_solution)
         logger.debug(run_id, 'Solving NLP returned {}', f_x_solution)
+
         if not f_x_solution:
             return []
+
         assert f_x_solution.status.is_success()
 
         x_k = [v.value for v in f_x_solution.variables[:relaxed_problem.num_variables]]
