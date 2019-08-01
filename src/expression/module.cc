@@ -43,6 +43,7 @@ void init_module(py::module& m) {
     .def_property_readonly("args", &Expression::children)
     .def("expression_tree_data", &Expression::expression_tree_data)
     .def("nargs", [](const Expression &ex) { return ex.num_children(); })
+    .def("polynomial_degree", &Expression::polynomial_degree)
     .def("nth_children", &Expression::nth_children)
     .def("is_constant", &Expression::is_constant)
     .def("is_expression_type", &Expression::is_expression)

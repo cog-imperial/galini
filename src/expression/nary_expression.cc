@@ -38,6 +38,14 @@ ADObject SumExpression::eval(values_ptr<ADObject>& values) const {
   return eval_sum(values);
 }
 
+int SumExpression::polynomial_degree() const {
+  int result = 0;
+  for (auto child : children_) {
+    result = std::max(result, child->polynomial_degree());
+  }
+  return result;
+}
+
 
 LinearExpression::LinearExpression(const std::shared_ptr<Problem>& problem,
 				   const std::vector<typename Expression::ptr>& children,

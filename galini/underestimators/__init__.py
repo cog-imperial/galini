@@ -17,7 +17,7 @@
 __all__ = [
     'Underestimator', 'UnderestimatorResult', 'McCormickUnderestimator',
     'LinearUnderestimator', 'UnivariateConcaveUnderestimator',
-    'SumOfUnderestimators'
+    'SumOfUnderestimators', 'DisaggregateBilinearUnderestimator',
 ]
 
 
@@ -29,3 +29,4 @@ from galini.underestimators.bilinear import McCormickUnderestimator
 from galini.underestimators.linear import LinearUnderestimator
 from galini.underestimators.concave import UnivariateConcaveUnderestimator
 from galini.underestimators.composite import SumOfUnderestimators
+from galini.underestimators.disaggregate_bilinear import DisaggregateBilinearUnderestimator

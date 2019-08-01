@@ -122,6 +122,10 @@ public:
     return uid_;
   }
 
+  virtual int polynomial_degree() const {
+    return -1;
+  }
+
   ptr self() {
     return this->shared_from_this();
   }

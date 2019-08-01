@@ -76,6 +76,8 @@ public:
   ADFloat eval(values_ptr<ADFloat>& values) const override;
   ADObject eval(values_ptr<ADObject>& values) const override;
 
+  int polynomial_degree() const override;
+
 private:
   template<class T>
   T eval_sum(values_ptr<T>& values) const {
@@ -111,6 +113,10 @@ public:
 
   double constant() const {
     return constant_;
+  }
+
+  int polynomial_degree() const override {
+    return 1;
   }
 
   std::vector<double> linear_coefs() const {
@@ -177,6 +183,10 @@ public:
 
   ADFloat eval(values_ptr<ADFloat>& values) const override;
   ADObject eval(values_ptr<ADObject>& values) const override;
+
+  int polynomial_degree() const override {
+    return 2;
+  }
 
 private:
   template<class T>

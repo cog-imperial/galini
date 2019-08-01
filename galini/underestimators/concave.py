@@ -26,7 +26,7 @@ class UnivariateConcaveUnderestimator(Underestimator):
         cvx = ctx.convexity(expr)
         return cvx.is_concave() and self.is_univariate(expr)
 
-    def underestimate(self, problem, expr, ctx):
+    def underestimate(self, problem, expr, ctx, **kwargs):
         var = self._collect_variable(expr)
         if var is None:
             raise RuntimeError('Not an unary expression')

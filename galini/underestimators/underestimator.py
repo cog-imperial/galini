@@ -38,7 +38,7 @@ class Underestimator(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def underestimate(self, problem, expr, ctx): # pragma: no cover
+    def underestimate(self, problem, expr, ctx, **kwargs): # pragma: no cover
         """Return expression underestimating expr.
 
         Parameters

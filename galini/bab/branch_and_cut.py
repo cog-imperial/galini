@@ -29,7 +29,8 @@ from galini.bab.strategy import KSectionBranchingStrategy
 from galini.bab.selection import BestLowerBoundSelectionStrategy
 from galini.bab.relaxations import ConvexRelaxation, LinearRelaxation
 from galini.relaxations.relaxed_problem import RelaxedProblem
-from galini.logging import get_logger
+from galini.logging import get_logger, DEBUG
+from galini.util import expr_to_str
 from galini.special_structure import (
     propagate_special_structure,
     perform_fbbt,
@@ -282,6 +283,26 @@ class BranchAndCutAlgorithm:
             logger.info(run_id, 'Initial feasible solution: {}', feasible_solution)
         else:
             feasible_solution = None
+
+        if logger.level <= DEBUG:
+            logger.debug(run_id, 'Relaxed Problem')
+            logger.debug(run_id,  'Variables:')
+            relaxed = relaxed_problem.relaxed
+
+            for v in relaxed.variables:
+                vv = relaxed.variable_view(v)
+                logger.debug(run_id, '\t{}: [{}, {}] c {}', v.name, vv.lower_bound(), vv.upper_bound(), vv.domain)
+            logger.debug(run_id, 'Objective: {}', expr_to_str(relaxed.objective.root_expr))
+            logger.debug(run_id, 'Constraints:')
+            for constraint in relaxed.constraints:
+                logger.debug(
+                    run_id,
+                    '{}: {} <= {} <= {}',
+                    constraint.name,
+                    constraint.lower_bound,
+                    expr_to_str(constraint.root_expr),
+                    constraint.upper_bound,
+                )
 
         linear_problem = self._build_linear_relaxation(relaxed_problem.relaxed)
 

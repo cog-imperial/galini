@@ -26,5 +26,5 @@ class LinearUnderestimator(Underestimator):
             expr.expression_type == ExpressionType.Constant
         )
 
-    def underestimate(self, problem, expr, ctx):
+    def underestimate(self, problem, expr, ctx, **kwargs):
         return UnderestimatorResult(expr)

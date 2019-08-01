@@ -21,6 +21,7 @@ from galini.suspect import ProblemContext
 from galini.underestimators import (
     McCormickUnderestimator,
     LinearUnderestimator,
+    DisaggregateBilinearUnderestimator,
     SumOfUnderestimators,
     UnderestimatorResult,
 )
@@ -52,23 +53,30 @@ class _RelaxationBase(Relaxation):
         pass
 
     def relax_objective(self, problem, objective):
-        result = self.relax_expression(problem, objective.root_expr)
+        result = self.relax_expression(problem, objective.root_expr, side=0)
         new_objective = Objective(objective.name, result.expression, objective.original_sense)
         return RelaxationResult(new_objective, result.constraints)
 
     def relax_constraint(self, problem, constraint):
-        result = self.relax_expression(problem, constraint.root_expr)
+        if constraint.lower_bound is None:
+            side = 0
+        elif constraint.upper_bound is None:
+            side = 1
+        else:
+            side = 2
+
+        result = self.relax_expression(problem, constraint.root_expr, side=side)
         new_constraint = Constraint(
             constraint.name, result.expression, constraint.lower_bound, constraint.upper_bound
         )
         return RelaxationResult(new_constraint, result.constraints)
 
-    def relax_expression(self, problem, expr):
-        return self._relax_expression(problem, expr)
+    def relax_expression(self, problem, expr, side=None):
+        return self._relax_expression(problem, expr, side=side)
 
-    def _relax_expression(self, problem, expr):
+    def _relax_expression(self, problem, expr, side=None):
         assert self._underestimator.can_underestimate(problem, expr, self._ctx)
-        result = self._underestimator.underestimate(problem, expr, self._ctx)
+        result = self._underestimator.underestimate(problem, expr, self._ctx, side=side)
         return result
 
 
@@ -76,17 +84,18 @@ class ConvexRelaxation(_RelaxationBase):
     def _root_underestimator(self):
         return SumOfUnderestimators([
             LinearUnderestimator(),
-            McCormickUnderestimator(linear=False),
+            DisaggregateBilinearUnderestimator(),
+            #McCormickUnderestimator(linear=False),
         ])
 
     def relaxed_problem_name(self, problem):
         return problem.name + '_convex'
 
-    def relax_expression(self, problem, expr):
+    def relax_expression(self, problem, expr, side=None):
         convexity = self._ctx.convexity(expr)
-        if convexity and convexity.is_convex():
-            return UnderestimatorResult(expr, [])
-        return self._relax_expression(problem, expr)
+        #if convexity and convexity.is_convex():
+        #    return UnderestimatorResult(expr, [])
+        return self._relax_expression(problem, expr, side=side)
 
 
 class LinearRelaxation(_RelaxationBase):

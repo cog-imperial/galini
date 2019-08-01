@@ -32,13 +32,13 @@ class SumOfUnderestimators(Underestimator):
             self._can_be_underestimated_by_child_underestimator(problem, expr, ctx)
         )
 
-    def underestimate(self, problem, expr, ctx):
+    def underestimate(self, problem, expr, ctx, **kwargs):
         if self._can_be_underestimated_as_sum_of_expressions(problem, expr, ctx):
-            return self._underestimate_as_sum(problem, expr, ctx)
+            return self._underestimate_as_sum(problem, expr, ctx, **kwargs)
 
         for underestimator in self._underestimators:
             if underestimator.can_underestimate(problem, expr, ctx):
-                return underestimator.underestimate(problem, expr, ctx)
+                return underestimator.underestimate(problem, expr, ctx, **kwargs)
 
         return None
 
@@ -56,11 +56,11 @@ class SumOfUnderestimators(Underestimator):
                 return True
         return False
 
-    def _underestimate_as_sum(self, problem, expr, ctx):
+    def _underestimate_as_sum(self, problem, expr, ctx, **kwargs):
         new_children = []
         new_constraints = []
         for child in expr.children:
-            result = self.underestimate(problem, child, ctx)
+            result = self.underestimate(problem, child, ctx, **kwargs)
             if result is not None:
                 new_children.append(result.expression)
                 new_constraints.extend(result.constraints)

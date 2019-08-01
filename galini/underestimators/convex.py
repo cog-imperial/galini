@@ -28,7 +28,7 @@ class ConvexUnderestimator(Underestimator):
         # are convex
         return cvx.is_convex() or expr.expression_type == ExpressionType.Quadratic
 
-    def underestimate(self, problem, expr, ctx):
+    def underestimate(self, problem, expr, ctx, **kwargs):
         cvx = ctx.convexity(expr)
         if cvx.is_convex():
             return UnderestimatorResult(expr)

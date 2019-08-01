@@ -66,6 +66,10 @@ public:
     return ADObject(value_);
   }
 
+  int polynomial_degree() const override {
+    return 0;
+  }
+
 private:
   double value_;
 };

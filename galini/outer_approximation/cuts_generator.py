@@ -64,12 +64,15 @@ class OuterApproximationCutsGenerator(CutsGenerator):
 
     def __init__(self, galini, config):
         super().__init__(galini, config)
+        self.galini = galini
         self._reset_node_local_storage()
         self._nlp_solver = galini.instantiate_solver('ipopt')
 
     def _reset_node_local_storage(self):
         self._round = 0
         self._feasibility_problem = None
+        self._nonlinear_objective = None
+        self._nonlinear_constraints = None
 
     @staticmethod
     def cuts_generator_options():
@@ -109,29 +112,53 @@ class OuterApproximationCutsGenerator(CutsGenerator):
 
         x = relaxed_problem.variables
 
-        num_objectives = relaxed_problem.num_objectives
-        num_constraints = relaxed_problem.num_constraints
+        num_objectives = len(self._nonlinear_objective)
+        num_constraints = len(self._nonlinear_constraints)
 
         w = np.zeros(num_objectives + num_constraints)
 
         logger.debug(run_id, 'Generating {} objective cuts', num_objectives)
         objective_cuts = [
             self._generate_cut(i, objective, x, x_k, fg, fg_x, w, True)
-            for i, objective in enumerate(relaxed_problem.objectives)
+            for i, objective in enumerate(self._nonlinear_objective)
         ]
 
         logger.debug(run_id, 'Generating {} constraints cuts', num_constraints)
         constraint_cuts = [
             self._generate_cut(num_objectives + i, constraint, x, x_k, fg, fg_x, w, False)
-            for i, constraint in enumerate(relaxed_problem.constraints)
+            for i, constraint in enumerate(self._nonlinear_constraints)
         ]
 
         self._round += 1
         return objective_cuts + constraint_cuts
 
     def _compute_derivatives(self, run_id, relaxed_problem, x_k):
-        f_idx = [f.root_expr.idx for f in relaxed_problem.objectives]
-        g_idx = [g.root_expr.idx for g in relaxed_problem.constraints]
+        if self.galini.paranoid_mode:
+            assert relaxed_problem.objective.root_expr.polynomial_degree() >= 0
+            assert all(
+                g.root_expr.polynomial_degree() >= 0
+                for g in relaxed_problem.constraints
+            )
+
+        if relaxed_problem.objective.root_expr.polynomial_degree() > 1:
+            f_idx = [relaxed_problem.objective.root_expr.idx]
+            self._nonlinear_objective = [relaxed_problem.objective]
+        else:
+            f_idx = []
+            self._nonlinear_objective = []
+
+        g_idx = [
+            g.root_expr.idx
+            for g in relaxed_problem.constraints
+            if g.root_expr.polynomial_degree() > 1
+        ]
+
+        self._nonlinear_constraints = [
+            g
+            for g in relaxed_problem.constraints
+            if g.root_expr.polynomial_degree() > 1
+        ]
+
         return relaxed_problem.expression_tree_data().eval(x_k, f_idx + g_idx)
 
     def _solve_nlp_with_integer_fixed(self, run_id, relaxed_problem, mip_solution):

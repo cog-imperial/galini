@@ -37,10 +37,11 @@ class McCormickUnderestimator(Underestimator):
     def can_underestimate(self, problem, expr, ctx):
         return expr.expression_type == ExpressionType.Quadratic
 
-    def underestimate(self, problem, expr, ctx):
+    def underestimate(self, problem, expr, ctx, **kwargs):
         assert expr.expression_type == ExpressionType.Quadratic
         if ctx.metadata.get('bilinear_aux_variables', None) is None:
             ctx.metadata['bilinear_aux_variables'] = dict()
+
         squares = []
         variables = []
         constraints = []

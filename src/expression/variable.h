@@ -89,6 +89,10 @@ public:
   py::object reference() const { return reference_; }
   void set_reference(const py::object &ref) { reference_ = ref; }
 
+  int polynomial_degree() const override {
+    return 1;
+  }
+
 private:
   std::string name_;
   py::object lower_bound_;
