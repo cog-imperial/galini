@@ -608,6 +608,8 @@ class BranchAndCutAlgorithm:
 
         except Exception as ex:
             logger.warning(run_id, 'FBBT Failed: {}', str(ex))
+            self._bounds, self._monotonicity, self._convexity = \
+                propagate_special_structure(problem)
             return
 
         logger.debug(run_id, 'Set FBBT Bounds')

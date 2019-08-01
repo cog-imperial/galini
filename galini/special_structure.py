@@ -21,7 +21,7 @@ from suspect.convexity import ConvexityPropagationVisitor
 import suspect.convexity.rules as cvx_rules
 from suspect.interval import Interval
 import galini.core as core
-from galini.fbbt import BoundsTightener, FBBTStopCriterion
+from galini.fbbt import BoundsTightener, FBBTStopCriterion, _GaliniBoundsPropagationVisitor
 from galini.timelimit import timeout
 from galini.suspect import (
     ProblemContext,
@@ -150,11 +150,15 @@ class _GaliniSpecialStructurePropagationVisitor(SpecialStructurePropagationVisit
 
 
 def propagate_special_structure(problem, bounds=None):
-    if bounds is None:
-        bounds = ExpressionDict(problem)
     visitor = _GaliniSpecialStructurePropagationVisitor(problem)
     iterator = ProblemForwardIterator()
     convexity = ExpressionDict(problem)
     monotonicity = ExpressionDict(problem)
+
+    if bounds is None:
+        bounds = ExpressionDict(problem)
+        prop_visitor = _GaliniBoundsPropagationVisitor()
+        iterator.iterate(problem, prop_visitor, bounds)
+
     iterator.iterate(problem, visitor, convexity, monotonicity, bounds)
     return bounds, monotonicity, convexity
