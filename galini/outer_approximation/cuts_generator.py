@@ -20,6 +20,7 @@ from galini.core import LinearExpression, Domain
 from galini.cuts import CutType, Cut, CutsGenerator
 from galini.logging import get_logger
 from galini.relaxations.relaxed_problem import RelaxedProblem
+from galini.math import is_close, is_inf
 from galini.outer_approximation.feasibility_problem import FeasibilityProblemRelaxation
 
 
@@ -67,10 +68,12 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         self.galini = galini
         self._reset_node_local_storage()
         self._nlp_solver = galini.instantiate_solver('ipopt')
+        self.cuts_relative_tolerance = 1e-3
 
     def _reset_node_local_storage(self):
         self._round = 0
         self._feasibility_problem = None
+        self._nlp_solution = None
         self._nonlinear_objective = None
         self._nonlinear_constraints = None
 
@@ -91,6 +94,13 @@ class OuterApproximationCutsGenerator(CutsGenerator):
     def after_end_at_node(self, run_id, problem, relaxed_problem, solution):
         pass
 
+    def has_converged(self, state):
+        if self._nlp_solution is None:
+            return False
+        if is_inf(state.lower_bound):
+            return False
+        return is_close(state.lower_bound, self._nlp_solution, rtol=self.cuts_relative_tolerance)
+
     def generate(self, run_id, problem, relaxed_problem, linear_problem, mip_solution, tree, node):
         logger.debug(run_id, 'Starting cut round={}', self._round)
         logger.debug(run_id, 'Compute points for non integer variables')
@@ -102,6 +112,7 @@ class OuterApproximationCutsGenerator(CutsGenerator):
             return []
 
         assert f_x_solution.status.is_success()
+        self._nlp_solution = f_x_solution.objective_value()
 
         x_k = [v.value for v in f_x_solution.variables[:relaxed_problem.num_variables]]
 

@@ -21,6 +21,7 @@ from galini.cuts import CutType, Cut, CutsGenerator
 
 from galini.abb.relaxation import AlphaBBRelaxation
 from galini.core import Constraint
+from galini.math import mc, is_close
 from operator import itemgetter
 from itertools import combinations_with_replacement, chain
 from os import path
@@ -54,6 +55,7 @@ class SdpCutsGenerator(CutsGenerator):
         self._cut_sel = config['cut_sel_strategy']
         self._big_m = config['big_m']
         self._thres_min_coeff_comb = config['thres_min_coeff_comb']
+        self._cuts_relative_tolerance = config['convergence_relative_tolerance']
 
         assert (0 <= self._sel_size), \
             "Selection size (how many cuts) needs to be a positive proportion/absolute number!"
@@ -114,7 +116,12 @@ class SdpCutsGenerator(CutsGenerator):
             NumericOption('thres_min_coeff_comb',
                           default=1e-5,
                           description="Threshold for the min absolute value of a valid coefficient when combining "
-                                      "constraints based on Lagrange multipliers for optimality cut selection")
+                                      "constraints based on Lagrange multipliers for optimality cut selection"),
+            NumericOption('convergence_relative_tolerance',
+                          default=1e-3,
+                          description='Termination criteria on lower bound improvement between '
+                                      'two consecutive cut rounds <= relative_tolerance % of '
+                                      'lower bound improvement from cut round'),
         ])
 
     def before_start_at_root(self, run_id, problem, relaxed_problem):
@@ -149,6 +156,24 @@ class SdpCutsGenerator(CutsGenerator):
         self._ubs = None
         self._dbs = None
         self._agg_list_rescaled = None
+
+    def has_converged(self, state):
+        """Termination criteria for cut generation loop.
+
+        Termination criteria on lower bound improvement between two consecutive
+        cut rounds <= relative_tolerance % of lower bound improvement from cut round.
+        """
+        if (state.first_solution is None or
+            state.previous_solution is None or
+            state.latest_solution is None):
+            return False
+
+        if is_close(state.latest_solution, state.previous_solution, atol=mc.epsilon):
+            return True
+
+        improvement = state.latest_solution - state.previous_solution
+        lower_bound_improvement = state.latest_solution - state.first_solution
+        return (improvement / lower_bound_improvement) <= self._cuts_relative_tolerance
 
     def generate(self, run_id, problem, relaxed_problem, linear_problem, solution, tree, node):
         cuts = list(self._generate(run_id, problem, relaxed_problem, linear_problem, solution, tree, node))

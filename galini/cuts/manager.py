@@ -72,6 +72,9 @@ class CutsGeneratorsManager(object):
         for gen in self._generators:
             gen.after_end_at_node(run_id, problem, relaxed_problem, solution)
 
+    def has_converged(self, state):
+        return all(gen.has_converged(state) for gen in self._generators)
+
     def generate(self, run_id, problem, relaxed_problem, linear_problem, mip_solution, tree, node):
         all_cuts = []
         logger.info(run_id, 'Generating cuts: {}', [gen.name for gen in self._generators])

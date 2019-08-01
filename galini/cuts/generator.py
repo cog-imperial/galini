@@ -57,6 +57,9 @@ class CutsGenerator(metaclass=abc.ABCMeta):
     def after_end_at_node(self, run_id, problem, relaxed_problem, solution):
         pass
 
+    def has_converged(self, state):
+        pass
+
     @abc.abstractmethod
     def generate(self, run_id, problem, relaxed_problem, linear_problem, mip_solution, tree, node):
         pass

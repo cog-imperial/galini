@@ -115,11 +115,7 @@ class BranchAndCutAlgorithm:
             bab_config['root_node_feasible_solution_search_timelimit']
 
         bac_config = galini.get_configuration_group('bab.branch_and_cut')
-
         self.cuts_maxiter = bac_config['maxiter']
-        self.cuts_relative_tolerance = bac_config['relative_tolerance']
-        self.cuts_domain_eps = bac_config['domain_eps']
-        self.cuts_selection_size = bac_config['selection_size']
 
         self.branching_strategy = KSectionBranchingStrategy(2)
         self.node_selection_strategy = BestLowerBoundSelectionStrategy()
@@ -131,18 +127,7 @@ class BranchAndCutAlgorithm:
     @staticmethod
     def algorithm_options():
         return OptionsGroup('branch_and_cut', [
-            NumericOption('domain_eps',
-                          default=1e-3,
-                          description='Minimum domain length for each variable to consider cut on'),
-            NumericOption('relative_tolerance',
-                          default=1e-3,
-                          description='Termination criteria on lower bound improvement between '
-                                      'two consecutive cut rounds <= relative_tolerance % of '
-                                      'lower bound improvement from cut round'),
             IntegerOption('maxiter', default=20, description='Number of cut rounds'),
-            NumericOption('selection_size',
-                          default=0.1,
-                          description='Cut selection size as a % of all cuts or as absolute number of cuts'),
         ])
 
     def before_solve(self, model, problem):
@@ -254,9 +239,8 @@ class BranchAndCutAlgorithm:
     def _solve_problem_at_node(self, run_id, problem, relaxed_problem, tree, node):
         logger.info(
             run_id,
-            'Starting Cut generation iterations. Maximum iterations={}, relative tolerance={}',
-            self.cuts_maxiter,
-            self.cuts_relative_tolerance)
+            'Starting Cut generation iterations. Maximum iterations={}',
+            self.cuts_maxiter)
         logger.info(
             run_id,
             'Using cuts generators: {}',
@@ -555,7 +539,7 @@ class BranchAndCutAlgorithm:
             if domain != Domain.REAL:
                 # Solution (from pool) can contain non integer values for
                 # integer variables. Simply round these values up
-                if np.trunc(value) != value:
+                if not is_close(np.trunc(value), value, atol=mc.epsilon):
                     value = min(view.upper_bound(), np.ceil(value))
                 problem.fix(v, value)
             else:
@@ -574,22 +558,7 @@ class BranchAndCutAlgorithm:
         return NodeSolution(solution, solution)
 
     def _cuts_converged(self, state):
-        """Termination criteria for cut generation loop.
-
-        Termination criteria on lower bound improvement between two consecutive
-        cut rounds <= relative_tolerance % of lower bound improvement from cut round.
-        """
-        if (state.first_solution is None or
-            state.previous_solution is None or
-            state.latest_solution is None):
-            return False
-
-        if is_close(state.latest_solution, state.previous_solution, atol=mc.epsilon):
-            return True
-
-        improvement = state.latest_solution - state.previous_solution
-        lower_bound_improvement = state.latest_solution - state.first_solution
-        return (improvement / lower_bound_improvement) <= self.cuts_relative_tolerance
+        return self._cuts_generators_manager.has_converged(state)
 
     def _cuts_iterations_exceeded(self, state):
         return state.round > self.cuts_maxiter

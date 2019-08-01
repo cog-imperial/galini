@@ -41,6 +41,7 @@ class TriangleCutsGenerator(CutsGenerator):
         self._thres_tri_viol = config['thres_triangle_viol']
         self._min_tri_cuts = config['min_tri_cuts_per_round']
         self._max_tri_cuts = config['max_tri_cuts_per_round']
+        self._cuts_relative_tolerance = config['convergence_relative_tolerance']
 
         # Problem info related to triangle cuts associated with every node of BabAlgorithm
         self.__problem_info_triangle = None
@@ -68,6 +69,11 @@ class TriangleCutsGenerator(CutsGenerator):
             NumericOption('max_tri_cuts_per_round',
                           default=10e3,
                           description='Max number of triangle cuts to be added to relaxation at each cut round'),
+            NumericOption('convergence_relative_tolerance',
+                          default=1e-3,
+                          description='Termination criteria on lower bound improvement between '
+                                      'two consecutive cut rounds <= relative_tolerance % of '
+                                      'lower bound improvement from cut round'),
         ])
 
     def before_start_at_root(self, run_id, problem, relaxed_problem):
@@ -88,6 +94,24 @@ class TriangleCutsGenerator(CutsGenerator):
         self._lbs = None
         self._ubs = None
         self._dbs = None
+
+    def has_converged(self, state):
+        """Termination criteria for cut generation loop.
+
+        Termination criteria on lower bound improvement between two consecutive
+        cut rounds <= relative_tolerance % of lower bound improvement from cut round.
+        """
+        if (state.first_solution is None or
+            state.previous_solution is None or
+            state.latest_solution is None):
+            return False
+
+        if is_close(state.latest_solution, state.previous_solution, atol=mc.epsilon):
+            return True
+
+        improvement = state.latest_solution - state.previous_solution
+        lower_bound_improvement = state.latest_solution - state.first_solution
+        return (improvement / lower_bound_improvement) <= self._cuts_relative_tolerance
 
     def generate(self, run_id, problem, relaxed_problem, linear_problem, solution, tree, node):
         cuts = list(self._generate(run_id, problem, relaxed_problem, linear_problem, solution, tree, node))
