@@ -6,7 +6,7 @@ from galini.core import LinearExpression, QuadraticExpression, SumExpression
 from galini.pyomo import problem_from_pyomo_model
 from galini.bab.relaxations import ConvexRelaxation, LinearRelaxation
 from galini.special_structure import propagate_special_structure, perform_fbbt
-from galini.util import print_problem
+from galini.util import print_problem, expr_to_str
 
 
 def _convex_relaxation(problem):
@@ -71,17 +71,25 @@ def test_convex_relaxation_with_quadratic_only():
     relaxed = relaxation.relax(dag)
 
     assert relaxed.objective
-    assert len(relaxed.constraints) == 1
+    # original constraint + 10 for disaggregated squares
+    assert len(relaxed.constraints) == 1 + 10
 
     objective = relaxed.objective
     constraint = relaxed.constraints[0]
 
-    assert isinstance(objective.root_expr, QuadraticExpression)
-    assert isinstance(constraint.root_expr, QuadraticExpression)
+    assert isinstance(objective.root_expr, LinearExpression)
+    assert len(objective.root_expr.children) == 10
 
-    assert len(objective.root_expr.terms) == 10
-    assert len(constraint.root_expr.terms) == 10
+    for constraint in relaxed.constraints[:-1]:
+        assert isinstance(constraint.root_expr, SumExpression)
+        children = constraint.root_expr.children
+        assert len(children) == 2
+        assert isinstance(children[0], LinearExpression)
+        assert isinstance(children[1], QuadraticExpression)
 
+    constraint = relaxed.constraints[-1]
+    assert len(constraint.root_expr.children) == 10
+    assert isinstance(constraint.root_expr, LinearExpression)
 
 def test_convex_relaxation_with_quadratic_and_linear():
     m = pe.ConcreteModel()
@@ -98,30 +106,31 @@ def test_convex_relaxation_with_quadratic_and_linear():
     relaxation = _convex_relaxation(dag)
     relaxed = relaxation.relax(dag)
 
+    print_problem(relaxed)
+
     assert relaxed.objective
-    assert len(relaxed.constraints) == 1
+    assert len(relaxed.constraints) == 1 + 10
 
     objective = relaxed.objective
-    constraint = relaxed.constraints[0]
-
     assert isinstance(objective.root_expr, SumExpression)
-    assert isinstance(constraint.root_expr, SumExpression)
 
-    if isinstance(objective.root_expr.children[0], QuadraticExpression):
-        q, l = objective.root_expr.children
-    else:
-        l, q = objective.root_expr.children
+    assert all(
+        isinstance(c, LinearExpression)
+        for c in objective.root_expr.children
+    )
 
-    assert isinstance(q, QuadraticExpression)
-    assert isinstance(l, LinearExpression)
+    for constraint in relaxed.constraints[:-1]:
+        assert isinstance(constraint.root_expr, SumExpression)
+        children = constraint.root_expr.children
+        assert len(children) == 2
+        assert isinstance(children[0], LinearExpression)
+        assert isinstance(children[1], QuadraticExpression)
 
-    if isinstance(constraint.root_expr.children[0], QuadraticExpression):
-        q, l = constraint.root_expr.children
-    else:
-        l, q = constraint.root_expr.children
-
-    assert isinstance(q, QuadraticExpression)
-    assert isinstance(l, LinearExpression)
+    constraint = relaxed.constraints[-1]
+    assert all(
+        isinstance(c, LinearExpression)
+        for c in constraint.root_expr.children
+    )
 
 
 def test_linear_relaxation_with_quadratic_and_linear():
