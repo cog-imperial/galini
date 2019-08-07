@@ -11,14 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import numpy as np
 import networkx as nx
-from suspect.interval import Interval
-from suspect.expression import ExpressionType
+import numpy as np
 from suspect.convexity.rules import QuadraticRule
+from suspect.expression import ExpressionType
 from suspect.fbbt.propagation.rules import (
     QuadraticRule as QuadraticBoundPropagationRule
 )
+
 from galini.core import (
     QuadraticExpression,
     LinearExpression,
@@ -28,10 +28,9 @@ from galini.core import (
     Domain,
     ExpressionReference,
 )
-from galini.math import is_inf
 from galini.underestimators.bilinear import McCormickUnderestimator
-from galini.underestimators.underestimator import Underestimator, UnderestimatorResult
-
+from galini.underestimators.underestimator import Underestimator, \
+    UnderestimatorResult
 
 
 class DisaggregateBilinearUnderestimator(Underestimator):
@@ -62,12 +61,11 @@ class DisaggregateBilinearUnderestimator(Underestimator):
             for t in expr.terms
         )
 
-        connected_component_subgraphs = list(nx.connected_component_subgraphs(term_graph))
-
         # Check convexity of each connected subgraph
         convex_exprs = []
         nonconvex_exprs = []
-        for connected_graph in connected_component_subgraphs:
+        for connected_component in nx.connected_components(term_graph):
+            connected_graph =term_graph.subgraph(connected_component)
             vars1 = []
             vars2 = []
             coefs = []
@@ -79,7 +77,9 @@ class DisaggregateBilinearUnderestimator(Underestimator):
                 vars2.append(v2)
                 coefs.append(coef)
             quadratic_expr = QuadraticExpression(vars1, vars2, coefs)
-            cvx = self._quadratic_rule.apply(quadratic_expr, ctx.convexity, ctx.monotonicity, ctx.bounds)
+            cvx = self._quadratic_rule.apply(
+                quadratic_expr, ctx.convexity, ctx.monotonicity, ctx.bounds
+            )
             if cvx.is_convex() and side == 0:
                 convex_exprs.append(quadratic_expr)
             elif cvx.is_concave() and side == 1:
@@ -91,7 +91,9 @@ class DisaggregateBilinearUnderestimator(Underestimator):
         constraints = []
         for quadratic_expr in convex_exprs:
             quadratic_expr_bounds = \
-                self._quadratic_bound_propagation_rule.apply(quadratic_expr, ctx.bounds)
+                self._quadratic_bound_propagation_rule.apply(
+                    quadratic_expr, ctx.bounds
+                )
 
             aux_w = Variable(
                 '_aux_{}'.format(self._call_count),
@@ -126,7 +128,9 @@ class DisaggregateBilinearUnderestimator(Underestimator):
 
         nonconvex_quadratic_expr = QuadraticExpression(nonconvex_exprs)
         nonconvex_quadratic_under = \
-            self._bilinear_underestimator.underestimate(problem, nonconvex_quadratic_expr, ctx, **kwargs)
+            self._bilinear_underestimator.underestimate(
+                problem, nonconvex_quadratic_expr, ctx, **kwargs
+            )
         assert nonconvex_quadratic_under is not None
 
         aux_vars_expr = LinearExpression(
@@ -135,7 +139,9 @@ class DisaggregateBilinearUnderestimator(Underestimator):
             0.0,
         )
 
-        new_expr = LinearExpression([aux_vars_expr, nonconvex_quadratic_under.expression])
+        new_expr = LinearExpression(
+            [aux_vars_expr, nonconvex_quadratic_under.expression]
+        )
 
         constraints.extend(nonconvex_quadratic_under.constraints)
 

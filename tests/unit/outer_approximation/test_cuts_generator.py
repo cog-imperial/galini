@@ -1,19 +1,22 @@
 # pylint: skip-file
-import pytest
 import numpy as np
 import pyomo.environ as pe
-from tests.unit.fixtures import FakeStatus, FakeStatusEnum
-from galini.pyomo import dag_from_pyomo_model
+import pytest
+
+from galini.galini import Galini
+from galini.bab.relaxations import LinearRelaxation, ConvexRelaxation
+from galini.outer_approximation.cuts_generator import (
+    OuterApproximationCutsGenerator
+)
+from galini.pyomo import problem_from_pyomo_model
+from galini.relaxations.relaxed_problem import RelaxedProblem
 from galini.solvers.solution import (
     OptimalObjective,
     OptimalVariable,
     Solution,
 )
-from galini.outer_approximation.cuts_generator import (
-    OuterApproximationCutsGenerator
-)
-from galini.galini import Galini
-from galini.util import print_problem, expr_to_str
+from galini.special_structure import propagate_special_structure
+from tests.unit.fixtures import FakeStatus, FakeStatusEnum
 
 
 @pytest.fixture
@@ -21,42 +24,23 @@ def problem():
     m = pe.ConcreteModel()
 
     m.I = range(2)
-    m.x = pe.Var(m.I, bounds=(0, 4))
-    m.y = pe.Var(m.I, bounds=(0, 4), domain=pe.Binary)
+    m.x = pe.Var(m.I, domain=pe.Integers, bounds=(0, 200))
+    m.x[0].setub(4.0)
+    m.x[1].setub(7.0)
 
     @m.Objective()
     def f(m):
-        return m.y[0] + m.y[1] + m.x[0]**2 + m.x[1]**2
+        return m.x[0]**2 - 16*m.x[0] + m.x[1]**2 - 4*m.x[1] + 68
 
     @m.Constraint()
     def g0(m):
-        return (m.x[0] - 2)**2 - m.x[1] <= 0
+        return m.x[0]**2 + m.x[1] >= 0
 
     @m.Constraint()
     def g1(m):
-        return m.x[0] - 2*m.y[0] >= 0
+        return -0.33*m.x[0] - m.x[1] + 4.5 >= 0
 
-    @m.Constraint()
-    def g2(m):
-        return m.x[0] - m.x[1] - 3*(1 - m.y[0]) <= 0
-
-    @m.Constraint()
-    def g3(m):
-        return m.x[0] - (1 - m.y[0]) >= 0
-
-    @m.Constraint()
-    def g4(m):
-        return m.x[1] - m.y[1] >= 0
-
-    @m.Constraint()
-    def g5(m):
-        return m.x[0] + m.x[1] >= 3 * m.y[0]
-
-    @m.Constraint()
-    def g6(m):
-        return sum(m.y[i] for i in m.I) >= 1
-
-    return dag_from_pyomo_model(m)
+    return problem_from_pyomo_model(m)
 
 
 def test_outer_approximation_cuts(problem):
@@ -69,54 +53,52 @@ def test_outer_approximation_cuts(problem):
     })
     config = galini.get_configuration_group('cuts_generator.outer_approximation')
     generator = OuterApproximationCutsGenerator(galini, config)
+
+    bounds, mono, cvx = propagate_special_structure(problem)
+
+    cvx_relaxation = ConvexRelaxation(problem, bounds, mono, cvx)
+    relaxed_problem = RelaxedProblem(cvx_relaxation, problem).relaxed
+
+    linear_relaxation = LinearRelaxation(relaxed_problem, bounds, mono, cvx)
+    linear_problem = RelaxedProblem(linear_relaxation, relaxed_problem).relaxed
+
     solution = Solution(
         FakeStatus(FakeStatusEnum.Success),
-        [OptimalObjective('f', 0.0)],
+        [OptimalObjective('_objvar', 8.00)],
         [
-            OptimalVariable('x[0]', 0.0),
-            OptimalVariable('x[1]', 0.0),
-            OptimalVariable('y[0]', 1.0),
-            OptimalVariable('y[1]', 1.0),
+            OptimalVariable('x[0]', 4.0),
+            OptimalVariable('x[1]', 2.0),
+            OptimalVariable('_aux_0', 12.0),
+            OptimalVariable('_aux_1', 0.0),
+            OptimalVariable('_objvar', 8.0),
+            OptimalVariable('_aux_bilinear_x[0]_x[0]', 12.0),
+            OptimalVariable('_aux_bilinear_x[1]_x[1]', 0.0),
         ]
     )
+
     cuts = generator.generate(
         run_id=0,
-        problem=None,
-        relaxed_problem=problem,
-        linear_problem=None,
+        problem=problem,
+        relaxed_problem=relaxed_problem,
+        linear_problem=linear_problem,
         mip_solution=solution,
         tree=None,
         node=None,
     )
-    assert len(cuts) == 8
+    assert len(cuts) == 2
+
     objective_cuts = [c for c in cuts if c.is_objective]
     constraint_cuts = [c for c in cuts if not c.is_objective]
 
-    assert len(objective_cuts) == 1
-    _check_objective_cut(objective_cuts[0])
+    assert len(objective_cuts) == 0
 
-    assert len(constraint_cuts) == 7
+    assert len(constraint_cuts) == 2
     _cut_map = [
         _check_g0,
         _check_g1,
-        _check_g2,
-        _check_g3,
-        _check_g4,
-        _check_g5,
-        _check_g6,
     ]
     for i, cut in enumerate(constraint_cuts):
         _cut_map[i](cut)
-
-
-def _check_objective_cut(cut):
-    assert cut.is_objective
-    assert cut.lower_bound is None
-    assert cut.upper_bound is None
-    expr = cut.expr
-    coefs = [expr.coefficient(v) for v in expr.children]
-    assert np.all(np.isclose(coefs, [4.0, 4.0, 1.0, 1.0]))
-    assert np.isclose(expr.constant_term, -8.0)
 
 
 def _check_gx(cut, expected_lb, expected_ub, expected_coefs, expected_const):
@@ -139,28 +121,8 @@ def _check_gx(cut, expected_lb, expected_ub, expected_coefs, expected_const):
 
 
 def _check_g0(cut):
-    _check_gx(cut, None, 0, [0.0, -1.0, 0.0, 0.0], 0.0)
+    _check_gx(cut, None, 0, [8.0, 0.0, -1.0, 0.0, 0.0], -16.0)
 
 
 def _check_g1(cut):
-    _check_gx(cut, 0, None, [1.0, 0.0, -2.0, 0.0], 0.0)
-
-
-def _check_g2(cut):
-    _check_gx(cut, None, 0, [1.0, -1.0, 3.0, 0.0], -3.0)
-
-
-def _check_g3(cut):
-    _check_gx(cut, 0, None, [1.0, 0.0, 1.0, 0.0], -1)
-
-
-def _check_g4(cut):
-    _check_gx(cut, 0, None, [0.0, 1.0, 0.0, -1.0], 0.0)
-
-
-def _check_g5(cut):
-    _check_gx(cut, None, 0.0, [-1.0, -1.0, 3.0, 0.0], 0.0)
-
-
-def _check_g6(cut):
-    _check_gx(cut, 1, None, [0.0, 0.0, 1.0, 1.0], 0.0)
+    _check_gx(cut, None, 0, [0.0, 4.0, 0.0, -1.0, 0.0], -4.0)
