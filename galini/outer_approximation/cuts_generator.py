@@ -22,7 +22,8 @@ from galini.core import LinearExpression, Domain
 from galini.cuts import CutType, Cut, CutsGenerator
 from galini.logging import get_logger
 from galini.math import is_close, is_inf, mc, almost_ge, almost_le
-from galini.outer_approximation.feasibility_problem import FeasibilityProblemRelaxation
+from galini.outer_approximation.feasibility_problem import \
+    FeasibilityProblemRelaxation
 from galini.relaxations.relaxed_problem import RelaxedProblem
 
 logger = get_logger(__name__)
@@ -85,6 +86,7 @@ class OuterApproximationCutsGenerator(CutsGenerator):
 
     @staticmethod
     def cuts_generator_options():
+        """Outer Approximation cuts generator options"""
         return CutsGeneratorOptions(OuterApproximationCutsGenerator.name, [
             NumericOption('threshold', default=1e-3),
             NumericOption('convergence_relative_tol', default=1e-3),
@@ -136,7 +138,9 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         self._round += 1
         return cuts
 
-    def _generate_cuts(self, relaxed_problem, linear_problem, mip_solution, x_k):
+    def _generate_cuts(self, relaxed_problem, linear_problem, mip_solution,
+                       x_k):
+
         variables = relaxed_problem.variables
 
         nonlinear_objective = self._nonlinear_objective(relaxed_problem)
@@ -238,6 +242,8 @@ class OuterApproximationCutsGenerator(CutsGenerator):
             # c <= g(x) <= c, g(x) convex
             raise NotImplementedError('Convex cut on equality')
 
+        return None
+
 
     def _nonlinear_constraints(self, relaxed_problem):
         if self.galini.paranoid_mode:
@@ -283,7 +289,9 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         ]
         return x_k
 
-    def _solve_nlp_with_integer_fixed(self, run_id, relaxed_problem, mip_solution):
+    def _solve_nlp_with_integer_fixed(self, run_id, relaxed_problem,
+                                      mip_solution):
+
         with fixed_integer_variables(run_id,
                                      relaxed_problem,
                                      mip_solution) as problem:
