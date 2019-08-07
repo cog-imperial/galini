@@ -14,7 +14,8 @@
 
 """Galini Core module."""
 from enum import Enum
-from collections import namedtuple
+
+from .reference import BilinearTermReference, ExpressionReference
 
 
 __all__ = [
@@ -55,9 +56,6 @@ class Sense(Enum):
     def is_maximization(self):
         return not self.is_minimization()
 
-
-BilinearTermReference = namedtuple('BilinearTermReference', ['var1', 'var2'])
-ExpressionReference = namedtuple('ExpressionReference', ['expression'])
 
 from galini.core.problem import (
     Problem,

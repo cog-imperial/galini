@@ -15,25 +15,26 @@
 """Solve NLP using Ipopt."""
 
 import numpy as np
-from galini.logging import get_logger, DEBUG, WARNING
-from galini.util import expr_to_str
-from galini.math import mc, is_inf
+
 from galini.config.options import (
     SolverOptions,
     ExternalSolverOptions,
     OptionsGroup,
     StringOption,
 )
-from galini.solvers import Solver
-from galini.timelimit import seconds_left
 from galini.core import (
     ipopt_solve,
     IpoptApplication,
     EJournalLevel,
     PythonJournal,
 )
-from galini.ipopt.solution import build_solution
 from galini.ipopt.logger import IpoptLoggerAdapter
+from galini.ipopt.solution import build_solution
+from galini.logging import get_logger, DEBUG
+from galini.math import mc, is_inf
+from galini.solvers import Solver
+from galini.timelimit import seconds_left
+from galini.util import expr_to_str
 
 
 logger = get_logger(__name__)
@@ -55,7 +56,6 @@ class IpoptNLPSolver(Solver):
         ])
 
     def actual_solve(self, problem, run_id, **kwargs):
-
         config = self.galini.get_configuration_group('ipopt')
 
         if 'ipopt_application' in kwargs:
@@ -69,7 +69,7 @@ class IpoptNLPSolver(Solver):
         if timelimit is None:
             timelimit = seconds_left()
         else:
-            # Respect global timelimit
+            # Respect global time limit
             timelimit = min(timelimit, seconds_left())
 
         self._configure_ipopt_application(app, config, timelimit)
@@ -77,15 +77,23 @@ class IpoptNLPSolver(Solver):
         xi, xl, xu = self.get_starting_point_and_bounds(run_id, problem)
         gl, gu, constraints_root_expr_idxs = \
             self.get_constraints_bounds(run_id, problem)
-        logger.debug(run_id, 'Calling in IPOPT')
+        objective_root_expr_idxs = [problem.objective.root_expr.idx]
 
         tree_data = problem.expression_tree_data()
-        out_indexes = [problem.objective.root_expr.idx] + constraints_root_expr_idxs
+        out_indexes = objective_root_expr_idxs + constraints_root_expr_idxs
 
+        logger_adapter = IpoptLoggerAdapter(logger, run_id, DEBUG)
+
+        if logger.level <= DEBUG:
+            self._print_debug_problem(run_id, problem, xi, xl, xu, gl, gu)
+
+        logger.debug(run_id, 'Calling in IPOPT')
         ipopt_solution = ipopt_solve(
-            app, tree_data, out_indexes, xi, xl, xu, gl, gu, IpoptLoggerAdapter(logger, run_id, DEBUG)
+            app, tree_data, out_indexes, xi, xl, xu, gl, gu, logger_adapter
         )
-        solution = build_solution(run_id, problem, ipopt_solution, tree_data, out_indexes)
+        solution = build_solution(
+            run_id, problem, ipopt_solution, tree_data, out_indexes
+        )
         logger.debug(run_id, 'IPOPT returned {}', solution)
         return solution
 
@@ -99,7 +107,7 @@ class IpoptNLPSolver(Solver):
                 options.set_integer_value(key, value, True, False)
             elif isinstance(value, float):
                 options.set_numeric_value(key, value, True, False)
-        # set timelimit
+        # set time limit
         options.set_numeric_value('max_cpu_time', timelimit, True, False)
 
     def _configure_ipopt_logger(self, app, config, run_id):
@@ -113,8 +121,6 @@ class IpoptNLPSolver(Solver):
 
     def get_starting_point_and_bounds(self, run_id, problem):
         nx = problem.num_variables
-
-        logger.debug(run_id, 'Problem has {} variables', nx)
 
         xi = np.zeros(nx)
         xl = np.zeros(nx)
@@ -132,7 +138,9 @@ class IpoptNLPSolver(Solver):
                     lb = -mc.user_upper_bound
                     logger.warning(
                         run_id,
-                        'Variable {} lower bound is infinite: setting to {}', var.name, lb
+                        'Variable {} lower bound is infinite: setting to {}',
+                        var.name,
+                        lb,
                     )
 
                 ub = v.upper_bound()
@@ -140,7 +148,9 @@ class IpoptNLPSolver(Solver):
                     ub = mc.user_upper_bound
                     logger.warning(
                         run_id,
-                        'Variable {} upper bound is infinite: setting to {}', var.name, ub
+                        'Variable {} upper bound is infinite: setting to {}',
+                        var.name,
+                        ub,
                     )
 
                 xl[i] = lb
@@ -154,23 +164,17 @@ class IpoptNLPSolver(Solver):
                 else:
                     xi[i] = max(lb, min(ub, 0))
 
-            logger.debug(
-                run_id,
-                'Variable: {} <= {} <= {}, starting {}',
-                xl[i], var.name, xu[i], xi[i])
         return xi, xl, xu
 
     def get_constraints_bounds(self, run_id, problem):
         ng = problem.num_constraints
-
-        logger.debug(run_id, 'Problem has {} constraints', ng)
 
         gl = np.zeros(ng)
         gu = np.zeros(ng)
         out_indexes = []
         count = 0
         for i, c in enumerate(problem.constraints):
-            if c.metadata.get('rlt_constraint_info'):
+            if self._skip_constraint(c):
                 (v, aux_vs) = c.metadata['rlt_constraint_info']
                 logger.debug(
                     run_id,
@@ -180,17 +184,50 @@ class IpoptNLPSolver(Solver):
                     [v.name for v in aux_vs]
                 )
                 continue
-            gl[count] = c.lower_bound if c.lower_bound is not None else -2e19
-            gu[count] = c.upper_bound if c.upper_bound is not None else 2e19
-            logger.debug(
-                run_id,
-                'Constraint {}: {} <= {} <= {}',
-                c.name,
-                gl[i],
-                expr_to_str(c.root_expr),
-                gu[i],
-            )
+
+            lb = c.lower_bound
+            ub = c.upper_bound
+            if lb is None:
+                lb = -mc.infinity
+            if ub is None:
+                ub = mc.infinity
+
+            gl[count] = lb
+            gu[count] = ub
             out_indexes.append(c.root_expr.idx)
             count += 1
 
         return gl[:count], gu[:count], out_indexes
+
+    def _skip_constraint(self, constraint):
+        return 'rlt_constraint_info' in constraint.metadata
+
+    def _print_debug_problem(self, run_id, problem, xi, xl, xu, gl, gu):
+        logger.debug(run_id, 'Num Variables: {}', problem.num_variables)
+        logger.debug(run_id, 'Num Constraints: {}', problem.num_constraints)
+
+        logger.debug(run_id, 'Variables:')
+        for i, var in enumerate(problem.variables):
+            logger.debug(
+                run_id,
+                '\t{}: [{}, {}] start {}',
+                var.name, xl[i], xu[i], xi[i]
+            )
+
+        logger.debug(run_id, 'Objective:')
+        logger.debug(
+            run_id, '\t {}', expr_to_str(problem.objective.root_expr)
+        )
+
+        logger.debug(run_id, 'Constraints:')
+        idx = 0
+        for constraint in problem.constraints:
+            if self._skip_constraint(constraint):
+                continue
+            logger.debug(
+                run_id,
+                '\t{}: {} <= {} <= {}',
+                constraint.name,
+                gl[idx], expr_to_str(constraint.root_expr), gu[idx]
+            )
+            idx += 1

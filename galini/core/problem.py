@@ -15,6 +15,7 @@
 import warnings
 import numpy as np
 import galini_core as core
+from galini.core.reference import BilinearTermReference
 
 
 class VariableView:
@@ -320,9 +321,10 @@ class Problem(_ProblemBase):
 
         if variable.reference:
             ref = variable.reference
-            if not self.metadata.get('bilinear_aux_variables'):
-                self.metadata['bilinear_aux_variables'] = {}
-            self.metadata['bilinear_aux_variables'][(ref.var1.idx, ref.var2.idx)] = variable
+            if isinstance(ref, BilinearTermReference):
+                if not self.metadata.get('bilinear_aux_variables'):
+                    self.metadata['bilinear_aux_variables'] = {}
+                self.metadata['bilinear_aux_variables'][(ref.var1.idx, ref.var2.idx)] = variable
         new_var = self._dag.insert_vertex(variable)
         self._variables.append(new_var)
 

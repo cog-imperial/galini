@@ -26,7 +26,7 @@ from galini.core import (
     Constraint,
     Variable,
     Domain,
-    BilinearTermReference,
+    ExpressionReference,
 )
 from galini.math import is_inf
 from galini.underestimators.bilinear import McCormickUnderestimator
@@ -100,6 +100,7 @@ class DisaggregateBilinearUnderestimator(Underestimator):
                 Domain.REAL,
             )
 
+            aux_w.reference = ExpressionReference(quadratic_expr)
             aux_vars.append(aux_w)
 
             if side == 0:

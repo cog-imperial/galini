@@ -12,22 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""GALINI Configuration module."""
+from collections import namedtuple
 
-__all__ = ['GaliniConfig', 'ConfigurationManager', 'CutsGeneratorOptions']
-
-from .configuration import GaliniConfig
-from .manager import ConfigurationManager
-from .options import (
-    SolverOptions,
-    CutsGeneratorOptions,
-    OptionsGroup,
-    Option,
-    NumericOption,
-    IntegerOption,
-    BoolOption,
-    StringOption,
-    StringListOption,
-    ExternalSolverOptions,
-    EnumOption,
-)
+BilinearTermReference = namedtuple('BilinearTermReference', ['var1', 'var2'])
+ExpressionReference = namedtuple('ExpressionReference', ['expression'])

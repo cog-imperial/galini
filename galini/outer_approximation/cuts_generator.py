@@ -13,16 +13,17 @@
 # limitations under the License.
 
 """Outer-Approximation cuts generator."""
-import numpy as np
 from contextlib import contextmanager
-from galini.config import CutsGeneratorOptions
+
+import numpy as np
+
+from galini.config import CutsGeneratorOptions, NumericOption
 from galini.core import LinearExpression, Domain
 from galini.cuts import CutType, Cut, CutsGenerator
 from galini.logging import get_logger
-from galini.relaxations.relaxed_problem import RelaxedProblem
-from galini.math import is_close, is_inf
+from galini.math import is_close, is_inf, mc, almost_ge, almost_le
 from galini.outer_approximation.feasibility_problem import FeasibilityProblemRelaxation
-
+from galini.relaxations.relaxed_problem import RelaxedProblem
 
 logger = get_logger(__name__)
 
@@ -50,13 +51,14 @@ class OuterApproximationCutsGenerator(CutsGenerator):
 
     References
     ----------
-    [0] Bonami P., Biegler L. T., Conn A. R., Cornuéjols G., Grossmann I. E., Laird C. D.,
-        Lee J, Lodi A., Margot F., Sawaya N., Wächter A. (2008).
+    [0] Bonami P., Biegler L. T., Conn A. R., Cornuéjols G., Grossmann I. E.,
+        Laird C. D., Lee J, Lodi A., Margot F., Sawaya N., Wächter A. (2008).
         An algorithmic framework for convex mixed integer nonlinear programs.
         Discrete Optimization
         https://doi.org/10.1016/J.DISOPT.2006.10.011
     [1] Duran, M. A., Grossmann, I. E. (1986).
-        An outer-approximation algorithm for a class of mixed-integer nonlinear programs.
+        An outer-approximation algorithm for a class of mixed-integer nonlinear
+        programs.
         Mathematical Programming
         https://doi.org/10.1007/BF02592064
     """
@@ -66,20 +68,26 @@ class OuterApproximationCutsGenerator(CutsGenerator):
     def __init__(self, galini, config):
         super().__init__(galini, config)
         self.galini = galini
-        self._reset_node_local_storage()
+
+        self._round = 0
+        self._feasibility_problem = None
+        self._nlp_solution = None
+
         self._nlp_solver = galini.instantiate_solver('ipopt')
-        self.cuts_relative_tolerance = 1e-3
+
+        self.convergence_relative_tol = config['convergence_relative_tol']
+        self.threshold = config['threshold']
 
     def _reset_node_local_storage(self):
         self._round = 0
         self._feasibility_problem = None
         self._nlp_solution = None
-        self._nonlinear_objective = None
-        self._nonlinear_constraints = None
 
     @staticmethod
     def cuts_generator_options():
         return CutsGeneratorOptions(OuterApproximationCutsGenerator.name, [
+            NumericOption('threshold', default=1e-3),
+            NumericOption('convergence_relative_tol', default=1e-3),
         ])
 
     def before_start_at_root(self, run_id, problem, relaxed_problem):
@@ -97,129 +105,245 @@ class OuterApproximationCutsGenerator(CutsGenerator):
     def has_converged(self, state):
         if self._nlp_solution is None:
             return False
+
         if is_inf(state.lower_bound):
             return False
-        return is_close(state.lower_bound, self._nlp_solution, rtol=self.cuts_relative_tolerance)
 
-    def generate(self, run_id, problem, relaxed_problem, linear_problem, mip_solution, tree, node):
+        return is_close(
+            state.lower_bound,
+            self._nlp_solution,
+            rtol=self.convergence_relative_tol,
+        )
+
+    def generate(self, run_id, problem, relaxed_problem, linear_problem,
+                 mip_solution, tree, node):
         logger.debug(run_id, 'Starting cut round={}', self._round)
-        logger.debug(run_id, 'Compute points for non integer variables')
-        f_x_solution = self._solve_nlp_with_integer_fixed(run_id, relaxed_problem, mip_solution)
-        logger.debug(run_id, 'Solving NLP returned {}', f_x_solution)
 
-        if not f_x_solution:
-            logger.warning(run_id, 'No solution from NLP. Generating no cuts')
+        noninteger_values = self._compute_noninteger_values(
+            run_id, relaxed_problem, mip_solution
+        )
+
+        if noninteger_values is None:
             return []
 
-        assert f_x_solution.status.is_success()
-        self._nlp_solution = f_x_solution.objective_value()
-
-        x_k = [v.value for v in f_x_solution.variables[:relaxed_problem.num_variables]]
-
-        logger.debug(run_id, 'Computing derivatives at point x_k={}', x_k)
-        fg = self._compute_derivatives(run_id, relaxed_problem, x_k)
-        fg_x = fg.forward(0, x_k)
-        logger.debug(run_id, 'Objectives/Constraints value at x_k={}', fg_x)
-
-        x = relaxed_problem.variables
-
-        num_objectives = len(self._nonlinear_objective)
-        num_constraints = len(self._nonlinear_constraints)
-
-        w = np.zeros(num_objectives + num_constraints)
-
-        logger.debug(run_id, 'Generating {} objective cuts', num_objectives)
-        objective_cuts = [
-            self._generate_cut(i, objective, x, x_k, fg, fg_x, w, True)
-            for i, objective in enumerate(self._nonlinear_objective)
-        ]
-
-        logger.debug(run_id, 'Generating {} constraints cuts', num_constraints)
-        constraint_cuts = [
-            self._generate_cut(num_objectives + i, constraint, x, x_k, fg, fg_x, w, False)
-            for i, constraint in enumerate(self._nonlinear_constraints)
-        ]
-
+        cuts_gen = self._generate_cuts(
+            relaxed_problem,
+            linear_problem,
+            mip_solution,
+            noninteger_values,
+        )
+        cuts = list(cuts_gen)
         self._round += 1
-        return objective_cuts + constraint_cuts
+        return cuts
 
-    def _compute_derivatives(self, run_id, relaxed_problem, x_k):
+    def _generate_cuts(self, relaxed_problem, linear_problem, mip_solution, x_k):
+        variables = relaxed_problem.variables
+
+        nonlinear_objective = self._nonlinear_objective(relaxed_problem)
+        if nonlinear_objective:
+            raise RuntimeError('Relaxation has non linear objective.')
+
+        # Filter out constraints that are not of interest
+        nonlinear_constraints = self._nonlinear_constraints(relaxed_problem)
+
+        # What if it's a nonlinear constraint non present in the original
+        # problem?
+        linear_constraints = [
+            linear_problem.constraint(c.name)
+            for c in nonlinear_constraints
+        ]
+
+        linear_expr_idx = [c.root_expr.idx for c in linear_constraints]
+        nonlinear_expr_idx = [c.root_expr.idx for c in nonlinear_constraints]
+
+        mip_values = [v.value for v in mip_solution.variables]
+        nonlinear_mip_values = mip_values[:relaxed_problem.num_variables]
+
+        linear_expr_eval = \
+            linear_problem.expression_tree_data()\
+                .eval(mip_values, linear_expr_idx)
+
+        nonlinear_expr_eval = \
+            relaxed_problem.expression_tree_data()\
+                .eval(nonlinear_mip_values, nonlinear_expr_idx)
+
+        linear_expr_value = linear_expr_eval.forward(0, mip_values)
+        linear_expr_value = np.array(linear_expr_value)
+
+        nonlinear_expr_value = \
+            nonlinear_expr_eval.forward(0, nonlinear_mip_values)
+        nonlinear_expr_value = np.array(nonlinear_expr_value)
+
+        # The difference between the linear cut and the convex function
+        # evaluated at the mip solution
+        nonlinear_linear_diff = nonlinear_expr_value - linear_expr_value
+
+        w = np.zeros_like(nonlinear_constraints)
+        nonlinear_expr_x_k_value = nonlinear_expr_eval.forward(0, x_k)
+
+        for i, constraint in enumerate(nonlinear_constraints):
+            new_cut = self._generate_cut_for_constraint(
+                i,
+                constraint,
+                variables,
+                x_k,
+                w,
+                nonlinear_linear_diff,
+                nonlinear_expr_eval,
+                nonlinear_expr_x_k_value,
+            )
+
+            if new_cut is not None:
+                yield new_cut
+
+    def _generate_cut_for_constraint(self, i, constraint, variables, x_k, w,
+                                     nonlinear_linear_diff, nonlinear_expr_eval,
+                                     nonlinear_expr_x_k_value):
+        cons_lb = constraint.lower_bound
+        cons_ub = constraint.upper_bound
+
+        if cons_lb is None:
+            # g(x) <= c, g(x) convex
+            assert almost_ge(nonlinear_linear_diff[i], 0.0, atol=mc.epsilon)
+
+            # If nonlinear linear diff is >= threshold, then
+            # f(x) - L(x) > threshold
+            above_threshold = almost_ge(
+                nonlinear_linear_diff[i],
+                self.threshold,
+                atol=mc.epsilon,
+            )
+            if above_threshold:
+                return self._generate_cut(
+                    i, constraint, variables, x_k, w,
+                    nonlinear_expr_eval, nonlinear_expr_x_k_value
+                )
+        elif cons_ub is None:
+            # -g(x) >= c, g(x) convex
+            assert almost_le(nonlinear_linear_diff[i], 0.0, atol=mc.epsilon)
+
+            # This is the same as before, but the (convex) constraint is
+            # written as -g(x) >= c, where g(x) is convex
+            below_threshold = almost_le(
+                nonlinear_linear_diff[i],
+                -self.threshold,
+                atol=mc.epsilon,
+            )
+            if below_threshold:
+                return self._generate_cut(
+                    i, constraint, variables, x_k, w,
+                    nonlinear_expr_eval, nonlinear_expr_x_k_value
+                )
+        else:
+            # c <= g(x) <= c, g(x) convex
+            raise NotImplementedError('Convex cut on equality')
+
+
+    def _nonlinear_constraints(self, relaxed_problem):
         if self.galini.paranoid_mode:
-            assert relaxed_problem.objective.root_expr.polynomial_degree() >= 0
             assert all(
                 g.root_expr.polynomial_degree() >= 0
                 for g in relaxed_problem.constraints
             )
 
+        return [
+            constraint
+            for constraint in relaxed_problem.constraints
+            if constraint.root_expr.polynomial_degree() > 1
+        ]
+
+    def _nonlinear_objective(self, relaxed_problem):
+        if self.galini.paranoid_mode:
+            assert relaxed_problem.objective.root_expr.polynomial_degree() >= 0
+
         if relaxed_problem.objective.root_expr.polynomial_degree() > 1:
-            f_idx = [relaxed_problem.objective.root_expr.idx]
-            self._nonlinear_objective = [relaxed_problem.objective]
-        else:
-            f_idx = []
-            self._nonlinear_objective = []
+            return relaxed_problem.objective
 
-        g_idx = [
-            g.root_expr.idx
-            for g in relaxed_problem.constraints
-            if g.root_expr.polynomial_degree() > 1
+        return None
+
+    def _compute_noninteger_values(self, run_id, relaxed_problem, mip_solution):
+        logger.debug(run_id, 'Compute points for non integer variables')
+
+        f_x_solution = self._solve_nlp_with_integer_fixed(
+            run_id, relaxed_problem, mip_solution
+        )
+
+        logger.debug(run_id, 'Solving NLP returned {}', f_x_solution)
+
+        if not f_x_solution:
+            logger.warning(run_id, 'No solution from NLP. Generating no cuts')
+            return None
+
+        assert f_x_solution.status.is_success()
+        self._nlp_solution = f_x_solution.objective_value()
+
+        x_k = [
+            v.value
+            for v in f_x_solution.variables[:relaxed_problem.num_variables]
         ]
-
-        self._nonlinear_constraints = [
-            g
-            for g in relaxed_problem.constraints
-            if g.root_expr.polynomial_degree() > 1
-        ]
-
-        return relaxed_problem.expression_tree_data().eval(x_k, f_idx + g_idx)
+        return x_k
 
     def _solve_nlp_with_integer_fixed(self, run_id, relaxed_problem, mip_solution):
-        with fixed_integer_variables(run_id, relaxed_problem, mip_solution) as problem:
+        with fixed_integer_variables(run_id,
+                                     relaxed_problem,
+                                     mip_solution) as problem:
+
             nlp_solution = self._nlp_solver.solve(problem)
+
             logger.debug(run_id, 'NLP with integer fixed: {}', nlp_solution)
 
         if nlp_solution.status.is_success():
             return nlp_solution
 
-        feasibility_nlp_solution = \
-            self._solve_feasibility_problem(run_id, relaxed_problem, mip_solution)
+        feasibility_nlp_solution = self._solve_feasibility_problem(
+            run_id, relaxed_problem, mip_solution
+        )
 
         return feasibility_nlp_solution
 
     def _solve_feasibility_problem(self, run_id, problem, mip_solution):
         if self._feasibility_problem is None:
+            # Lazily create feasibility problem and save it for next time
             relaxation = FeasibilityProblemRelaxation()
             self._feasibility_problem = RelaxedProblem(relaxation, problem)
 
-        with fixed_integer_variables(run_id, self._feasibility_problem.relaxed, mip_solution) as problem:
-            feasibility_nlp_solution = self._nlp_solver.solve(problem)
-            logger.debug(run_id, 'Feasibility NLP with integer fixed: {}', feasibility_nlp_solution)
+        with fixed_integer_variables(run_id,
+                                     self._feasibility_problem.relaxed,
+                                     mip_solution) as nlp_problem:
+
+            feasibility_nlp_solution = self._nlp_solver.solve(nlp_problem)
+
+            logger.debug(
+                run_id,
+                'Feasibility NLP with integer fixed: {}',
+                feasibility_nlp_solution
+            )
 
             if feasibility_nlp_solution.status.is_success():
                 return feasibility_nlp_solution
 
-            logger.warning(run_id, 'Feasibility NLP returned a non feasible solution')
+            logger.warning(
+                run_id,
+                'Feasibility NLP returned a non feasible solution'
+            )
             return None
 
-    def _generate_cut(self, i, constraint, x, x_k, fg, g_x, w, is_objective):
+    def _generate_cut(self, i, constraint, x, x_k, w, fg, g_x):
         w[i] = 1.0
         d_fg = fg.reverse(1, w)
         w[i] = 0.0
-        cut_name = '_outer_approximation_{}_{}_round_{}'.format(i, constraint.name, self._round)
 
-        if not is_objective:
-            return Cut(
-                CutType.LOCAL,
-                cut_name,
-                LinearExpression(x, d_fg, -np.dot(d_fg, x_k) + g_x[i]),
-                constraint.lower_bound,
-                constraint.upper_bound,
-            )
+        cut_name = self._cut_name(i, constraint.name)
+        cut_expr = LinearExpression(x, d_fg, -np.dot(d_fg, x_k) + g_x[i])
 
         return Cut(
             CutType.LOCAL,
             cut_name,
-            LinearExpression(x, d_fg, -np.dot(d_fg, x_k) + g_x[i]),
-            None,
-            None,
-            is_objective=True,
+            cut_expr,
+            constraint.lower_bound,
+            constraint.upper_bound,
+            is_objective=False,
         )
+
+    def _cut_name(self, i, name):
+        return '_outer_approximation_{}_{}_r_{}'.format(i, name, self._round)
