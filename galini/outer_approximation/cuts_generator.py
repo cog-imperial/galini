@@ -150,6 +150,9 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         # Filter out constraints that are not of interest
         nonlinear_constraints = self._nonlinear_constraints(relaxed_problem)
 
+        if not nonlinear_constraints:
+            return
+
         # What if it's a nonlinear constraint non present in the original
         # problem?
         linear_constraints = [

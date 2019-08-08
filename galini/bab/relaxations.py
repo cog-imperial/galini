@@ -66,7 +66,6 @@ class _RelaxationBase(Relaxation):
             relaxed_problem.metadata[BILINEAR_ENVELOPE_GENERATED_META] = \
                 original_bilinear_gen.copy()
 
-        print(problem.metadata)
         self._ctx.metadata = relaxed_problem.metadata
         self._before_relax(problem)
 
