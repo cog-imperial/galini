@@ -14,13 +14,24 @@
 
 """Underestimator interface."""
 from abc import ABCMeta, abstractmethod
+from enum import Enum
+
 from galini.core import Expression, Constraint
 
 
+class UnderestimatorSide(Enum):
+    """Represent the underestimator side."""
+    UNDER = 0
+    OVER = 1
+    BOTH = 2
+
+
 class Underestimator(metaclass=ABCMeta):
+    """Base class for underestimators."""
+
     @abstractmethod
     def can_underestimate(self, problem, expr, ctx): # pragma: no cover
-        """Check if the current underestimator can underestimate the given expression.
+        """Check if the current underestimator can underestimate the expression.
 
         Parameters
         ----------
@@ -35,7 +46,6 @@ class Underestimator(metaclass=ABCMeta):
         -------
         bool
         """
-        pass
 
     @abstractmethod
     def underestimate(self, problem, expr, ctx, **kwargs): # pragma: no cover
@@ -54,10 +64,9 @@ class Underestimator(metaclass=ABCMeta):
         -------
         UnderestimatorResult
         """
-        pass
 
 
-class UnderestimatorResult(object):
+class UnderestimatorResult:
     """Represent the result of an underestimator.
 
     The result contains a expression that underestimates the original expression
@@ -72,7 +81,9 @@ class UnderestimatorResult(object):
 
         for constraint in constraints:
             if not isinstance(constraint, Constraint):
-                raise ValueError('constraints must contain values of type Constraint')
+                raise ValueError(
+                    'constraints must contain values of type Constraint'
+                )
 
         self.expression = expression
         self.constraints = constraints

@@ -30,7 +30,7 @@ from galini.core import (
 )
 from galini.underestimators.bilinear import McCormickUnderestimator
 from galini.underestimators.underestimator import Underestimator, \
-    UnderestimatorResult
+    UnderestimatorResult, UnderestimatorSide
 
 
 class DisaggregateBilinearUnderestimator(Underestimator):
@@ -49,10 +49,6 @@ class DisaggregateBilinearUnderestimator(Underestimator):
         assert expr.expression_type == ExpressionType.Quadratic
 
         side = kwargs.pop('side')
-
-        # Expression is an equality, use convex envelope
-        if side == 2:
-            return self._bilinear_underestimator.underestimate(problem, expr, ctx, **kwargs)
 
         term_graph = nx.Graph()
         term_graph.add_nodes_from(ch.idx for ch in expr.children)
@@ -80,9 +76,11 @@ class DisaggregateBilinearUnderestimator(Underestimator):
             cvx = self._quadratic_rule.apply(
                 quadratic_expr, ctx.convexity, ctx.monotonicity, ctx.bounds
             )
-            if cvx.is_convex() and side == 0:
+            if cvx.is_convex() and side == UnderestimatorSide.UNDER:
                 convex_exprs.append(quadratic_expr)
-            elif cvx.is_concave() and side == 1:
+            elif cvx.is_convex() and side == UnderestimatorSide.BOTH:
+                convex_exprs.append(quadratic_expr)
+            elif cvx.is_concave() and side == UnderestimatorSide.OVER:
                 convex_exprs.append(quadratic_expr)
             else:
                 nonconvex_exprs.append(quadratic_expr)
@@ -105,14 +103,14 @@ class DisaggregateBilinearUnderestimator(Underestimator):
             aux_w.reference = ExpressionReference(quadratic_expr)
             aux_vars.append(aux_w)
 
-            if side == 0:
+            if side == UnderestimatorSide.UNDER:
                 lower_bound = None
                 upper_bound = 0.0
-            elif side == 1:
+            elif side == UnderestimatorSide.OVER:
                 lower_bound = 0.0
                 upper_bound = None
             else:
-                raise RuntimeError('Should not generate disaggregate bilinear terms for equality constraints')
+                lower_bound = upper_bound = 0.0
 
             constraint = Constraint(
                 '_disaggregate_aux_{}'.format(self._call_count),

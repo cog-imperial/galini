@@ -129,6 +129,7 @@ class OuterApproximationCutsGenerator(CutsGenerator):
             return []
 
         cuts_gen = self._generate_cuts(
+            run_id,
             relaxed_problem,
             linear_problem,
             mip_solution,
@@ -138,9 +139,8 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         self._round += 1
         return cuts
 
-    def _generate_cuts(self, relaxed_problem, linear_problem, mip_solution,
-                       x_k):
-
+    def _generate_cuts(self, run_id, relaxed_problem, linear_problem,
+                       mip_solution, x_k):
         variables = relaxed_problem.variables
 
         nonlinear_objective = self._nonlinear_objective(relaxed_problem)
@@ -156,6 +156,12 @@ class OuterApproximationCutsGenerator(CutsGenerator):
             linear_problem.constraint(c.name)
             for c in nonlinear_constraints
         ]
+
+        logger.debug(
+            run_id,
+            'Number of Nonlinear constraints: {}',
+            len(nonlinear_constraints),
+        )
 
         linear_expr_idx = [c.root_expr.idx for c in linear_constraints]
         nonlinear_expr_idx = [c.root_expr.idx for c in nonlinear_constraints]
@@ -181,6 +187,8 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         # The difference between the linear cut and the convex function
         # evaluated at the mip solution
         nonlinear_linear_diff = nonlinear_expr_value - linear_expr_value
+
+        logger.debug(run_id, 'Nonlinear - linear = {}', nonlinear_linear_diff)
 
         w = np.zeros_like(nonlinear_constraints)
         nonlinear_expr_x_k_value = nonlinear_expr_eval.forward(0, x_k)
@@ -208,8 +216,6 @@ class OuterApproximationCutsGenerator(CutsGenerator):
 
         if cons_lb is None:
             # g(x) <= c, g(x) convex
-            assert almost_ge(nonlinear_linear_diff[i], 0.0, atol=mc.epsilon)
-
             # If nonlinear linear diff is >= threshold, then
             # f(x) - L(x) > threshold
             above_threshold = almost_ge(
@@ -224,8 +230,6 @@ class OuterApproximationCutsGenerator(CutsGenerator):
                 )
         elif cons_ub is None:
             # -g(x) >= c, g(x) convex
-            assert almost_le(nonlinear_linear_diff[i], 0.0, atol=mc.epsilon)
-
             # This is the same as before, but the (convex) constraint is
             # written as -g(x) >= c, where g(x) is convex
             below_threshold = almost_le(

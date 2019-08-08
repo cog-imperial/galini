@@ -24,6 +24,7 @@ from galini.underestimators import (
     DisaggregateBilinearUnderestimator,
     SumOfUnderestimators,
     UnderestimatorResult,
+    UnderestimatorSide,
 )
 
 
@@ -53,17 +54,17 @@ class _RelaxationBase(Relaxation):
         pass
 
     def relax_objective(self, problem, objective):
-        result = self.relax_expression(problem, objective.root_expr, side=0)
+        result = self.relax_expression(problem, objective.root_expr, side=UnderestimatorSide.UNDER)
         new_objective = Objective(objective.name, result.expression, objective.original_sense)
         return RelaxationResult(new_objective, result.constraints)
 
     def relax_constraint(self, problem, constraint):
         if constraint.lower_bound is None:
-            side = 0
+            side = UnderestimatorSide.UNDER
         elif constraint.upper_bound is None:
-            side = 1
+            side = UnderestimatorSide.OVER
         else:
-            side = 2
+            side = UnderestimatorSide.BOTH
 
         result = self.relax_expression(problem, constraint.root_expr, side=side)
         new_constraint = Constraint(
@@ -93,8 +94,6 @@ class ConvexRelaxation(_RelaxationBase):
 
     def relax_expression(self, problem, expr, side=None):
         convexity = self._ctx.convexity(expr)
-        #if convexity and convexity.is_convex():
-        #    return UnderestimatorResult(expr, [])
         return self._relax_expression(problem, expr, side=side)
 
 
