@@ -244,7 +244,16 @@ class OuterApproximationCutsGenerator(CutsGenerator):
                 )
         else:
             # c <= g(x) <= c, g(x) convex
-            raise NotImplementedError('Convex cut on equality')
+            above_threshold = almost_ge(
+                nonlinear_linear_diff[i],
+                self.threshold,
+                atol=mc.epsilon,
+            )
+            if above_threshold:
+                return self._generate_cut(
+                    i, constraint, variables, x_k, w,
+                    nonlinear_expr_eval, nonlinear_expr_x_k_value
+                )
 
         return None
 
