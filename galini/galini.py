@@ -23,17 +23,20 @@ from galini.logging import (
 )
 
 
-class Galini(object):
+class Galini:
+    """Contains information about the current instance of galini."""
     def __init__(self):
         self._solvers_reg = SolversRegistry()
         self._cuts_gen_reg = CutsGeneratorsRegistry()
-        self._config_manager = ConfigurationManager(self._solvers_reg, self._cuts_gen_reg)
+        self._config_manager = \
+            ConfigurationManager(self._solvers_reg, self._cuts_gen_reg)
         self._config = self._config_manager.configuration
         self.logger = get_logger('galini')
         self.cuts_generators_manager = CutsGeneratorsManager(self)
         self.paranoid_mode = False
 
     def update_configuration(self, user_config):
+        """Update galini configuration with `user_config`."""
         self._config_manager.update_configuration(user_config)
         self._config = self._config_manager.configuration
         self.cuts_generators_manager = CutsGeneratorsManager(self)
@@ -62,13 +65,20 @@ class Galini(object):
             raise ValueError('No cuts generator "{}"'.format(name))
         return gen_cls
 
+    def available_cuts_generators(self):
+        """Get available cuts generators."""
+        return self._cuts_gen_reg.keys()
+
     def get_configuration_group(self, group):
+        """Get the specified configuration `group`."""
         parts = group.split('.')
         config = self._config
         for part in parts:
             config = config.get(part, None)
             if config is None:
-                raise ValueError('Invalid configuration group "{}"'.format(group))
+                raise ValueError(
+                    'Invalid configuration group "{}"'.format(group)
+                )
         return config
 
 

@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Cuts generators manager."""
-from galini.registry import Registry
-from galini.logging import get_logger
-from galini.config.options import OptionsGroup, StringListOption
+import numpy as np
 
+import galini.core as core
+from galini.config.options import OptionsGroup, StringListOption
+from galini.logging import get_logger
+from galini.registry import Registry
+from galini.util import expr_to_str
 
 logger = get_logger(__name__)
 
@@ -26,8 +29,10 @@ class CutsGeneratorsRegistry(Registry):
         return 'galini.cuts_generators'
 
 
-class CutsGeneratorsManager(object):
+class CutsGeneratorsManager:
+    """Manages cuts generators."""
     def __init__(self, galini):
+        self.galini = galini
         self._generators = self._initialize_generators(galini)
 
     def _initialize_generators(self, galini):
@@ -37,10 +42,11 @@ class CutsGeneratorsManager(object):
         for cut_gen_name in cuts_gen_config.generators:
             generator_cls = galini.get_cuts_generator(cut_gen_name)
             if generator_cls is None:
+                # pylint: disable=line-too-long
                 raise ValueError(
                     'Invalid cuts generator "{}", available cuts generators: {}'.format(
                         cut_gen_name,
-                        ', '.join(registry.keys())
+                        ', '.join(galini.available_cuts_generators()),
                     ))
             generator_config = cuts_gen_config[generator_cls.name]
             generators.append(generator_cls(galini, generator_config))
@@ -48,44 +54,101 @@ class CutsGeneratorsManager(object):
 
     @staticmethod
     def cuts_generators_manager_options():
+        """Options for CutsGeneratorsManager."""
         return OptionsGroup('cuts_generator', [
             StringListOption('generators', default=[]),
         ])
 
     @property
     def generators(self):
+        """Available cuts generators."""
         return self._generators
 
     def before_start_at_root(self, run_id, problem, relaxed_problem):
+        """Callback called before start at root node."""
         for gen in self._generators:
             gen.before_start_at_root(run_id, problem, relaxed_problem)
 
     def after_end_at_root(self, run_id, problem, relaxed_problem, solution):
+        """Callback called after end at root node."""
         for gen in self._generators:
             gen.after_end_at_root(run_id, problem, relaxed_problem, solution)
 
     def before_start_at_node(self, run_id, problem, relaxation):
+        """Callback called before start at non root nodes."""
         for gen in self._generators:
             gen.before_start_at_node(run_id, problem, relaxation)
 
     def after_end_at_node(self, run_id, problem, relaxed_problem, solution):
+        """Callback called after end at non root nodes."""
         for gen in self._generators:
             gen.after_end_at_node(run_id, problem, relaxed_problem, solution)
 
     def has_converged(self, state):
+        """Predicated to check if cuts have converged."""
         return all(gen.has_converged(state) for gen in self._generators)
 
-    def generate(self, run_id, problem, relaxed_problem, linear_problem, mip_solution, tree, node):
+    def generate(self, run_id, problem, relaxed_problem, linear_problem,
+                 mip_solution, tree, node):
+        """Generate a new set of cuts."""
         all_cuts = []
-        logger.info(run_id, 'Generating cuts: {}', [gen.name for gen in self._generators])
+        logger.info(
+            run_id,
+            'Generating cuts: {}',
+            [gen.name for gen in self._generators],
+        )
+
+        paranoid_mode = self.galini.paranoid_mode
 
         for gen in self._generators:
-            cuts = gen.generate(run_id, problem, relaxed_problem, linear_problem, mip_solution, tree, node)
+            cuts = gen.generate(
+                run_id, problem, relaxed_problem, linear_problem, mip_solution,
+                tree, node
+            )
             if cuts is None:
                 cuts = []
             if not isinstance(cuts, list):
-                raise ValueError('CutsGenerator.generate must return a list of cuts.')
-            logger.info(run_id, '  * {} generated {} cuts.', gen.name, len(cuts))
+                raise ValueError(
+                    'CutsGenerator.generate must return a list of cuts.'
+                )
+            logger.info(
+                run_id, '  * {} generated {} cuts.', gen.name, len(cuts)
+            )
             for cut in cuts:
+                if paranoid_mode:
+                    _check_cut_coefficients(cut)
                 all_cuts.append(cut)
         return all_cuts
+
+
+def _check_cut_coefficients(cut):
+    root_expr = cut.expr
+    _check_cut_expr_coefficients(cut, root_expr)
+
+
+def _check_cut_expr_coefficients(cut, expr):
+    if isinstance(expr, core.LinearExpression):
+        _check_linear_expr_coefficients(cut, expr)
+        return
+
+    if isinstance(expr, core.QuadraticExpression):
+        for term in expr.terms:
+            if not np.isfinite(term.coefficient):
+                _raise_paranoid_mode_check_fail(cut)
+
+    if isinstance(expr, core.SumExpression):
+        for child in expr.children:
+            _check_cut_expr_coefficients(cut, child)
+
+
+def _check_linear_expr_coefficients(cut, expr):
+    if not np.all(np.isfinite(expr.linear_coefs)):
+        _raise_paranoid_mode_check_fail(cut)
+
+
+def _raise_paranoid_mode_check_fail(cut):
+    raise ValueError(
+        'Cut {} has non finite coefficients: {}'.format(
+            cut.name,
+            expr_to_str(cut.expr),
+        ))
