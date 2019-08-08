@@ -30,6 +30,10 @@ from galini.underestimators import (
     SumOfUnderestimators,
     UnderestimatorSide,
 )
+from galini.underestimators.bilinear import (
+    BILINEAR_AUX_VAR_META,
+    BILINEAR_ENVELOPE_GENERATED_META,
+)
 
 
 class _RelaxationBase(Relaxation):
@@ -42,16 +46,27 @@ class _RelaxationBase(Relaxation):
         raise NotImplementedError('_root_underestimator')
 
     def before_relax(self, problem, relaxed_problem, **kwargs):
-        if 'bilinear_aux_variables' in problem.metadata:
-            original_bilinear_aux = problem.metadata['bilinear_aux_variables']
+        # Copy bilinear aux var metadata to avoid duplicate aux vars
+        if BILINEAR_AUX_VAR_META in problem.metadata:
+            original_bilinear_aux = problem.metadata[BILINEAR_AUX_VAR_META]
             relaxed_bilinear_aux = dict()
 
             for xy_tuple, var in original_bilinear_aux.items():
                 relaxed_var = relaxed_problem.variable(var)
                 relaxed_bilinear_aux[xy_tuple] = relaxed_var
-                relaxed_problem.metadata['bilinear_aux_variables'] = \
-                    relaxed_bilinear_aux
 
+            relaxed_problem.metadata[BILINEAR_AUX_VAR_META] = \
+                relaxed_bilinear_aux
+
+        # Copy bilinear aux var generated envelope to avoid duplicate cons
+        if BILINEAR_ENVELOPE_GENERATED_META in problem.metadata:
+            original_bilinear_gen = \
+                problem.metadata[BILINEAR_ENVELOPE_GENERATED_META]
+
+            relaxed_problem.metadata[BILINEAR_ENVELOPE_GENERATED_META] = \
+                original_bilinear_gen.copy()
+
+        print(problem.metadata)
         self._ctx.metadata = relaxed_problem.metadata
         self._before_relax(problem)
 

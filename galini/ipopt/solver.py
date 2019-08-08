@@ -32,6 +32,7 @@ from galini.ipopt.logger import IpoptLoggerAdapter
 from galini.ipopt.solution import build_solution
 from galini.logging import get_logger, DEBUG
 from galini.math import mc, is_inf
+from galini.pyomo.postprocess import PROBLEM_RLT_CONS_INFO
 from galini.solvers import Solver
 from galini.timelimit import seconds_left
 from galini.util import expr_to_str
@@ -175,7 +176,7 @@ class IpoptNLPSolver(Solver):
         count = 0
         for i, c in enumerate(problem.constraints):
             if self._skip_constraint(c):
-                (v, aux_vs) = c.metadata['rlt_constraint_info']
+                (v, aux_vs) = c.metadata[PROBLEM_RLT_CONS_INFO]
                 logger.debug(
                     run_id,
                     'Constraint {}: Skip RLT {} = {}',
@@ -200,7 +201,7 @@ class IpoptNLPSolver(Solver):
         return gl[:count], gu[:count], out_indexes
 
     def _skip_constraint(self, constraint):
-        return 'rlt_constraint_info' in constraint.metadata
+        return PROBLEM_RLT_CONS_INFO in constraint.metadata
 
     def _print_debug_problem(self, run_id, problem, xi, xl, xu, gl, gu):
         logger.debug(run_id, 'Num Variables: {}', problem.num_variables)

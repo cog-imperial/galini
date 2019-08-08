@@ -19,19 +19,28 @@ from galini.math import is_close, mc
 from galini.util import expr_to_str
 
 
+# Aux variables for bilinear terms defined in the problem
+PROBLEM_BILINEAR_AUX_VAR_META = 'problem_bilinear_aux_variables'
+
+PROBLEM_RLT_CONS_INFO = 'problem_rlt_cons_info'
+
+
 def detect_auxiliary_variables(problem):
     bilinear_aux_variables = dict()
     for constraint in problem.constraints:
         root_expr = constraint.root_expr
 
-        if not isinstance(root_expr, core.SumExpression) or len(root_expr.children) != 2:
+        if (not isinstance(root_expr, core.SumExpression) or
+                len(root_expr.children) != 2):
             continue
 
         a, b = root_expr.children
-        if isinstance(a, core.QuadraticExpression) and isinstance(b, core.LinearExpression):
+        if (isinstance(a, core.QuadraticExpression) and
+                isinstance(b, core.LinearExpression)):
             quadratic = a
             linear = b
-        elif isinstance(b, core.QuadraticExpression) and isinstance(a, core.LinearExpression):
+        elif (isinstance(b, core.QuadraticExpression) and
+              isinstance(a, core.LinearExpression)):
             quadratic = b
             linear = a
         else:
@@ -57,10 +66,11 @@ def detect_auxiliary_variables(problem):
                 var.reference = core.BilinearTermReference(term.var1, term.var2)
                 bilinear_aux_variables[(term.var1.idx, term.var2.idx)] = var
 
-    problem.metadata['bilinear_aux_variables'] = bilinear_aux_variables
+    problem.metadata[PROBLEM_BILINEAR_AUX_VAR_META] = bilinear_aux_variables
 
 
 def detect_rlt_constraints(problem):
+    # TODO(fra): double check this is working as intended
     possible_rlt = dict()
     seen_sum = set()
 
@@ -83,7 +93,8 @@ def detect_rlt_constraints(problem):
         # if it's product it can be RLT
         if isinstance(root_expr, core.LinearExpression):
             if bounds_zero:
-                is_rlt, var, summed_vars = _detect_rlt_expression_linear(root_expr)
+                is_rlt, var, summed_vars = \
+                    _detect_rlt_expression_linear(root_expr)
             else:
                 is_rlt = False
 
@@ -96,10 +107,14 @@ def detect_rlt_constraints(problem):
                 # Check all coefficients
                 is_sum = True
                 for v in root_expr.children:
-                    if not is_close(root_expr.coefficient(v), 1.0, atol=mc.epsilon):
+                    is_one = is_close(
+                        root_expr.coefficient(v), 1.0, atol=mc.epsilon
+                    )
+                    if not is_one:
                         is_sum = False
                 if is_sum:
-                    summed_vars_idx = tuple(sorted(v.idx for v in root_expr.children))
+                    summed_vars_idx = \
+                        tuple(sorted(v.idx for v in root_expr.children))
                     seen_sum.add(summed_vars_idx)
 
         elif isinstance(root_expr, core.SumExpression):
@@ -107,7 +122,8 @@ def detect_rlt_constraints(problem):
                 continue
             is_rlt, var, summed_vars = _detect_rlt_expression_product(root_expr)
             if not is_rlt:
-                is_rlt, var, summed_vars = _detect_rlt_expression_bilinear(root_expr)
+                is_rlt, var, summed_vars = \
+                    _detect_rlt_expression_bilinear(root_expr)
 
         else:
             is_rlt = False
@@ -120,21 +136,20 @@ def detect_rlt_constraints(problem):
             possible_rlt[summed_vars_idx] = []
         possible_rlt[summed_vars_idx].append((constraint, var, summed_vars))
 
-        # constraint.metadata['is_rlt_constraint'] = (non_aux_variable, aux_variables)
     if len(possible_rlt) < len(seen_sum):
         for var_indexes, constraints in possible_rlt.items():
             if var_indexes in seen_sum:
                 # it's a RLT
                 for constraint, var, aux_vars in constraints:
-                    constraint.metadata['rlt_constraint_info'] = (var, aux_vars)
+                    constraint.metadata[PROBLEM_RLT_CONS_INFO] = (var, aux_vars)
     else:
         for var_indexes in seen_sum:
             constraints = possible_rlt.get(var_indexes, [])
             for constraint, var, aux_vars in constraints:
-                constraint.metadata['rlt_constraint_info'] = (var, aux_vars)
+                constraint.metadata[PROBLEM_RLT_CONS_INFO] = (var, aux_vars)
 
 
-def _detect_rlt_expression_product(root_expr):
+def _detect_rlt_expression_product(_root_expr):
     """Matches expression of type x1 - x1*(x2+x3+...+xn)"""
     return False, None, None
 

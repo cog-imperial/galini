@@ -25,8 +25,17 @@ from galini.core import (
     Domain,
     BilinearTermReference,
 )
-from galini.math import is_inf
-from galini.underestimators.underestimator import Underestimator, UnderestimatorResult
+from galini.pyomo.postprocess import PROBLEM_BILINEAR_AUX_VAR_META
+from galini.underestimators.underestimator import (
+    Underestimator,
+    UnderestimatorResult,
+)
+
+# Dictionary of (var1, var2) -> aux
+BILINEAR_AUX_VAR_META = 'bilinear_aux_variables'
+
+# Set containing bilinear term for which envelope was generated
+BILINEAR_ENVELOPE_GENERATED_META = 'bilinear_aux_variable_envelope_generated'
 
 
 class McCormickUnderestimator(Underestimator):
@@ -39,22 +48,26 @@ class McCormickUnderestimator(Underestimator):
 
     def underestimate(self, problem, expr, ctx, **kwargs):
         assert expr.expression_type == ExpressionType.Quadratic
-        if ctx.metadata.get('bilinear_aux_variables', None) is None:
-            ctx.metadata['bilinear_aux_variables'] = dict()
+
+        if ctx.metadata.get(BILINEAR_AUX_VAR_META, None) is None:
+            ctx.metadata[BILINEAR_AUX_VAR_META] = dict()
+
+        if ctx.metadata.get(BILINEAR_ENVELOPE_GENERATED_META, None) is None:
+            ctx.metadata[BILINEAR_ENVELOPE_GENERATED_META] = set()
 
         squares = []
         variables = []
         constraints = []
         for term in expr.terms:
             if term.var1 != term.var2 or self.linear:
-                aux_var_linear, aux_var_constraints = self._underestimate_bilinear_term(problem, term, ctx)
+                aux_var_linear, aux_var_constraints = \
+                    self._underestimate_bilinear_term(problem, term, ctx)
                 if aux_var_linear is None:
                     return None
                 variables.append(aux_var_linear)
                 constraints.extend(aux_var_constraints)
             else:
                 squares.append((term.coefficient, term.var1))
-
 
         if not squares:
             new_linear_expr = LinearExpression(variables)
@@ -63,7 +76,11 @@ class McCormickUnderestimator(Underestimator):
         # Squares + (optional) linear expression
         square_coefficients = [c for c, _ in squares]
         square_variables = [v for _, v in squares]
-        quadratic_expr = QuadraticExpression(square_variables, square_variables, square_coefficients)
+        quadratic_expr = QuadraticExpression(
+            square_variables,
+            square_variables,
+            square_coefficients,
+        )
         if not variables:
             return UnderestimatorResult(quadratic_expr, constraints)
 
@@ -73,23 +90,73 @@ class McCormickUnderestimator(Underestimator):
             constraints,
         )
 
-    def _get_bilinear_aux_var(self, metadata, xy_tuple):
-        bilinear_aux_variables = metadata.get('bilinear_aux_variables', {})
-        return bilinear_aux_variables.get(xy_tuple)
+    def _get_bilinear_aux_var(self, problem, ctx, xy_tuple):
+        bilinear_aux_variables = \
+            ctx.metadata.get(BILINEAR_AUX_VAR_META, dict())
+        aux = bilinear_aux_variables.get(xy_tuple, None)
+
+        if aux is not None:
+            return aux
+
+        problem_bilinear_aux_variables = \
+            problem.root.metadata.get(PROBLEM_BILINEAR_AUX_VAR_META, dict())
+
+        aux = problem_bilinear_aux_variables.get(xy_tuple, None)
+        if aux is None:
+            return None
+
+        return problem.variable(aux)
 
     def _underestimate_bilinear_term(self, problem, term, ctx):
-        bilinear_aux_vars = ctx.metadata['bilinear_aux_variables']
+        bilinear_aux_vars = ctx.metadata[BILINEAR_AUX_VAR_META]
         x_expr = term.var1
         y_expr = term.var2
 
         xy_tuple = self._bilinear_tuple(x_expr, y_expr)
-        w = self._get_bilinear_aux_var(ctx.metadata, xy_tuple)
-        if w is not None:
-            new_expr = LinearExpression([w], [term.coefficient], 0.0)
-            return new_expr, []
+        w = self._get_bilinear_aux_var(problem, ctx, xy_tuple)
 
-        x = problem.variable_view(term.var1)
-        y = problem.variable_view(term.var2)
+        if w is None:
+            x_l = problem.lower_bound(x_expr)
+            x_u = problem.upper_bound(x_expr)
+
+            y_l = problem.lower_bound(y_expr)
+            y_u = problem.upper_bound(y_expr)
+
+            if term.var1 == term.var2:
+                assert np.isclose(x_l, y_l) and np.isclose(x_u, y_u)
+                w_bounds = Interval(x_l, x_u) ** 2
+            else:
+                w_bounds = Interval(x_l, x_u) * Interval(y_l, y_u)
+
+            w = Variable(
+                self._format_aux_name(term.var1, term.var2),
+                w_bounds.lower_bound,
+                w_bounds.upper_bound,
+                Domain.REAL,
+            )
+
+            reference = BilinearTermReference(x_expr, y_expr)
+
+            w.reference = reference
+            bilinear_aux_vars[xy_tuple] = w
+            constraints = self._generate_envelope_constraints(problem, term, w)
+            ctx.metadata[BILINEAR_ENVELOPE_GENERATED_META].add(xy_tuple)
+        elif xy_tuple not in ctx.metadata[BILINEAR_ENVELOPE_GENERATED_META]:
+            constraints = self._generate_envelope_constraints(problem, term, w)
+            ctx.metadata[BILINEAR_ENVELOPE_GENERATED_META].add(xy_tuple)
+        else:
+            constraints = []
+
+        new_expr = LinearExpression([w], [term.coefficient], 0.0)
+
+        return new_expr, constraints
+
+    def _generate_envelope_constraints(self, problem, term, w):
+        x_expr = term.var1
+        y_expr = term.var2
+
+        x = problem.variable_view(x_expr)
+        y = problem.variable_view(y_expr)
 
         x_l = x.lower_bound()
         x_u = x.upper_bound()
@@ -104,27 +171,8 @@ class McCormickUnderestimator(Underestimator):
             _is_inf(y_u)
         )
 
-        reference = BilinearTermReference(term.var1, term.var2)
-
-        if term.var1 == term.var2:
-            assert np.isclose(x_l, y_l) and np.isclose(x_u, y_u)
-            w_bounds = Interval(x_l, x_u) ** 2
-        else:
-            w_bounds = Interval(x_l, x_u) * Interval(y_l, y_u)
-
-        w = Variable(
-            self._format_aux_name(term.var1, term.var2),
-            w_bounds.lower_bound,
-            w_bounds.upper_bound,
-            Domain.REAL,
-        )
-        w.reference = reference
-        bilinear_aux_vars[xy_tuple] = w
-
-        new_expr = LinearExpression([w], [term.coefficient], 0.0)
-
         if any_unbounded:
-            return new_expr, []
+            return []
 
         assert not _is_inf(x_l)
         assert not _is_inf(x_u)
@@ -157,34 +205,34 @@ class McCormickUnderestimator(Underestimator):
                 0.0,
             )
 
-            return new_expr, [upper_bound_0, upper_bound_1, lower_bound_0]
-        else:
-            upper_bound_0 = Constraint(
-                self._format_constraint_name(w, 'ub_0'),
-                LinearExpression([y_expr, x_expr, w], [x_l, y_l, -1], -x_l*y_l),
-                None,
-                0.0,
-            )
-            upper_bound_1 = Constraint(
-                self._format_constraint_name(w, 'ub_1'),
-                LinearExpression([y_expr, x_expr, w], [x_u, y_u, -1], -x_u*y_u),
-                None,
-                0.0,
-            )
-            lower_bound_0 = Constraint(
-                self._format_constraint_name(w, 'lb_0'),
-                LinearExpression([y_expr, x_expr, w], [-x_u, -y_l, 1], x_u*y_l),
-                None,
-                0.0,
-            )
-            lower_bound_1 = Constraint(
-                self._format_constraint_name(w, 'lb_1'),
-                LinearExpression([y_expr, x_expr, w], [-x_l, -y_u, 1], x_l*y_u),
-                None,
-                0.0,
-            )
+            return [upper_bound_0, upper_bound_1, lower_bound_0]
 
-            return new_expr, [upper_bound_0, upper_bound_1, lower_bound_0, lower_bound_1]
+        upper_bound_0 = Constraint(
+            self._format_constraint_name(w, 'ub_0'),
+            LinearExpression([y_expr, x_expr, w], [x_l, y_l, -1], -x_l*y_l),
+            None,
+            0.0,
+        )
+        upper_bound_1 = Constraint(
+            self._format_constraint_name(w, 'ub_1'),
+            LinearExpression([y_expr, x_expr, w], [x_u, y_u, -1], -x_u*y_u),
+            None,
+            0.0,
+        )
+        lower_bound_0 = Constraint(
+            self._format_constraint_name(w, 'lb_0'),
+            LinearExpression([y_expr, x_expr, w], [-x_u, -y_l, 1], x_u*y_l),
+            None,
+            0.0,
+        )
+        lower_bound_1 = Constraint(
+            self._format_constraint_name(w, 'lb_1'),
+            LinearExpression([y_expr, x_expr, w], [-x_l, -y_u, 1], x_l*y_u),
+            None,
+            0.0,
+        )
+
+        return [upper_bound_0, upper_bound_1, lower_bound_0, lower_bound_1]
 
     def _format_aux_name(self, x, y):
         return '_aux_bilinear_{}_{}'.format(x.name, y.name)

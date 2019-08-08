@@ -12,13 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""GALINI Problem and its children."""
+
+# TODO(fra): fix pylint issues
+# pylint: skip-file
+
 import warnings
 import numpy as np
 import galini_core as core
 from galini.core.reference import BilinearTermReference
 
 
+# Redefine here to avoid circular import
+BILINEAR_AUX_VAR_META = 'bilinear_aux_variables'
+
+
 class VariableView:
+    """Variable bounds and domain in a problem."""
     def __init__(self, problem, variable):
         self.problem = problem
         self.variable = variable
@@ -92,7 +102,7 @@ class Objective:
         self.metadata = dict()
 
 
-class _ProblemBase:
+class _ProblemBase: # pylint: disable=too-many-public-methods
     def __init__(self, name):
         self.name = name
         self.parent = None
@@ -155,10 +165,14 @@ class _ProblemBase:
         return self._variable_value(var, self._starting_points_mask)
 
     def set_starting_point(self, var, value):
-        return self._set_variable_value(var, value, self._starting_points, self._starting_points_mask)
+        return self._set_variable_value(
+            var, value, self._starting_points, self._starting_points_mask
+        )
 
     def starting_point(self, var):
-        return self._variable_value(var, self._starting_points, self._starting_points_mask)
+        return self._variable_value(
+            var, self._starting_points, self._starting_points_mask
+        )
 
     def has_value(self, var):
         return self._variable_value(var, self._values_mask)
@@ -171,13 +185,17 @@ class _ProblemBase:
         return self._variable_value(var, self._values, self._fixed_mask)
 
     def set_value(self, var, value):
-        return self._set_variable_value(var, value, self._values, self._values_mask)
+        return self._set_variable_value(
+            var, value, self._values, self._values_mask
+        )
 
     def is_fixed(self, var):
         return self._variable_value(var, self._fixed_mask)
 
     def fix(self, var, value):
-        return self._set_variable_value(var, value, self._values, self._fixed_mask)
+        return self._set_variable_value(
+            var, value, self._values, self._fixed_mask
+        )
 
     def unfix(self, var):
         self._fixed_mask[var.idx] = False
@@ -238,6 +256,7 @@ class Problem(_ProblemBase):
     def __init__(self, name):
         super().__init__(name)
         self._dag = core.Graph()
+        self.root = self
 
         self.name = name
         self.metadata = dict()
@@ -322,9 +341,10 @@ class Problem(_ProblemBase):
         if variable.reference:
             ref = variable.reference
             if isinstance(ref, BilinearTermReference):
-                if not self.metadata.get('bilinear_aux_variables'):
-                    self.metadata['bilinear_aux_variables'] = {}
-                self.metadata['bilinear_aux_variables'][(ref.var1.idx, ref.var2.idx)] = variable
+                if not self.metadata.get(BILINEAR_AUX_VAR_META):
+                    self.metadata[BILINEAR_AUX_VAR_META] = dict()
+                xy_tuple = (ref.var1.idx, ref.var2.idx)
+                self.metadata[BILINEAR_AUX_VAR_META][xy_tuple] = variable
         new_var = self._dag.insert_vertex(variable)
         self._variables.append(new_var)
 
@@ -353,8 +373,10 @@ class Problem(_ProblemBase):
     def add_constraint(self, constraint):
         """Add constraint to the problem."""
         if constraint.name in self._constraints_map:
-            raise RuntimeError('Duplicate constraint {}'.format(constraint.name))
-        root_expr = self._dag.insert_tree(constraint.root_expr)
+            raise RuntimeError(
+                'Duplicate constraint {}'.format(constraint.name)
+            )
+        _root_expr = self._dag.insert_tree(constraint.root_expr)
         self._constraints.append(constraint)
         self._constraints_map[constraint.name] = constraint
         return constraint
@@ -363,7 +385,7 @@ class Problem(_ProblemBase):
         """Add objective to the problem."""
         if self._objectives:
             raise RuntimeError('Adding additional objectives.')
-        root_expr = self._dag.insert_tree(objective.root_expr)
+        _root_expr = self._dag.insert_tree(objective.root_expr)
 
         self._objectives.append(objective)
         self._objectives_map[objective.name] = objective
@@ -384,6 +406,7 @@ class ChildProblem(_ProblemBase):
         super().__init__(parent.name)
         self._copy_variable_info(parent)
         self.parent = parent
+        self.root = parent.root
 
     def _copy_variable_info(self, parent):
         self._domains = parent._domains.copy()

@@ -19,6 +19,7 @@ from galini.math import mc, almost_ge, almost_le
 from galini.core import (
     IpoptSolution as CoreIpoptSolution,
 )
+from galini.pyomo.postprocess import PROBLEM_RLT_CONS_INFO
 from galini.solvers import (
     Solution,
     Status,
@@ -75,7 +76,7 @@ def _solution_is_feasible(run_id, problem, solution, fg_x):
     logger.debug(run_id, 'Checking infeasibility')
     i = 0
     for _, constraint in enumerate(problem.constraints):
-        if constraint.metadata.get('rlt_constraint_info'):
+        if constraint.metadata.get(PROBLEM_RLT_CONS_INFO):
             continue
         lb = constraint.lower_bound
         if lb is None:
