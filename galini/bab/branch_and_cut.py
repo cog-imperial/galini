@@ -11,54 +11,53 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """Branch & Cut algorithm."""
-from collections import namedtuple
+
 import datetime
-import logging
+
 import numpy as np
 import pyomo.environ as pe
-from galini.math import mc, is_close
-from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.core.expr.current import identify_variables
 import coramin.domain_reduction.obbt as coramin_obbt
 from coramin.relaxations.auto_relax import relax
+from pyomo.core.expr.current import identify_variables
+from pyomo.core.kernel.component_set import ComponentSet
 from suspect.expression import ExpressionType
 from suspect.interval import Interval
+
 from galini.bab.node import NodeSolution
-from galini.bab.strategy import KSectionBranchingStrategy
-from galini.bab.selection import BestLowerBoundSelectionStrategy
 from galini.bab.relaxations import ConvexRelaxation, LinearRelaxation
-from galini.relaxations.relaxed_problem import RelaxedProblem
+from galini.bab.selection import BestLowerBoundSelectionStrategy
+from galini.bab.strategy import KSectionBranchingStrategy
+from galini.config import (
+    OptionsGroup,
+    IntegerOption,
+)
+from galini.core import LinearExpression, SumExpression, Domain
 from galini.logging import get_logger, DEBUG
-from galini.util import expr_to_str
+from galini.math import mc, is_close
+from galini.quantities import relative_gap, absolute_gap
+from galini.relaxations.relaxed_problem import RelaxedProblem
 from galini.special_structure import (
     propagate_special_structure,
     perform_fbbt,
 )
-from galini.quantities import relative_gap, absolute_gap
-from galini.core import Constraint, LinearExpression, SumExpression, Domain, Sense
-from galini.cuts import CutsGeneratorsManager
 from galini.timelimit import (
     seconds_left,
     current_time,
     seconds_elapsed_since,
     timeout,
 )
-from galini.config import (
-    OptionsGroup,
-    NumericOption,
-    IntegerOption,
-    EnumOption,
-)
-
+from galini.util import expr_to_str
 
 logger = get_logger(__name__)
 
-coramin_logger = coramin_obbt.logger
+coramin_logger = coramin_obbt.logger # pylint: disable=invalid-name
 coramin_logger.disabled = True
 
 
-class CutsState(object):
+class CutsState:
+    """Cut loop state."""
     def __init__(self):
         self.round = 0
         self.lower_bound = -np.inf
@@ -67,16 +66,23 @@ class CutsState(object):
         self.previous_solution = None
 
     def update(self, solution, paranoid=False, atol=None, rtol=None):
+        """Update cut state with `solution`."""
         self.round += 1
         current_objective = solution.objective.value
         if paranoid:
+            close = is_close(
+                current_objective, self.lower_bound, atol=atol, rtol=rtol
+            )
             increased = (
                 current_objective >= self.lower_bound or
-                is_close(current_objective, self.lower_bound, atol=atol, rtol=rtol)
+                close
             )
             if not increased:
                 msg = 'Lower bound in cuts phase decreased: {} to {}'
-                raise RuntimeError(msg.format(self.lower_bound, current_objective))
+                raise RuntimeError(
+                    msg.format(self.lower_bound, current_objective)
+                )
+
         self.lower_bound = current_objective
         if self.first_solution is None:
             self.first_solution = current_objective
@@ -85,13 +91,17 @@ class CutsState(object):
             self.latest_solution = current_objective
 
     def __str__(self):
-        return 'CutsState(round={}, lower_bound={})'.format(self.round, self.lower_bound)
+        return 'CutsState(round={}, lower_bound={})'.format(
+            self.round, self.lower_bound
+        )
 
     def __repr__(self):
         return '<{} at {}>'.format(str(self), hex(id(self)))
 
 
+# pylint: disable=too-many-instance-attributes
 class BranchAndCutAlgorithm:
+    """Branch and Cut algorithm."""
     name = 'branch_and_cut'
 
     def __init__(self, galini, solver):
@@ -124,13 +134,17 @@ class BranchAndCutAlgorithm:
         self._monotonicity = None
         self._convexity = None
 
+    # pylint: disable=line-too-long
     @staticmethod
     def algorithm_options():
+        """Return options for BranchAndCutAlgorithm"""
         return OptionsGroup('branch_and_cut', [
             IntegerOption('maxiter', default=20, description='Number of cut rounds'),
         ])
 
+    # pylint: disable=too-many-branches
     def before_solve(self, model, problem):
+        """Callback called before solve."""
         try:
             obbt_timelimit = self.solver.config['obbt_timelimit']
             obbt_start_time = current_time()
@@ -152,7 +166,9 @@ class BranchAndCutAlgorithm:
             solver = pe.SolverFactory('cplex_persistent')
             solver.set_instance(relaxed_model)
             obbt_simplex_maxiter = self.solver.config['obbt_simplex_maxiter']
-            solver._solver_model.parameters.simplex.limits.iterations.set(obbt_simplex_maxiter)
+            # TODO(fra): make this non-cplex specific
+            simplex_limits = solver._solver_model.parameters.simplex.limits # pylint: disable=protected-access
+            simplex_limits.iterations.set(obbt_simplex_maxiter)
             # collect variables in nonlinear constraints
             nonlinear_variables = ComponentSet()
             for constraint in model.component_data_objects(ctype=pe.Constraint):
@@ -160,22 +176,28 @@ class BranchAndCutAlgorithm:
                 if constraint.body.polynomial_degree() == 1:
                     continue
 
-                for var in identify_variables(constraint.body, include_fixed=False):
+                for var in identify_variables(constraint.body,
+                                              include_fixed=False):
                     # Coramin will complain about variables that are fixed
                     # Note: Coramin uses an hard-coded 1e-6 tolerance
                     if var.lb is None or var.ub is None:
                         nonlinear_variables.add(var)
                     else:
-                        if not (var.ub - var.lb < 1e-6):
+                        if not var.ub - var.lb < 1e-6:
                             nonlinear_variables.add(var)
 
-            relaxed_vars = [getattr(relaxed_model, v.name) for v in nonlinear_variables]
+            relaxed_vars = [
+                getattr(relaxed_model, v.name)
+                for v in nonlinear_variables
+            ]
 
             logger.info(0, 'Performing OBBT on {} variables', len(relaxed_vars))
 
             time_left = obbt_timelimit - seconds_elapsed_since(obbt_start_time)
             with timeout(time_left, 'Timeout in OBBT'):
-                result = coramin_obbt.perform_obbt(relaxed_model, solver, relaxed_vars)
+                result = coramin_obbt.perform_obbt(
+                    relaxed_model, solver, relaxed_vars
+                )
 
             if result is None:
                 return
@@ -191,13 +213,17 @@ class BranchAndCutAlgorithm:
                 new_ub = _safe_ub(vv.domain, new_ub, old_ub)
                 if not new_lb is None and not new_ub is None:
                     if is_close(new_lb, new_ub, atol=mc.epsilon):
-                        if old_lb is not None and is_close(new_lb, old_lb, atol=mc.epsilon):
+                        if old_lb is not None and \
+                                is_close(new_lb, old_lb, atol=mc.epsilon):
                             new_ub = new_lb
                         else:
                             new_lb = new_ub
                 vv.set_lower_bound(new_lb)
                 vv.set_upper_bound(new_ub)
-                logger.debug(0, '  {}: [{}, {}]', v.name, vv.lower_bound(), vv.upper_bound())
+                logger.debug(
+                    0, '  {}: [{}, {}]',
+                    v.name, vv.lower_bound(), vv.upper_bound()
+                )
 
         except TimeoutError:
             logger.info(0, 'OBBT timed out')
@@ -217,7 +243,10 @@ class BranchAndCutAlgorithm:
             rtol=self.relative_tolerance,
             atol=self.tolerance,
         )
-        assert (state.lower_bound <= state.upper_bound or bounds_close)
+
+        if self.galini.paranoid_mode:
+            assert (state.lower_bound <= state.upper_bound or bounds_close)
+
         return (
             rel_gap <= self.relative_tolerance or
             abs_gap <= self.tolerance
@@ -236,20 +265,27 @@ class BranchAndCutAlgorithm:
             self._timeout()
         )
 
-    def _solve_problem_at_node(self, run_id, problem, relaxed_problem, tree, node):
+    # pylint: disable=too-many-branches
+    def _solve_problem_at_node(self, run_id, problem, relaxed_problem,
+                               tree, node):
         logger.info(
             run_id,
             'Starting Cut generation iterations. Maximum iterations={}',
             self.cuts_maxiter)
+        generators_name = [
+            g.name for g in self._cuts_generators_manager.generators
+        ]
         logger.info(
             run_id,
             'Using cuts generators: {}',
-            ', '.join([g.name for g in self._cuts_generators_manager.generators]))
+            ', '.join(generators_name)
+        )
 
         logger.debug(run_id, 'Variables bounds of problem')
         for v in problem.variables:
             vv = problem.variable_view(v)
-            logger.debug(run_id, '\t{}\t({}, {})', v.name, vv.lower_bound(), vv.upper_bound())
+            logger.debug(run_id, '\t{}\t({}, {})', v.name,
+                         vv.lower_bound(), vv.upper_bound())
 
         # Check if problem is convex in current domain, in that case
         # use IPOPT to solve it (if all variables are reals)
@@ -263,20 +299,29 @@ class BranchAndCutAlgorithm:
 
         if not node.has_parent:
             # It's root node, try to find a feasible integer solution
-            feasible_solution = self._find_root_node_feasible_solution(run_id, problem)
-            logger.info(run_id, 'Initial feasible solution: {}', feasible_solution)
+            feasible_solution = \
+                self._find_root_node_feasible_solution(run_id, problem)
+            logger.info(
+                run_id, 'Initial feasible solution: {}', feasible_solution
+            )
         else:
             feasible_solution = None
 
         if logger.level <= DEBUG:
             logger.debug(run_id, 'Relaxed Problem')
-            logger.debug(run_id,  'Variables:')
+            logger.debug(run_id, 'Variables:')
             relaxed = relaxed_problem.relaxed
 
             for v in relaxed.variables:
                 vv = relaxed.variable_view(v)
-                logger.debug(run_id, '\t{}: [{}, {}] c {}', v.name, vv.lower_bound(), vv.upper_bound(), vv.domain)
-            logger.debug(run_id, 'Objective: {}', expr_to_str(relaxed.objective.root_expr))
+                logger.debug(
+                    run_id, '\t{}: [{}, {}] c {}',
+                    v.name, vv.lower_bound(), vv.upper_bound(), vv.domain
+                )
+            logger.debug(
+                run_id, 'Objective: {}',
+                expr_to_str(relaxed.objective.root_expr)
+            )
             logger.debug(run_id, 'Constraints:')
             for constraint in relaxed.constraints:
                 logger.debug(
@@ -298,7 +343,8 @@ class BranchAndCutAlgorithm:
                not self._timeout() and
                not self._cuts_iterations_exceeded(cuts_state)):
             feasible, new_cuts, mip_solution = self._perform_cut_round(
-                run_id, problem, relaxed_problem.relaxed, linear_problem.relaxed, cuts_state, tree, node
+                run_id, problem, relaxed_problem.relaxed,
+                linear_problem.relaxed, cuts_state, tree, node
             )
 
             if not feasible:
@@ -329,7 +375,10 @@ class BranchAndCutAlgorithm:
                         0.0
                     )
 
-            logger.debug(run_id, 'Updating CutState: State={}, Solution={}', cuts_state, mip_solution)
+            logger.debug(
+                run_id, 'Updating CutState: State={}, Solution={}',
+                cuts_state, mip_solution
+            )
 
             cuts_state.update(
                 mip_solution,
@@ -338,7 +387,7 @@ class BranchAndCutAlgorithm:
                 rtol=self.relative_tolerance,
             )
 
-            if len(new_cuts) == 0:
+            if not new_cuts:
                 break
 
         logger.debug(
@@ -348,8 +397,9 @@ class BranchAndCutAlgorithm:
             tree.upper_bound
         )
 
-        if (cuts_state.lower_bound >= tree.upper_bound and
-            not is_close(cuts_state.lower_bound, tree.upper_bound, atol=mc.epsilon)):
+        if cuts_state.lower_bound >= tree.upper_bound and \
+                not is_close(cuts_state.lower_bound, tree.upper_bound,
+                             atol=mc.epsilon):
             # No improvement
             return NodeSolution(mip_solution, None)
 
@@ -359,29 +409,44 @@ class BranchAndCutAlgorithm:
 
         primal_solution = self._solve_primal(problem, mip_solution)
 
-        if not primal_solution.status.is_success() and feasible_solution is not None:
+        if not primal_solution.status.is_success() and \
+                feasible_solution is not None:
             # Could not get primal solution, but have a feasible solution
             return NodeSolution(mip_solution, feasible_solution)
 
         return NodeSolution(mip_solution, primal_solution)
 
     def solve_problem_at_root(self, run_id, problem, tree, node):
+        """Solve problem at root node."""
         self._perform_fbbt(run_id, problem, tree, node)
         relaxed_problem = self._build_convex_relaxation(problem)
-        self._cuts_generators_manager.before_start_at_root(run_id, problem, relaxed_problem.relaxed)
-        solution = self._solve_problem_at_node(run_id, problem, relaxed_problem, tree, node)
-        self._cuts_generators_manager.after_end_at_root(run_id, problem, relaxed_problem.relaxed, solution)
+        self._cuts_generators_manager.before_start_at_root(
+            run_id, problem, relaxed_problem.relaxed
+        )
+        solution = self._solve_problem_at_node(
+            run_id, problem, relaxed_problem, tree, node
+        )
+        self._cuts_generators_manager.after_end_at_root(
+            run_id, problem, relaxed_problem.relaxed, solution
+        )
         self._bounds = None
         self._convexity = None
         self._monotonicity = None
         return solution
 
     def solve_problem_at_node(self, run_id, problem, tree, node):
+        """Solve problem at non root node."""
         self._perform_fbbt(run_id, problem, tree, node)
         relaxed_problem = self._build_convex_relaxation(problem)
-        self._cuts_generators_manager.before_start_at_node(run_id, problem, relaxed_problem.relaxed)
-        solution = self._solve_problem_at_node(run_id, problem, relaxed_problem, tree, node)
-        self._cuts_generators_manager.after_end_at_node(run_id, problem, relaxed_problem.relaxed, solution)
+        self._cuts_generators_manager.before_start_at_node(
+            run_id, problem, relaxed_problem.relaxed
+        )
+        solution = self._solve_problem_at_node(
+            run_id, problem, relaxed_problem, tree, node
+        )
+        self._cuts_generators_manager.after_end_at_node(
+            run_id, problem, relaxed_problem.relaxed, solution
+        )
         self._bounds = None
         self._convexity = None
         self._monotonicity = None
@@ -405,7 +470,8 @@ class BranchAndCutAlgorithm:
         )
         return RelaxedProblem(relaxation, problem)
 
-    def _perform_cut_round(self, run_id, problem, relaxed_problem, linear_problem, cuts_state, tree, node):
+    def _perform_cut_round(self, run_id, problem, relaxed_problem,
+                           linear_problem, cuts_state, tree, node):
         logger.debug(run_id, 'Round {}. Solving linearized problem.', cuts_state.round)
 
         mip_solution = self._mip_solver.solve(linear_problem)
@@ -422,8 +488,13 @@ class BranchAndCutAlgorithm:
 
         # Generate new cuts
         new_cuts = self._cuts_generators_manager.generate(
-            run_id, problem, relaxed_problem, linear_problem, mip_solution, tree, node)
-        logger.debug(run_id, 'Round {}. Adding {} cuts.', cuts_state.round, len(new_cuts))
+            run_id, problem, relaxed_problem, linear_problem, mip_solution,
+            tree, node
+        )
+        logger.debug(
+            run_id, 'Round {}. Adding {} cuts.',
+            cuts_state.round, len(new_cuts)
+        )
         return True, new_cuts, mip_solution
 
     def _find_root_node_feasible_solution(self, run_id, problem):
@@ -435,15 +506,23 @@ class BranchAndCutAlgorithm:
             np.random.seed(seed)
 
         if not problem.has_integer_variables():
-            return self._find_root_node_feasible_solution_continuous(run_id, problem)
-        return self._find_root_node_feasible_solution_mixed_integer(run_id, problem)
+            return self._find_root_node_feasible_solution_continuous(
+                run_id, problem
+            )
 
-    def _find_root_node_feasible_solution_continuous(self, run_id, problem):
-        start_time = current_time()
-        end_time = min(
-            start_time + datetime.timedelta(seconds=self.root_node_feasible_solution_search_timelimit),
-            start_time + datetime.timedelta(seconds=seconds_left())
+        return self._find_root_node_feasible_solution_mixed_integer(
+            run_id, problem
         )
+
+    def _find_root_node_feasible_solution_continuous(self, _run_id, problem):
+        start_time = current_time()
+        feasible_solution_search_time = min(
+            datetime.timedelta(
+                seconds=self.root_node_feasible_solution_search_timelimit
+            ),
+            datetime.timedelta(seconds=seconds_left())
+        )
+        end_time = start_time + feasible_solution_search_time
         # Can't pass 0 as time limit to ipopt
         now = current_time()
         if end_time <= start_time:
@@ -455,14 +534,18 @@ class BranchAndCutAlgorithm:
         feasible_solution = None
         is_timeout = False
         start_time = current_time()
-        end_time = min(
-            start_time + datetime.timedelta(seconds=self.root_node_feasible_solution_search_timelimit),
-            start_time + datetime.timedelta(seconds=seconds_left())
+        feasible_solution_search_time = min(
+            datetime.timedelta(
+                seconds=self.root_node_feasible_solution_search_timelimit
+            ),
+            datetime.timedelta(seconds=seconds_left())
         )
+        end_time = start_time + feasible_solution_search_time
         iteration = 1
 
         if end_time <= start_time:
             return None
+
         while not feasible_solution and not is_timeout:
             if self._timeout():
                 is_timeout = True
@@ -494,7 +577,10 @@ class BranchAndCutAlgorithm:
                 if solution.status.is_success():
                     feasible_solution = solution
 
-            logger.info(run_id, 'Iteration {}: Solution is {}', iteration, solution.status.description())
+            logger.info(
+                run_id, 'Iteration {}: Solution is {}',
+                iteration, solution.status.description()
+            )
             iteration += 1
 
         # unfix all variables
@@ -511,11 +597,12 @@ class BranchAndCutAlgorithm:
         if mip_solution.solution_pool is None:
             return solution
         for mip_solution_from_pool in mip_solution.solution_pool:
-            solution_from_pool = \
-                self._solve_primal_with_solution(problem, mip_solution_from_pool.inner)
+            solution_from_pool = self._solve_primal_with_solution(
+                problem, mip_solution_from_pool.inner
+            )
             if solution_from_pool.status.is_success():
                 return solution_from_pool
-        # No solution from pool was feasible, return original infeasible solution
+        # No solution from pool was feasible, return original infeasible sol
         return solution
 
     def _solve_primal_with_solution(self, problem, mip_solution):
@@ -563,7 +650,7 @@ class BranchAndCutAlgorithm:
     def _cuts_iterations_exceeded(self, state):
         return state.round > self.cuts_maxiter
 
-    def _perform_fbbt(self, run_id, problem, tree, node):
+    def _perform_fbbt(self, run_id, problem, _tree, node):
         logger.debug(run_id, 'Performing FBBT')
         try:
             bounds = perform_fbbt(
@@ -575,6 +662,7 @@ class BranchAndCutAlgorithm:
             self._bounds, self._monotonicity, self._convexity = \
                 propagate_special_structure(problem, bounds)
 
+        # pylint: disable=broad-except
         except Exception as ex:
             logger.warning(run_id, 'FBBT Failed: {}', str(ex))
             self._bounds, self._monotonicity, self._convexity = \
@@ -605,7 +693,10 @@ class BranchAndCutAlgorithm:
                 cause_infeasibility = v
 
         if cause_infeasibility is not None:
-            logger.info(run_id, 'Bounds on variable {} cause infeasibility', v.name)
+            logger.info(
+                run_id, 'Bounds on variable {} cause infeasibility',
+                cause_infeasibility.name
+            )
         else:
             for v in problem.variables:
                 vv = problem.variable_view(v)
@@ -660,7 +751,9 @@ def _convert_linear_expr(linear_problem, expr, objvar=None):
                     coefficients[ch.idx] = 0
                 coefficients[ch.idx] += expr.coefficient(ch)
         else:
-            raise ValueError('Invalid ExpressionType {}'.format(expr.expression_type))
+            raise ValueError(
+                'Invalid ExpressionType {}'.format(expr.expression_type)
+            )
 
     children = []
     coeffs = []
