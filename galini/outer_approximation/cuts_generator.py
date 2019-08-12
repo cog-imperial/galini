@@ -169,7 +169,10 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         linear_expr_idx = [c.root_expr.idx for c in linear_constraints]
         nonlinear_expr_idx = [c.root_expr.idx for c in nonlinear_constraints]
 
-        mip_values = [v.value for v in mip_solution.variables]
+        mip_values = [
+            _mip_variable_value(linear_problem, v)
+            for v in mip_solution.variables
+        ]
         nonlinear_mip_values = mip_values[:relaxed_problem.num_variables]
 
         linear_expr_eval = \
@@ -371,3 +374,22 @@ class OuterApproximationCutsGenerator(CutsGenerator):
 
     def _cut_name(self, i, name):
         return '_outer_approximation_{}_{}_r_{}'.format(i, name, self._round)
+
+
+def _mip_variable_value(problem, solution):
+    if solution.value is not None:
+        return solution.value
+    var = problem.variable_view(solution.name)
+    lb = var.lower_bound()
+    ub = var.upper_bound()
+    if lb is None:
+        if ub is None:
+            return 0.0
+        return ub
+
+    if ub is None:
+        if lb is None:
+            return 0.0
+        return lb
+
+    return lb + (ub / 2.0)
