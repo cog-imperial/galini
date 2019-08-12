@@ -11,22 +11,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """SDP Cuts generator."""
+
+import platform
+from ctypes import cdll, c_double
+from itertools import combinations_with_replacement, chain
+from operator import itemgetter
+from os import path
+
 import numpy as np
 from networkx import enumerate_all_cliques, from_numpy_matrix
 from suspect.expression import ExpressionType
-from galini.config import CutsGeneratorOptions, NumericOption, EnumOption
-from galini.core import LinearExpression, SumExpression, QuadraticExpression
-from galini.cuts import CutType, Cut, CutsGenerator
 
 from galini.abb.relaxation import AlphaBBRelaxation
+from galini.config import CutsGeneratorOptions, NumericOption, EnumOption
 from galini.core import Constraint
+from galini.core import LinearExpression, SumExpression, QuadraticExpression
+from galini.cuts import CutType, Cut, CutsGenerator
+from galini.logging import get_logger
 from galini.math import mc, is_close
-from operator import itemgetter
-from itertools import combinations_with_replacement, chain
-from os import path
-import platform
-from ctypes import cdll, c_double
+
+
+logger = get_logger(__name__)
 
 
 class SdpCutsGenerator(CutsGenerator):
@@ -181,7 +188,7 @@ class SdpCutsGenerator(CutsGenerator):
         return cuts
 
     def _generate(self, run_id, problem, _relaxed_problem, linear_problem, solution, tree, node):
-        rank_list = self._get_sdp_selection(linear_problem, solution)
+        rank_list = self._get_sdp_selection(run_id, linear_problem, solution)
         agg_list = self._agg_list_rescaled
         nb_sdp_cuts = 0
 
@@ -240,13 +247,19 @@ class SdpCutsGenerator(CutsGenerator):
             lifted_mat[var2.idx, var1.idx] = var_sol.value
         return lifted_mat
 
-    def _get_sdp_selection(self, problem, solution):
+    def _get_sdp_selection(self, run_id, problem, solution):
         lifted_mat = self._get_lifted_mat_values(problem, solution)
         agg_list = self._agg_list_rescaled
         nns = self._nns
         l = self._lbs
         d = self._dbs
         rank_list = []
+
+        if solution.dual_values is None:
+            # pylint: disable=line-too-long
+            logger.warning(run_id, 'SDP Cuts Generator requires solution dual values but solver did not return them.')
+            return rank_list
+
         # For each sub-problem rho
         for idx, (clique, inputNNs) in enumerate(agg_list):
             obj_improve = 0
