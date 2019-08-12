@@ -34,9 +34,6 @@ from galini.underestimators.underestimator import (
 # Dictionary of (var1, var2) -> aux
 BILINEAR_AUX_VAR_META = 'bilinear_aux_variables'
 
-# Set containing bilinear term for which envelope was generated
-BILINEAR_ENVELOPE_GENERATED_META = 'bilinear_aux_variable_envelope_generated'
-
 
 class McCormickUnderestimator(Underestimator):
     """Underestimate Quadratic expressions using McCormick envelope."""
@@ -51,9 +48,6 @@ class McCormickUnderestimator(Underestimator):
 
         if ctx.metadata.get(BILINEAR_AUX_VAR_META, None) is None:
             ctx.metadata[BILINEAR_AUX_VAR_META] = dict()
-
-        if ctx.metadata.get(BILINEAR_ENVELOPE_GENERATED_META, None) is None:
-            ctx.metadata[BILINEAR_ENVELOPE_GENERATED_META] = set()
 
         squares = []
         variables = []
@@ -140,10 +134,6 @@ class McCormickUnderestimator(Underestimator):
             w.reference = reference
             bilinear_aux_vars[xy_tuple] = w
             constraints = self._generate_envelope_constraints(problem, term, w)
-            ctx.metadata[BILINEAR_ENVELOPE_GENERATED_META].add(xy_tuple)
-        elif xy_tuple not in ctx.metadata[BILINEAR_ENVELOPE_GENERATED_META]:
-            constraints = self._generate_envelope_constraints(problem, term, w)
-            ctx.metadata[BILINEAR_ENVELOPE_GENERATED_META].add(xy_tuple)
         else:
             constraints = []
 

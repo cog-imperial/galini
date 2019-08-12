@@ -32,7 +32,6 @@ from galini.underestimators import (
 )
 from galini.underestimators.bilinear import (
     BILINEAR_AUX_VAR_META,
-    BILINEAR_ENVELOPE_GENERATED_META,
 )
 
 
@@ -57,14 +56,6 @@ class _RelaxationBase(Relaxation):
 
             relaxed_problem.metadata[BILINEAR_AUX_VAR_META] = \
                 relaxed_bilinear_aux
-
-        # Copy bilinear aux var generated envelope to avoid duplicate cons
-        if BILINEAR_ENVELOPE_GENERATED_META in problem.metadata:
-            original_bilinear_gen = \
-                problem.metadata[BILINEAR_ENVELOPE_GENERATED_META]
-
-            relaxed_problem.metadata[BILINEAR_ENVELOPE_GENERATED_META] = \
-                original_bilinear_gen.copy()
 
         self._ctx.metadata = relaxed_problem.metadata
         self._before_relax(problem)
