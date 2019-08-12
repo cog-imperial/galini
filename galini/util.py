@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""GALINI utility functions."""
 import sys
-from galini.core import Sense
+
 from suspect.expression import ExpressionType, UnaryFunctionType
 
 
@@ -34,6 +35,7 @@ def print_problem(problem, out=None):
         out.write('\n')
     out.write('\n')
 
+
 _FUNC_TYPE_TO_CLS = {
     UnaryFunctionType.Abs: 'abs',
     UnaryFunctionType.Sqrt: 'sqrt',
@@ -48,31 +50,68 @@ _FUNC_TYPE_TO_CLS = {
 }
 
 
+# pylint: disable=invalid-name
 def expr_to_str(expr):
+    """Convert expression to string for debugging."""
     et = expr.expression_type
     children_str = [expr_to_str(ch) for ch in expr.children]
 
     if et == ExpressionType.Sum:
         return ' + '.join(children_str)
-    elif et == ExpressionType.Variable:
+
+    if et == ExpressionType.Variable:
         return expr.name
-    elif et == ExpressionType.Constant:
+
+    if et == ExpressionType.Constant:
         return str(expr.value)
-    elif et == ExpressionType.Division:
+
+    if et == ExpressionType.Division:
         return '({}) / ({})'.format(children_str[0], children_str[1])
-    elif et == ExpressionType.Product:
+
+    if et == ExpressionType.Product:
         return '({}) * ({})'.format(children_str[0], children_str[1])
-    elif et == ExpressionType.Linear:
-        return (' + '.join(['{} {}'.format(expr.coefficient(ch), ch.name) for ch in expr.children])
+
+    if et == ExpressionType.Linear:
+        var_with_coef = [
+            '{} {}'.format(expr.coefficient(ch), ch.name)
+            for ch in expr.children
+        ]
+        return (' + '.join(var_with_coef)
                 + ' + ' + str(expr.constant_term))
-    elif et == ExpressionType.Power:
+
+    if et == ExpressionType.Power:
         return 'pow({}, {})'.format(children_str[0], children_str[1])
-    elif et == ExpressionType.Negation:
+
+    if et == ExpressionType.Negation:
         return '-({})'.format(children_str[0])
-    elif et == ExpressionType.Quadratic:
-        return ' + '.join(['{} {} {}'.format(t.coefficient, t.var1.name, t.var2.name) for t in expr.terms])
-    elif et == ExpressionType.UnaryFunction:
+
+    if et == ExpressionType.Quadratic:
+        term_with_coef = [
+            '{} {} {}'.format(t.coefficient, t.var1.name, t.var2.name)
+            for t in expr.terms
+        ]
+        return ' + '.join(term_with_coef)
+
+    if et == ExpressionType.UnaryFunction:
         return _FUNC_TYPE_TO_CLS[expr.func_type] + '(' + children_str[0] + ')'
 
-    else:
-        raise ValueError('Unhandled expression_type {}'.format(et))
+    raise ValueError('Unhandled expression_type {}'.format(et))
+
+
+def solution_numerical_value(solution, var_lb, var_ub):
+    """Return the solution value if present, use bounds to compute if not."""
+    value = solution.value
+    if value is not None:
+        return value
+
+    if var_lb is not None and var_ub is not None:
+        return var_lb + (var_ub / 2.0)
+
+    if var_lb is None and var_ub is None:
+        return 0.0
+
+    if var_lb is None:
+        return var_ub
+
+    # var_ub is None
+    return var_lb

@@ -25,6 +25,7 @@ from galini.math import is_close, is_inf, mc, almost_ge, almost_le
 from galini.outer_approximation.feasibility_problem import \
     FeasibilityProblemRelaxation
 from galini.relaxations.relaxed_problem import RelaxedProblem
+from galini.util import solution_numerical_value
 
 logger = get_logger(__name__)
 
@@ -376,20 +377,10 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         return '_outer_approximation_{}_{}_r_{}'.format(i, name, self._round)
 
 
-def _mip_variable_value(problem, solution):
-    if solution.value is not None:
-        return solution.value
-    var = problem.variable_view(solution.name)
-    lb = var.lower_bound()
-    ub = var.upper_bound()
-    if lb is None:
-        if ub is None:
-            return 0.0
-        return ub
-
-    if ub is None:
-        if lb is None:
-            return 0.0
-        return lb
-
-    return lb + (ub / 2.0)
+def _mip_variable_value(problem, sol):
+    v = problem.variable_view(sol.name)
+    return solution_numerical_value(
+        sol,
+        problem.lower_bound(v),
+        problem.upper_bound(v),
+    )

@@ -20,6 +20,7 @@ from galini.core import LinearExpression, SumExpression, QuadraticExpression
 from galini.cuts import CutType, Cut, CutsGenerator
 from galini.math import mc, is_close
 from galini.logging import get_logger
+from galini.util import solution_numerical_value
 
 
 logger = get_logger(__name__)
@@ -262,13 +263,16 @@ class TriangleCutsGenerator(CutsGenerator):
         x_vals = [0] * 3
         x_vals_scaled = [0] * 3
         l = self._lbs
+        u = self._ubs
         d = self._dbs
         for idx_clique, cl in enumerate(triple_cliques):
             # If the domain of any variables is very small, don't consider cut
             if any(d[i] <= self._domain_eps for i in cl):
                 continue
             for idx, var_idx in enumerate(cl):
-                x_vals[idx] = solution.variables[var_idx].value
+                x_vals[idx] = solution_numerical_value(
+                    solution.variables[var_idx], l[var_idx], u[var_idx]
+                )
                 x_vals_scaled[idx] = (x_vals[idx] - l[var_idx])/d[var_idx]
             x01 = (lifted_mat[cl[0], cl[1]] - l[cl[0]]*x_vals[1] - l[cl[1]]*x_vals[0] + l[cl[0]]*l[cl[1]])\
                   /d[cl[0]]/d[cl[1]]
