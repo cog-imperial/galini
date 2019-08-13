@@ -407,7 +407,12 @@ class BranchAndCutAlgorithm:
             # No time for finding primal solution
             return NodeSolution(mip_solution, None)
 
-        primal_solution = self._solve_primal(problem, mip_solution)
+        primal_solution = self._solve_primal_with_solution(
+            problem, mip_solution, fix_all=True
+        )
+        new_primal_solution = self._solve_primal(problem, mip_solution)
+        if new_primal_solution is not None:
+            primal_solution = new_primal_solution
 
         if not primal_solution.status.is_success() and \
                 feasible_solution is not None:
@@ -593,10 +598,12 @@ class BranchAndCutAlgorithm:
         solution = self._solve_primal_with_solution(problem, mip_solution)
         if solution.status.is_success():
             return solution
-        # Try solutions from mip solution pool, if avilable
+        # Try solutions from mip solution pool, if available
         if mip_solution.solution_pool is None:
             return solution
         for mip_solution_from_pool in mip_solution.solution_pool:
+            if seconds_left() <= 0:
+                return solution
             solution_from_pool = self._solve_primal_with_solution(
                 problem, mip_solution_from_pool.inner
             )
@@ -605,7 +612,7 @@ class BranchAndCutAlgorithm:
         # No solution from pool was feasible, return original infeasible sol
         return solution
 
-    def _solve_primal_with_solution(self, problem, mip_solution):
+    def _solve_primal_with_solution(self, problem, mip_solution, fix_all=False):
         # Solve original problem
         # Use mip solution as starting point
         for v, sv in zip(problem.variables, mip_solution.variables):
@@ -628,6 +635,8 @@ class BranchAndCutAlgorithm:
                 # integer variables. Simply round these values up
                 if not is_close(np.trunc(value), value, atol=mc.epsilon):
                     value = min(view.upper_bound(), np.ceil(value))
+                problem.fix(v, value)
+            elif fix_all:
                 problem.fix(v, value)
             else:
                 problem.set_starting_point(v, value)

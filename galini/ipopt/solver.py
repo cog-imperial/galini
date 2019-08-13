@@ -68,10 +68,10 @@ class IpoptNLPSolver(Solver):
         timelimit = kwargs.pop('timelimit', None)
 
         if timelimit is None:
-            timelimit = seconds_left()
+            timelimit = max(0, seconds_left())
         else:
             # Respect global time limit
-            timelimit = min(timelimit, seconds_left())
+            timelimit = min(timelimit, max(0, seconds_left()))
 
         self._configure_ipopt_application(app, config, timelimit)
 
@@ -109,6 +109,8 @@ class IpoptNLPSolver(Solver):
             elif isinstance(value, float):
                 options.set_numeric_value(key, value, True, False)
         # set time limit
+        if timelimit <= 0:
+            timelimit = 1 # Set to 1 to avoid ipopt ignoring its value
         options.set_numeric_value('max_cpu_time', timelimit, True, False)
 
     def _configure_ipopt_logger(self, app, config, run_id):
