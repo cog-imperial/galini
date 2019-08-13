@@ -154,75 +154,80 @@ class McCormickUnderestimator(Underestimator):
         y_l = y.lower_bound()
         y_u = y.upper_bound()
 
-        any_unbounded = (
-            _is_inf(x_l) or
-            _is_inf(x_u) or
-            _is_inf(y_l) or
-            _is_inf(y_u)
-        )
-
-        if any_unbounded:
-            return []
-
-        assert not _is_inf(x_l)
-        assert not _is_inf(x_u)
-        assert not _is_inf(y_l)
-        assert not _is_inf(y_u)
-
         #  y     x     w   const
         #  x^L   y^L  -1  -x^L y^L <= 0
         #  x^U   y^U  -1  -x^U y^U <= 0
         # -x^U  -y^L  +1  +x^U y^L <= 0
         # -x^L  -y^U  +1  +x^L y^U <= 0
 
+        constraints = []
+
         if term.var1 == term.var2:
-            upper_bound_0 = Constraint(
-                self._format_constraint_name(w, 'ub_0'),
-                LinearExpression([x_expr, w], [2.0*x_l, -1], -x_l*x_l),
-                None,
-                0.0,
-            )
-            upper_bound_1 = Constraint(
-                self._format_constraint_name(w, 'ub_1'),
-                LinearExpression([x_expr, w], [2.0*x_u, -1], -x_u*x_u),
-                None,
-                0.0,
-            )
-            lower_bound_0 = Constraint(
-                self._format_constraint_name(w, 'lb_0'),
-                LinearExpression([x_expr, w], [-(x_u + x_l), 1], x_u*x_l),
-                None,
-                0.0,
-            )
+            if not _is_inf(x_l):
+                lower_bound_0 = Constraint(
+                    self._format_constraint_name(w, 'lb_0'),
+                    LinearExpression([x_expr, w], [2.0*x_l, -1], -x_l*x_l),
+                    None,
+                    0.0,
+                )
+                constraints.append(lower_bound_0)
 
-            return [upper_bound_0, upper_bound_1, lower_bound_0]
+            if not _is_inf(x_u):
+                lower_bound_1 = Constraint(
+                    self._format_constraint_name(w, 'lb_1'),
+                    LinearExpression([x_expr, w], [2.0*x_u, -1], -x_u*x_u),
+                    None,
+                    0.0,
+                )
+                constraints.append(lower_bound_1)
 
-        upper_bound_0 = Constraint(
-            self._format_constraint_name(w, 'ub_0'),
-            LinearExpression([y_expr, x_expr, w], [x_l, y_l, -1], -x_l*y_l),
-            None,
-            0.0,
-        )
-        upper_bound_1 = Constraint(
-            self._format_constraint_name(w, 'ub_1'),
-            LinearExpression([y_expr, x_expr, w], [x_u, y_u, -1], -x_u*y_u),
-            None,
-            0.0,
-        )
-        lower_bound_0 = Constraint(
-            self._format_constraint_name(w, 'lb_0'),
-            LinearExpression([y_expr, x_expr, w], [-x_u, -y_l, 1], x_u*y_l),
-            None,
-            0.0,
-        )
-        lower_bound_1 = Constraint(
-            self._format_constraint_name(w, 'lb_1'),
-            LinearExpression([y_expr, x_expr, w], [-x_l, -y_u, 1], x_l*y_u),
-            None,
-            0.0,
-        )
+            if not _is_inf(x_u) and not _is_inf(x_l):
+                upper_bound_0 = Constraint(
+                    self._format_constraint_name(w, 'ub_0'),
+                    LinearExpression([x_expr, w], [-(x_u + x_l), 1], x_u*x_l),
+                    None,
+                    0.0,
+                )
+                constraints.append(upper_bound_0)
 
-        return [upper_bound_0, upper_bound_1, lower_bound_0, lower_bound_1]
+        else:
+            if not _is_inf(x_l) and not _is_inf(y_l):
+                lower_bound_0 = Constraint(
+                    self._format_constraint_name(w, 'lb_0'),
+                    LinearExpression([y_expr, x_expr, w], [x_l, y_l, -1], -x_l*y_l),
+                    None,
+                    0.0,
+                )
+                constraints.append(lower_bound_0)
+
+            if not _is_inf(x_u) and not _is_inf(y_u):
+                lower_bound_1 = Constraint(
+                    self._format_constraint_name(w, 'lb_1'),
+                    LinearExpression([y_expr, x_expr, w], [x_u, y_u, -1], -x_u*y_u),
+                    None,
+                    0.0,
+                )
+                constraints.append(lower_bound_1)
+
+            if not _is_inf(x_u) and not _is_inf(y_l):
+                upper_bound_0 = Constraint(
+                    self._format_constraint_name(w, 'ub_0'),
+                    LinearExpression([y_expr, x_expr, w], [-x_u, -y_l, 1], x_u*y_l),
+                    None,
+                    0.0,
+                )
+                constraints.append(upper_bound_0)
+
+            if not _is_inf(x_l) and not _is_inf(y_u):
+                upper_bound_1 = Constraint(
+                    self._format_constraint_name(w, 'ub_1'),
+                    LinearExpression([y_expr, x_expr, w], [-x_l, -y_u, 1], x_l*y_u),
+                    None,
+                    0.0,
+                )
+                constraints.append(upper_bound_1)
+
+        return constraints
 
     def _format_aux_name(self, x, y):
         return '_aux_bilinear_{}_{}'.format(x.name, y.name)
