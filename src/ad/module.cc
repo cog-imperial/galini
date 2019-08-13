@@ -30,6 +30,7 @@ void init_adfunc(py::module& m, const char *name) {
   py::class_<ADFunc<U>>(m, name)
     .def("forward", &ADFunc<U>::forward)
     .def("reverse", &ADFunc<U>::reverse)
+    .def("jacobian", &ADFunc<U>::jacobian)
     .def("hessian", py::overload_cast<const std::vector<U>&, std::size_t>(&ADFunc<U>::hessian))
     .def("hessian",
 	 py::overload_cast<const std::vector<U>&, const std::vector<U>&>(&ADFunc<U>::hessian));

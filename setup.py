@@ -178,6 +178,7 @@ setup(
         'galini.solvers': [
             'mip=galini.mip.solver:MIPSolver',
             'ipopt=galini.ipopt:IpoptNLPSolver',
+            'slsqp=galini.slsqp:SlsqpSolver',
             'bab=galini.bab:BranchAndBoundSolver',
         ],
         'galini.cuts_generators': [

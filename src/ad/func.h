@@ -44,6 +44,10 @@ public:
     return f_->Reverse(q, w);
   }
 
+  std::vector<U> jacobian(const std::vector<U>& x) {
+    return f_->Jacobian(x);
+  }
+
   std::vector<U> hessian(const std::vector<U>& x, std::size_t l) {
     return f_->Hessian(x, l);
   }
@@ -77,6 +81,13 @@ public:
     std::vector<ADPyobjectAdapter> pyw(w.size());
     std::copy(w.begin(), w.end(), pyw.begin());
     auto result = f_->Reverse(q, pyw);
+    return std::vector<py::object>(result.begin(), result.end());
+  }
+
+  std::vector<py::object> jacobian(const std::vector<py::object>& x) {
+    std::vector<ADPyobjectAdapter> pyx(x.size());
+    std::copy(x.begin(), x.end(), pyx.begin());
+    auto result = f_->Jacobian(x);
     return std::vector<py::object>(result.begin(), result.end());
   }
 
