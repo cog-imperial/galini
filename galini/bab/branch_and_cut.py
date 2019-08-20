@@ -32,6 +32,7 @@ from galini.bab.strategy import KSectionBranchingStrategy
 from galini.config import (
     OptionsGroup,
     IntegerOption,
+    BoolOption,
 )
 from galini.core import LinearExpression, SumExpression, Domain
 from galini.logging import get_logger, DEBUG
@@ -126,6 +127,7 @@ class BranchAndCutAlgorithm:
 
         bac_config = galini.get_configuration_group('bab.branch_and_cut')
         self.cuts_maxiter = bac_config['maxiter']
+        self._use_milp_relaxation = bac_config['use_milp_relaxation']
 
         self.branching_strategy = KSectionBranchingStrategy(2)
         self.node_selection_strategy = BestLowerBoundSelectionStrategy()
@@ -140,6 +142,7 @@ class BranchAndCutAlgorithm:
         """Return options for BranchAndCutAlgorithm"""
         return OptionsGroup('branch_and_cut', [
             IntegerOption('maxiter', default=20, description='Number of cut rounds'),
+            BoolOption('use_milp_relaxation', default=False, description='Solve MILP relaxations, not LP')
         ])
 
     # pylint: disable=too-many-branches
@@ -339,6 +342,14 @@ class BranchAndCutAlgorithm:
 
         mip_solution = None
 
+        if not self._use_milp_relaxation:
+            originally_integer = []
+            for var in linear_problem.relaxed.variables:
+                vv = linear_problem.relaxed.variable_view(var)
+                if vv.domain.is_integer():
+                    originally_integer.append(var)
+                    linear_problem.relaxed.set_domain(var, Domain.REAL)
+
         while (not self._cuts_converged(cuts_state) and
                not self._timeout() and
                not self._cuts_iterations_exceeded(cuts_state)):
@@ -396,6 +407,13 @@ class BranchAndCutAlgorithm:
             cuts_state.lower_bound,
             tree.upper_bound
         )
+
+        if not self._use_milp_relaxation:
+            for var in originally_integer:
+                linear_problem.relaxed.set_domain(var, Domain.INTEGER)
+
+            # Solve MILP to obtain MILP solution
+            mip_solution = self._mip_solver.solve(linear_problem.relaxed)
 
         if cuts_state.lower_bound >= tree.upper_bound and \
                 not is_close(cuts_state.lower_bound, tree.upper_bound,
