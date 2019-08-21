@@ -162,19 +162,19 @@ class BranchAndBoundSolver(Solver):
                 run_id, current_node.problem, tree, current_node)
             tree.update_node(current_node, solution)
 
-            current_node_converged = not is_close(
+            current_node_converged = is_close(
                 solution.lower_bound,
                 solution.upper_bound,
                 atol=self._algo.tolerance,
                 rtol=self._algo.relative_tolerance,
             )
 
-            if current_node_converged:
+            if not current_node_converged:
                 node_children, branching_point = tree.branch_at_node(current_node)
                 logger.info(run_id, 'Branched at point {}', branching_point)
             else:
-                # We won't explore this part of the tree anymore. Add to phatomed
-                # nodes.
+                # We won't explore this part of the tree anymore.
+                # Add to phatomed nodes.
                 logger.info(run_id, 'Phatom node {}', current_node.coordinate)
                 logger.log_prune_bab_node(run_id, current_node.coordinate)
                 tree.phatom_node(current_node)
