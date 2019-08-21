@@ -33,6 +33,7 @@ class CutsGeneratorsManager:
     """Manages cuts generators."""
     def __init__(self, galini):
         self.galini = galini
+        self._cuts_counters = []
         self._generators = self._initialize_generators(galini)
 
     def _initialize_generators(self, galini):
@@ -50,6 +51,10 @@ class CutsGeneratorsManager:
                     ))
             generator_config = cuts_gen_config[generator_cls.name]
             generators.append(generator_cls(galini, generator_config))
+            counter_name = "{}.cuts_count".format(generator_cls.name)
+            self._cuts_counters.append(
+                self.galini.telemetry.create_counter(counter_name)
+            )
         return generators
 
     @staticmethod
@@ -100,7 +105,7 @@ class CutsGeneratorsManager:
 
         paranoid_mode = self.galini.paranoid_mode
 
-        for gen in self._generators:
+        for gen, counter in zip(self._generators, self._cuts_counters):
             cuts = gen.generate(
                 run_id, problem, relaxed_problem, linear_problem, mip_solution,
                 tree, node
@@ -118,6 +123,7 @@ class CutsGeneratorsManager:
                 if paranoid_mode:
                     _check_cut_coefficients(cut)
                 all_cuts.append(cut)
+            counter.increment(len(cuts))
         return all_cuts
 
 

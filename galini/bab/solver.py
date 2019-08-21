@@ -13,22 +13,19 @@
 # limitations under the License.
 """Generic Branch & Bound solver."""
 import numpy as np
-from galini.logging import get_logger
+
+from galini.bab.branch_and_cut import BranchAndCutAlgorithm
+from galini.bab.solution import BabSolution, BabStatusInterrupted
+from galini.bab.tree import BabTree
 from galini.config import (
     SolverOptions,
     NumericOption,
     IntegerOption,
-    EnumOption,
     BoolOption,
 )
-from galini.bab.tree import BabTree
+from galini.logging import get_logger
+from galini.math import is_close
 from galini.solvers import Solver, OptimalObjective, OptimalVariable
-from galini.cuts import CutsGeneratorsRegistry
-from galini.bab.branch_and_cut import BranchAndCutAlgorithm
-from galini.bab.solution import BabSolution, BabStatusInterrupted
-from galini.math import mc, is_close
-from galini.util import print_problem
-
 
 logger = get_logger(__name__)
 
@@ -45,6 +42,13 @@ class BranchAndBoundSolver(Solver):
         self._algo = BranchAndCutAlgorithm(galini, solver=self)
         self._tree = None
         self._solution = None
+        self._telemetry = galini.telemetry
+        self._upper_bound = \
+            self._telemetry.create_gauge('bac.upper_bound', np.inf)
+        self._lower_bound = \
+            self._telemetry.create_gauge('bac.lower_bound', -np.inf)
+        self._visited_nodes_counter = \
+            self._telemetry.create_counter('bac.visited_nodes', 0)
 
     @staticmethod
     def solver_options():
@@ -83,13 +87,19 @@ class BranchAndBoundSolver(Solver):
         branching_strategy = self._algo.branching_strategy
         node_selection_strategy = self._algo.node_selection_strategy
 
+        bab_iteration = 0
+
         tree = BabTree(problem, branching_strategy, node_selection_strategy)
         self._tree = tree
 
         logger.info(run_id, 'Solving root problem')
         root_solution = self._algo.solve_problem_at_root(run_id, problem, tree, tree.root)
-
         tree.update_root(root_solution)
+        self._upper_bound.set_value(tree.upper_bound)
+        self._lower_bound.set_value(tree.lower_bound)
+        self._visited_nodes_counter.increment(1)
+        self._telemetry.log_at_end_of_iteration(run_id, bab_iteration)
+        bab_iteration += 1
 
         logger.info(run_id, 'Root problem solved, tree state {}', tree.state)
         logger.log_add_bab_node(
@@ -141,11 +151,15 @@ class BranchAndBoundSolver(Solver):
                 )
                 logger.log_prune_bab_node(run_id, current_node.coordinate)
                 tree.phatom_node(current_node)
+                self._upper_bound.set_value(tree.upper_bound)
+                self._lower_bound.set_value(tree.lower_bound)
+                self._visited_nodes_counter.increment(1)
+                self._telemetry.log_at_end_of_iteration(run_id, bab_iteration)
+                bab_iteration += 1
                 continue
 
             solution = self._algo.solve_problem_at_node(
                 run_id, current_node.problem, tree, current_node)
-
             tree.update_node(current_node, solution)
 
             current_node_converged = not is_close(
@@ -177,6 +191,11 @@ class BranchAndBoundSolver(Solver):
                 solution.lower_bound_solution,
                 solution.upper_bound_solution,
             )
+            self._upper_bound.set_value(tree.upper_bound)
+            self._lower_bound.set_value(tree.lower_bound)
+            self._visited_nodes_counter.increment(1)
+            self._telemetry.log_at_end_of_iteration(run_id, bab_iteration)
+            bab_iteration += 1
 
         logger.info(run_id, 'Branch & Bound Finished: {}', tree.state)
         logger.info(run_id, 'Branch & Bound Converged?: {}', self._algo._has_converged(tree.state))

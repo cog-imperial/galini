@@ -17,6 +17,7 @@ from galini.config import ConfigurationManager
 from galini.math import mc
 from galini.solvers import SolversRegistry
 from galini.fbbt import update_fbbt_settings
+from galini.telemetry import Telemetry
 from galini.logging import (
     get_logger,
     apply_config as apply_log_config,
@@ -31,6 +32,7 @@ class Galini:
         self._config_manager = \
             ConfigurationManager(self._solvers_reg, self._cuts_gen_reg)
         self._config = self._config_manager.configuration
+        self._telemetry = Telemetry()
         self.logger = get_logger('galini')
         self.cuts_generators_manager = CutsGeneratorsManager(self)
         self.paranoid_mode = False
@@ -80,6 +82,10 @@ class Galini:
                     'Invalid configuration group "{}"'.format(group)
                 )
         return config
+
+    @property
+    def telemetry(self):
+        return self._telemetry
 
 
 def _update_math_context(galini):

@@ -14,7 +14,12 @@
 
 """GALINI Configuration module."""
 
-__all__ = ['GaliniConfig', 'ConfigurationManager', 'CutsGeneratorOptions']
+__all__ = [
+    'GaliniConfig', 'ConfigurationManager', 'CutsGeneratorOptions',
+    'SolverOptions', 'NumericOption', 'IntegerOption', 'BoolOption',
+    'StringListOption', 'StringOption', 'ExternalSolverOptions',
+    'EnumOption',
+]
 
 from .configuration import GaliniConfig
 from .manager import ConfigurationManager
