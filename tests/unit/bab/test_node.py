@@ -5,7 +5,7 @@ import pyomo.environ as aml
 from tests.unit.bab.conftest import create_solution
 from galini.solvers.solution import OptimalObjective, Solution
 from galini.pyomo import dag_from_pyomo_model
-from galini.bab.node import Node, BranchingPoint, NodeSolution
+from galini.branch_and_bound.node import Node, BranchingPoint, NodeSolution
 
 
 @pytest.fixture()

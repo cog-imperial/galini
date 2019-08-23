@@ -4,13 +4,14 @@ import pyomo.environ as aml
 from galini.pyomo import problem_from_pyomo_model
 from galini.galini import Galini
 from galini.branch_and_cut.algorithm import BranchAndCutAlgorithm
-from galini.bab.relaxations import LinearRelaxation
+from galini.branch_and_bound.relaxations import LinearRelaxation
 from galini.special_structure import propagate_special_structure, perform_fbbt
 from galini.core import Constraint
 from galini.triangle.cuts_generator import TriangleCutsGenerator
 
 
 class FakeSolver:
+    name = 'branch_and_cut'
     config = {
         'obbt_simplex_maxiter': 100,
     }

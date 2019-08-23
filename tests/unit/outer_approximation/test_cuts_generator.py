@@ -4,7 +4,7 @@ import pyomo.environ as pe
 import pytest
 
 from galini.galini import Galini
-from galini.bab.relaxations import LinearRelaxation, ConvexRelaxation
+from galini.branch_and_bound.relaxations import LinearRelaxation, ConvexRelaxation
 from galini.outer_approximation.cuts_generator import (
     OuterApproximationCutsGenerator
 )

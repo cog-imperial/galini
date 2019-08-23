@@ -8,13 +8,14 @@ from galini.galini import Galini
 from galini.config import ConfigurationManager
 from galini.cuts import CutsGeneratorsRegistry
 from galini.branch_and_cut.algorithm import BranchAndCutAlgorithm
-from galini.bab.relaxations import LinearRelaxation
+from galini.branch_and_bound.relaxations import LinearRelaxation
 from galini.special_structure import propagate_special_structure, perform_fbbt
 from galini.core import Constraint
 from galini.sdp.cuts_generator import SdpCutsGenerator
 
 
 class FakeSolver:
+    name = 'branch_and_cut'
     config = {
         'obbt_simplex_maxiter': 100,
     }

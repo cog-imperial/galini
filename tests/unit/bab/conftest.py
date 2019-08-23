@@ -1,6 +1,6 @@
 # pylint: skip-file
 from galini.solvers.solution import OptimalObjective, Solution
-from galini.bab.node import NodeSolution
+from galini.branch_and_bound.node import NodeSolution
 
 
 def create_solution(lb, ub):

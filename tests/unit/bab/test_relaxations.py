@@ -4,7 +4,7 @@ import numpy as np
 import pyomo.environ as pe
 from galini.core import LinearExpression, QuadraticExpression, SumExpression
 from galini.pyomo import problem_from_pyomo_model
-from galini.bab.relaxations import ConvexRelaxation, LinearRelaxation
+from galini.branch_and_bound.relaxations import ConvexRelaxation, LinearRelaxation
 from galini.special_structure import propagate_special_structure, perform_fbbt
 from galini.util import print_problem, expr_to_str
 

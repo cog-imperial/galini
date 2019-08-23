@@ -3,9 +3,9 @@ import pytest
 import pyomo.environ as aml
 from tests.unit.bab.conftest import create_solution
 from galini.pyomo import dag_from_pyomo_model
-from galini.bab.node import NodeSolution
-from galini.bab.tree import BabTree
-from galini.bab.strategy import KSectionBranchingStrategy
+from galini.branch_and_bound.node import NodeSolution
+from galini.branch_and_bound.tree import BabTree
+from galini.branch_and_bound.strategy import KSectionBranchingStrategy
 
 
 class FakeSelectionStrategy:

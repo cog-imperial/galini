@@ -15,7 +15,7 @@
 """Branch & Bound tree."""
 from collections import namedtuple
 import numpy as np
-from galini.bab.node import Node, NodeSolution
+from galini.branch_and_bound.node import Node, NodeSolution
 from galini.solvers.solution import SolutionPool
 
 

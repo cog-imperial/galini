@@ -42,11 +42,11 @@ def test_ipopt_solver(model_name):
         'logging': {
             'stdout': True,
         },
-        'bac': {
+        'branch_and_cut': {
             'tolerance': atol,
             'relative_tolerance': rtol,
             'root_node_feasible_solution_search_timelimit': 0,
-            'branch_and_cut': {
+            'cuts': {
                 'maxiter': 100,
             }
         },

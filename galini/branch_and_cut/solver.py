@@ -16,8 +16,8 @@
 import numpy as np
 
 from galini.branch_and_cut.algorithm import BranchAndCutAlgorithm
-from galini.bab.solution import BabSolution, BabStatusInterrupted
-from galini.bab.tree import BabTree
+from galini.branch_and_bound.solution import BabSolution, BabStatusInterrupted
+from galini.branch_and_bound.tree import BabTree
 from galini.config import (
     SolverOptions,
     NumericOption,
@@ -32,24 +32,24 @@ logger = get_logger(__name__)
 
 
 class BranchAndBoundSolver(Solver):
-    name = 'bac'
+    name = 'branch_and_cut'
 
     description = 'Generic Branch & Bound solver.'
 
     def __init__(self, galini):
         super().__init__(galini)
-        config = galini.get_configuration_group('bac')
+        config = galini.get_configuration_group(self.name)
         self._catch_keyboard_interrupt = config.get('catch_keyboard_interrupt', True)
         self._algo = BranchAndCutAlgorithm(galini, solver=self)
         self._tree = None
         self._solution = None
         self._telemetry = galini.telemetry
         self._upper_bound = \
-            self._telemetry.create_gauge('bac.upper_bound', np.inf)
+            self._telemetry.create_gauge('branch_and_cut.upper_bound', np.inf)
         self._lower_bound = \
-            self._telemetry.create_gauge('bac.lower_bound', -np.inf)
+            self._telemetry.create_gauge('branch_and_cut.lower_bound', -np.inf)
         self._visited_nodes_counter = \
-            self._telemetry.create_counter('bac.visited_nodes', 0)
+            self._telemetry.create_counter('branch_and_cut.visited_nodes', 0)
 
     @staticmethod
     def solver_options():

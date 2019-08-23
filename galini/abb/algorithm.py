@@ -15,7 +15,7 @@
 """Alpha BB algorithm."""
 import numpy as np
 from galini.logging import Logger
-from galini.bab import (
+from galini.branch_and_bound import (
     BabTree,
     KSectionBranchingStrategy,
     NodeSelectionStrategy,

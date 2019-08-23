@@ -1,7 +1,7 @@
 # pylint: skip-file
 import pytest
 from galini.solvers import OptimalObjective, OptimalVariable
-from galini.bab.solution import BabSolution, BabStatusSuccess
+from galini.branch_and_bound.solution import BabSolution, BabStatusSuccess
 from galini.solvers.solution import SolutionPool
 
 

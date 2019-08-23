@@ -26,10 +26,10 @@ from pyomo.core.kernel.component_set import ComponentSet
 from suspect.expression import ExpressionType
 from suspect.interval import Interval
 
-from galini.bab.node import NodeSolution
-from galini.bab.relaxations import ConvexRelaxation, LinearRelaxation
-from galini.bab.selection import BestLowerBoundSelectionStrategy
-from galini.bab.strategy import KSectionBranchingStrategy
+from galini.branch_and_bound.node import NodeSolution
+from galini.branch_and_bound.relaxations import ConvexRelaxation, LinearRelaxation
+from galini.branch_and_bound.selection import BestLowerBoundSelectionStrategy
+from galini.branch_and_bound.strategy import KSectionBranchingStrategy
 from galini.config import (
     OptionsGroup,
     IntegerOption,
@@ -113,7 +113,7 @@ class BranchAndCutAlgorithm:
         self._mip_solver = galini.instantiate_solver('mip')
         self._cuts_generators_manager = galini.cuts_generators_manager
 
-        bab_config = galini.get_configuration_group('bac')
+        bab_config = galini.get_configuration_group(solver.name)
 
         self.tolerance = bab_config['tolerance']
         self.relative_tolerance = bab_config['relative_tolerance']
@@ -126,7 +126,7 @@ class BranchAndCutAlgorithm:
         self.root_node_feasible_solution_search_timelimit = \
             bab_config['root_node_feasible_solution_search_timelimit']
 
-        bac_config = galini.get_configuration_group('bac.branch_and_cut')
+        bac_config = galini.get_configuration_group('branch_and_cut.cuts')
         self.cuts_maxiter = bac_config['maxiter']
         self._use_milp_relaxation = bac_config['use_milp_relaxation']
 
@@ -141,7 +141,7 @@ class BranchAndCutAlgorithm:
     @staticmethod
     def algorithm_options():
         """Return options for BranchAndCutAlgorithm"""
-        return OptionsGroup('branch_and_cut', [
+        return OptionsGroup('cuts', [
             IntegerOption('maxiter', default=20, description='Number of cut rounds'),
             BoolOption('use_milp_relaxation', default=False, description='Solve MILP relaxations, not LP')
         ])
