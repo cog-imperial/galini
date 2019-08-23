@@ -14,20 +14,18 @@
 """GALINI solve subcommand."""
 
 import sys
-from argparse import ArgumentParser, Namespace
-import signal
-from galini.galini import Galini
+
 from galini.commands import (
     CliCommandWithProblem,
     OutputTable,
     print_output_table,
     add_output_format_parser_arguments,
 )
-from galini.timelimit import start_timelimit, set_timelimit
+from galini.galini import Galini
 from galini.logging import apply_config as apply_logging_config
+from galini.timelimit import start_timelimit, set_timelimit
 
-
-DEFAULT_SOLVER = 'bab'
+DEFAULT_SOLVER = 'bac'
 
 
 class SolveCommand(CliCommandWithProblem):

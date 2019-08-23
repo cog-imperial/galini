@@ -3,7 +3,7 @@ import numpy as np
 import pyomo.environ as aml
 from galini.pyomo import problem_from_pyomo_model
 from galini.galini import Galini
-from galini.bab.branch_and_cut import BranchAndCutAlgorithm
+from galini.branch_and_cut.algorithm import BranchAndCutAlgorithm
 from galini.bab.relaxations import LinearRelaxation
 from galini.special_structure import propagate_special_structure, perform_fbbt
 from galini.core import Constraint

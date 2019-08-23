@@ -21,6 +21,5 @@ __all__ = [
 
 from .tree import BabTree
 from .node import Node, NodeSolution
-from .solver import BranchAndBoundSolver
 from .strategy import BranchingStrategy, KSectionBranchingStrategy
-from .selection import BestLowerBoundSelectionStrategy
+from .selection import BestLowerBoundSelectionStrategy, NodeSelectionStrategy

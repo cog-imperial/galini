@@ -7,7 +7,7 @@ from galini.solvers import SolversRegistry
 from galini.galini import Galini
 from galini.config import ConfigurationManager
 from galini.cuts import CutsGeneratorsRegistry
-from galini.bab.branch_and_cut import BranchAndCutAlgorithm
+from galini.branch_and_cut.algorithm import BranchAndCutAlgorithm
 from galini.bab.relaxations import LinearRelaxation
 from galini.special_structure import propagate_special_structure, perform_fbbt
 from galini.core import Constraint

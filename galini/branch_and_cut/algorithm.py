@@ -1,16 +1,17 @@
-# Copyright 2018 Francesco Ceccon
+#  Copyright 2019 Francesco Ceccon
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
 
 """Branch & Cut algorithm."""
 
@@ -112,7 +113,7 @@ class BranchAndCutAlgorithm:
         self._mip_solver = galini.instantiate_solver('mip')
         self._cuts_generators_manager = galini.cuts_generators_manager
 
-        bab_config = galini.get_configuration_group('bab')
+        bab_config = galini.get_configuration_group('bac')
 
         self.tolerance = bab_config['tolerance']
         self.relative_tolerance = bab_config['relative_tolerance']
@@ -125,7 +126,7 @@ class BranchAndCutAlgorithm:
         self.root_node_feasible_solution_search_timelimit = \
             bab_config['root_node_feasible_solution_search_timelimit']
 
-        bac_config = galini.get_configuration_group('bab.branch_and_cut')
+        bac_config = galini.get_configuration_group('bac.branch_and_cut')
         self.cuts_maxiter = bac_config['maxiter']
         self._use_milp_relaxation = bac_config['use_milp_relaxation']
 

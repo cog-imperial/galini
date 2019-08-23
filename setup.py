@@ -179,7 +179,7 @@ setup(
             'mip=galini.mip.solver:MIPSolver',
             'ipopt=galini.ipopt:IpoptNLPSolver',
             'slsqp=galini.slsqp:SlsqpSolver',
-            'bab=galini.bab:BranchAndBoundSolver',
+            'bac=galini.branch_and_cut:BranchAndBoundSolver',
         ],
         'galini.cuts_generators': [
             'triangle=galini.triangle:TriangleCutsGenerator',
