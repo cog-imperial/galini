@@ -23,11 +23,26 @@ TreeState = namedtuple('TreeState', ['lower_bound', 'upper_bound', 'nodes_visite
 
 
 class BabTree:
+    """Branch & Bound Tree.
+
+    Parameters
+    ----------
+    problem : object
+        problem at node
+    branching_strategy : BranchingStrategy
+        branching strategy
+    selection_strategy : NodeSelectionStrategy
+        node selection strategy
+    """
     def __init__(self, problem, branching_strategy, selection_strategy):
         self.root = Node(problem, tree=self, coordinate=[0])
         self.branching_strategy = branching_strategy
         self.selection_strategy = selection_strategy
-        self.state = TreeState(lower_bound=-np.inf, upper_bound=np.inf, nodes_visited=0)
+        self.state = TreeState(
+            lower_bound=-np.inf,
+            upper_bound=np.inf,
+            nodes_visited=0,
+        )
         self.open_nodes = {}
         self.phatomed_nodes = []
         self.solution_pool = SolutionPool(5)
@@ -112,7 +127,8 @@ class BabTree:
         lower_bound_solution = solution.lower_bound_solution
         upper_bound_solution = solution.upper_bound_solution
 
-        if upper_bound_solution is not None and upper_bound_solution.status.is_success():
+        if (upper_bound_solution is not None and
+                upper_bound_solution.status.is_success()):
             self.solution_pool.add(upper_bound_solution)
             upper_bound_solution = upper_bound_solution
             new_upper_bound = min(
@@ -148,7 +164,8 @@ class BabTree:
         # of their lower bounds.
         # If there are no open nodes, then the lower bound is the lowest
         # of the phatomed nodes lower bounds.
-        if upper_bound_solution is None or not upper_bound_solution.status.is_success():
+        if (upper_bound_solution is None or
+                not upper_bound_solution.status.is_success()):
             new_upper_bound = None
         else:
             new_upper_bound = min(
@@ -183,7 +200,8 @@ class BabTree:
             new_upper_bound = self.state.upper_bound
 
         new_nodes_visited = self.state.nodes_visited + 1
-        self.state = TreeState(new_lower_bound, new_upper_bound, new_nodes_visited)
+        self.state = \
+            TreeState(new_lower_bound, new_upper_bound, new_nodes_visited)
 
     def _open_nodes_lower_bound(self, upper_bound=None):
         return self._nodes_minimum_lower_bound(

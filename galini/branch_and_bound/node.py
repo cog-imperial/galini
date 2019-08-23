@@ -17,10 +17,14 @@ from collections import namedtuple
 from galini.core import VariableView
 
 
-NodeState = namedtuple('NodeState', ['lower_bound_solution', 'upper_bound_solution'])
+NodeState = namedtuple(
+    'NodeState',
+    ['lower_bound_solution', 'upper_bound_solution']
+)
 
 
-class NodeSolution(object):
+class NodeSolution:
+    """Problem solution associated with a node."""
     def __init__(self, lower_bound_solution, upper_bound_solution):
         self.lower_bound_solution = lower_bound_solution
         self.upper_bound_solution = upper_bound_solution
@@ -44,20 +48,7 @@ class NodeSolution(object):
         return solution.objective_value()
 
 
-class BranchingPoint(object):
-    def __init__(self, variable, points):
-        self.variable = variable
-        if not isinstance(points, list):
-            points = [points]
-        self.points = points
-
-    def __str__(self):
-        return 'BranchingPoint(variable={}, points={})'.format(
-            self.variable.variable.name, self.points
-        )
-
-
-class Node(object):
+class Node:
     def __init__(self, problem, tree=None, parent=None,
                  coordinate=None, variable=None, solution=None):
         self.children = None
