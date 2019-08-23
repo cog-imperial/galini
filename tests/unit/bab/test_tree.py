@@ -1,25 +1,11 @@
 # pylint: skip-file
 import pytest
-import pyomo.environ as aml
 import numpy as np
-from tests.unit.bab.conftest import MockSelectionStrategy, create_solution
-from galini.pyomo import dag_from_pyomo_model
-from galini.branch_and_bound.node import Node, NodeSolution
+from tests.unit.bab.conftest import (
+    MockSelectionStrategy, create_solution, create_problem
+)
 from galini.branch_and_bound.strategy import  KSectionBranchingStrategy
 from galini.branch_and_bound.tree import BabTree
-
-
-def create_problem():
-    m = aml.ConcreteModel()
-    m.I = range(5)
-    m.x = aml.Var(m.I, bounds=(-1, 2))
-    m.obj = aml.Objective(expr=sum(m.x[i] for i in m.I))
-    return dag_from_pyomo_model(m)
-
-
-@pytest.fixture()
-def problem():
-    return create_problem()
 
 
 @pytest.fixture()

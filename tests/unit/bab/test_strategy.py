@@ -1,25 +1,14 @@
 # pylint: skip-file
 import pytest
-import pyomo.environ as aml
 from tests.unit.bab.conftest import create_solution
-from galini.pyomo import dag_from_pyomo_model
-from galini.branch_and_bound.node import NodeSolution
 from galini.branch_and_bound.tree import BabTree
 from galini.branch_and_bound.strategy import KSectionBranchingStrategy
+from tests.unit.bab.conftest import problem
 
 
 class FakeSelectionStrategy:
     def insert_node(self, node):
         pass
-
-
-@pytest.fixture()
-def problem():
-    m = aml.ConcreteModel()
-    m.I = range(5)
-    m.x = aml.Var(m.I, bounds=(-1, 2))
-    m.obj = aml.Objective(expr=sum(m.x[i] for i in m.I))
-    return dag_from_pyomo_model(m)
 
 
 @pytest.fixture()

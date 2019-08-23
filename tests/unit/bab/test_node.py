@@ -1,20 +1,9 @@
 # pytest: skip-file
 import pytest
 import numpy as np
-import pyomo.environ as aml
 from tests.unit.bab.conftest import create_solution
-from galini.solvers.solution import OptimalObjective, Solution
-from galini.pyomo import dag_from_pyomo_model
-from galini.branch_and_bound.node import Node, BranchingPoint, NodeSolution
-
-
-@pytest.fixture()
-def problem():
-    m = aml.ConcreteModel()
-    m.I = range(5)
-    m.x = aml.Var(m.I, bounds=(-1, 2))
-    m.obj = aml.Objective(expr=sum(m.x[i] for i in m.I))
-    return dag_from_pyomo_model(m)
+from galini.branch_and_bound.node import Node, BranchingPoint
+from tests.unit.bab.conftest import problem
 
 
 class MockBranching:
