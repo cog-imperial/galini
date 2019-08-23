@@ -314,7 +314,7 @@ class BranchAndCutAlgorithm:
         if logger.level <= DEBUG:
             logger.debug(run_id, 'Relaxed Problem')
             logger.debug(run_id, 'Variables:')
-            relaxed = relaxed_problem.relaxed
+            relaxed = relaxed_problem
 
             for v in relaxed.variables:
                 vv = relaxed.variable_view(v)
@@ -337,7 +337,7 @@ class BranchAndCutAlgorithm:
                     constraint.upper_bound,
                 )
 
-        linear_problem = self._build_linear_relaxation(relaxed_problem.relaxed)
+        linear_problem = self._build_linear_relaxation(relaxed_problem)
 
         cuts_state = CutsState()
 
@@ -355,7 +355,7 @@ class BranchAndCutAlgorithm:
                not self._timeout() and
                not self._cuts_iterations_exceeded(cuts_state)):
             feasible, new_cuts, mip_solution = self._perform_cut_round(
-                run_id, problem, relaxed_problem.relaxed,
+                run_id, problem, relaxed_problem,
                 linear_problem.relaxed, cuts_state, tree, node
             )
 
@@ -447,8 +447,9 @@ class BranchAndCutAlgorithm:
         self._cuts_generators_manager.before_start_at_root(
             run_id, problem, relaxed_problem.relaxed
         )
+        node.storage.convex_problem = relaxed_problem.relaxed
         solution = self._solve_problem_at_node(
-            run_id, problem, relaxed_problem, tree, node
+            run_id, problem, relaxed_problem.relaxed, tree, node
         )
         self._cuts_generators_manager.after_end_at_root(
             run_id, problem, relaxed_problem.relaxed, solution
@@ -462,14 +463,21 @@ class BranchAndCutAlgorithm:
         """Solve problem at non root node."""
         self._perform_fbbt(run_id, problem, tree, node)
         relaxed_problem = self._build_convex_relaxation(problem)
+
+        for v in node.storage.convex_problem.variables:
+            relaxed_var = relaxed_problem.relaxed.variable_view(v)
+            vv = node.storage.convex_problem.variable_view(v)
+            vv.set_lower_bound(relaxed_var.lower_bound())
+            vv.set_upper_bound(relaxed_var.upper_bound())
+
         self._cuts_generators_manager.before_start_at_node(
-            run_id, problem, relaxed_problem.relaxed
+            run_id, problem, node.storage.convex_problem
         )
         solution = self._solve_problem_at_node(
-            run_id, problem, relaxed_problem, tree, node
+            run_id, problem, node.storage.convex_problem, tree, node
         )
         self._cuts_generators_manager.after_end_at_node(
-            run_id, problem, relaxed_problem.relaxed, solution
+            run_id, problem, node.storage.convex_problem, solution
         )
         self._bounds = None
         self._convexity = None

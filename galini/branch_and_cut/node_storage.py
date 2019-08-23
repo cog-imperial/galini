@@ -27,7 +27,9 @@ class NodeStorage:
 
     def branch_at_point(self, branching_point):
         problem_children = branch_at_point(self.problem, branching_point)
-        convex_problem_children = [None] * len(problem_children)
+        convex_problem_children = branch_at_point(
+            self.convex_problem, branching_point
+        )
         assert len(problem_children) == len(convex_problem_children)
 
         return [
