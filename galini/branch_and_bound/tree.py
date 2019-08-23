@@ -27,15 +27,15 @@ class BabTree:
 
     Parameters
     ----------
-    problem : object
-        problem at node
+    storage : object
+        node storage at root node
     branching_strategy : BranchingStrategy
         branching strategy
     selection_strategy : NodeSelectionStrategy
         node selection strategy
     """
-    def __init__(self, problem, branching_strategy, selection_strategy):
-        self.root = Node(problem, tree=self, coordinate=[0])
+    def __init__(self, storage, branching_strategy, selection_strategy):
+        self.root = Node(storage, tree=self, coordinate=[0])
         self.branching_strategy = branching_strategy
         self.selection_strategy = selection_strategy
         self.state = TreeState(

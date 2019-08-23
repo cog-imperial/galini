@@ -18,6 +18,7 @@ import numpy as np
 from galini.branch_and_cut.algorithm import BranchAndCutAlgorithm
 from galini.branch_and_bound.solution import BabSolution, BabStatusInterrupted
 from galini.branch_and_bound.tree import BabTree
+from galini.branch_and_cut.node_storage import NodeStorage
 from galini.config import (
     SolverOptions,
     NumericOption,
@@ -90,11 +91,16 @@ class BranchAndBoundSolver(Solver):
 
         bab_iteration = 0
 
-        tree = BabTree(problem, branching_strategy, node_selection_strategy)
+        root_node_storage = NodeStorage(problem, None)
+        tree = BabTree(
+            root_node_storage, branching_strategy, node_selection_strategy
+        )
         self._tree = tree
 
         logger.info(run_id, 'Solving root problem')
-        root_solution = self._algo.solve_problem_at_root(run_id, problem, tree, tree.root)
+        root_solution = self._algo.solve_problem_at_root(
+            run_id, problem, tree, tree.root
+        )
         tree.update_root(root_solution)
         self._upper_bound.set_value(tree.upper_bound)
         self._lower_bound.set_value(tree.lower_bound)
@@ -123,7 +129,9 @@ class BranchAndBoundSolver(Solver):
                 logger.info(run_id, 'Branched at point {}', branching_point)
                 continue
             else:
-                var_view = current_node.problem.variable_view(current_node.variable)
+                current_node_problem = current_node.storage.problem
+                var_view = \
+                    current_node_problem.variable_view(current_node.variable)
 
                 logger.log_add_bab_node(
                     run_id,
@@ -160,7 +168,7 @@ class BranchAndBoundSolver(Solver):
                 continue
 
             solution = self._algo.solve_problem_at_node(
-                run_id, current_node.problem, tree, current_node)
+                run_id, current_node.storage.problem, tree, current_node)
             tree.update_node(current_node, solution)
 
             current_node_converged = is_close(
@@ -181,7 +189,7 @@ class BranchAndBoundSolver(Solver):
                 tree.phatom_node(current_node)
 
             self._log_problem_information_at_node(
-                run_id, current_node.problem, solution, current_node)
+                run_id, current_node.storage.problem, solution, current_node)
             logger.info(run_id, 'New tree state at {}: {}', current_node.coordinate, tree.state)
             logger.update_variable(run_id, 'z_l', tree.nodes_visited, tree.lower_bound)
             logger.update_variable(run_id, 'z_u', tree.nodes_visited, tree.upper_bound)

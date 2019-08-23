@@ -102,7 +102,7 @@ class Objective:
         self.metadata = dict()
 
 
-class _ProblemBase: # pylint: disable=too-many-public-methods
+class _ProblemBase:  # pylint: disable=too-many-public-methods
     def __init__(self, name):
         self.name = name
         self.parent = None

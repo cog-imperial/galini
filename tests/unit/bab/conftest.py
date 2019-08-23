@@ -4,6 +4,7 @@ import pyomo.environ as pe
 from galini.pyomo.convert import problem_from_pyomo_model
 from galini.solvers.solution import OptimalObjective, Solution
 from galini.branch_and_bound.node import NodeSolution
+from galini.branch_and_bound.branching import branch_at_point
 
 
 def create_problem():
@@ -41,3 +42,17 @@ class MockSolution(Solution):
 class MockSelectionStrategy:
     def insert_node(self, node):
         pass
+
+
+class MockNodeStorage:
+    def __init__(self, problem):
+        self.problem = problem
+
+    def branching_data(self):
+        return self.problem
+
+    def branch_at_point(self, branching_point):
+        children = branch_at_point(self.problem, branching_point)
+        return [
+            MockNodeStorage(child) for child in children
+        ]

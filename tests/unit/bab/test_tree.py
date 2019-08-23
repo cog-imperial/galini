@@ -2,9 +2,10 @@
 import pytest
 import numpy as np
 from tests.unit.bab.conftest import (
-    MockSelectionStrategy, create_solution, create_problem
+    MockSelectionStrategy, create_solution, create_problem, MockNodeStorage
 )
-from galini.branch_and_bound.strategy import  KSectionBranchingStrategy
+from galini.branch_and_bound.strategy import KSectionBranchingStrategy
+from galini.branch_and_bound.branching import BranchingPoint
 from galini.branch_and_bound.tree import BabTree
 
 
@@ -35,15 +36,17 @@ def tree():
      5 : [0, 2, 1]
 
     """
-    t = BabTree(create_problem(), KSectionBranchingStrategy(), MockSelectionStrategy())
+    problem = create_problem()
+    storage = MockNodeStorage(problem)
+    t = BabTree(storage, KSectionBranchingStrategy(), MockSelectionStrategy())
     t.update_root(create_solution(-30.0, 0.0))
     root = t.root
-    for _ in range(3):
-        root.add_children()
+    bp = BranchingPoint(problem.variable(0), [0.0, 0.5])
+    root.branch_at_point(bp)
 
     c = root.children[2]
-    for _ in range(2):
-        c.add_children()
+    bp = BranchingPoint(problem.variable(1), [0.0])
+    c.branch_at_point(bp)
 
     return t
 
@@ -67,14 +70,22 @@ class TestBabTreeCoordinates:
 
 class TestBabTreeState:
     def test_update_root(self):
-        tree = BabTree(create_problem(), KSectionBranchingStrategy(), MockSelectionStrategy())
+        tree = BabTree(
+            MockNodeStorage(create_problem()),
+            KSectionBranchingStrategy(),
+            MockSelectionStrategy()
+        )
         sol = create_solution(5.0, 10.0)
         tree.update_root(sol)
         assert np.isclose(5.0, tree.lower_bound)
         assert np.isclose(10.0, tree.upper_bound)
 
     def test_update_with_new_lower_bound(self):
-        tree = BabTree(create_problem(), KSectionBranchingStrategy(), MockSelectionStrategy())
+        tree = BabTree(
+            MockNodeStorage(create_problem()),
+            KSectionBranchingStrategy(),
+            MockSelectionStrategy()
+        )
         sol = create_solution(5.0, 10.0)
         tree.update_root(sol)
 
@@ -101,7 +112,11 @@ class TestBabTreeState:
         assert np.isclose(10.0, tree.upper_bound)
 
     def test_update_with_new_upper_bound(self):
-        tree = BabTree(create_problem(), KSectionBranchingStrategy(), MockSelectionStrategy())
+        tree = BabTree(
+            MockNodeStorage(create_problem()),
+            KSectionBranchingStrategy(),
+            MockSelectionStrategy()
+        )
         sol = create_solution(5.0, 10.0)
 
         tree.update_root(sol)
@@ -124,7 +139,11 @@ class TestBabTreeState:
         assert np.isclose(9.0, tree.upper_bound)
 
     def test_update_with_both_new_bounds(self):
-        tree = BabTree(create_problem(), KSectionBranchingStrategy(), MockSelectionStrategy())
+        tree = BabTree(
+            MockNodeStorage(create_problem()),
+            KSectionBranchingStrategy(),
+            MockSelectionStrategy()
+        )
         sol = create_solution(5.0, 10.0)
 
         tree.update_root(sol)

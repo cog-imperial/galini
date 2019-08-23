@@ -1,6 +1,6 @@
 # pylint: skip-file
 import pytest
-from tests.unit.bab.conftest import create_solution
+from tests.unit.bab.conftest import create_solution, MockNodeStorage
 from galini.branch_and_bound.tree import BabTree
 from galini.branch_and_bound.strategy import KSectionBranchingStrategy
 from tests.unit.bab.conftest import problem
@@ -19,7 +19,11 @@ def solution():
 class TestKFoldBranchingStrategy:
     def test_bisect(self, problem, solution):
         bisect_strat = KSectionBranchingStrategy()
-        tree = BabTree(problem, bisect_strat, FakeSelectionStrategy())
+        tree = BabTree(
+            MockNodeStorage(problem),
+            bisect_strat,
+            FakeSelectionStrategy(),
+        )
         node = tree.root
         for i in range(5):
             node.update(create_solution(0.0, 1.0))
@@ -31,7 +35,11 @@ class TestKFoldBranchingStrategy:
 
     def test_ksection(self, problem, solution):
         ksection_strat = KSectionBranchingStrategy(7)
-        tree = BabTree(problem, ksection_strat, FakeSelectionStrategy())
+        tree = BabTree(
+            MockNodeStorage(problem),
+            ksection_strat,
+            FakeSelectionStrategy(),
+        )
         node = tree.root
         for i in range(5):
             node.update(create_solution(0.0, 1.0))
