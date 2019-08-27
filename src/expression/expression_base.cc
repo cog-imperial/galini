@@ -26,7 +26,8 @@ namespace galini {
 namespace expression {
 
 namespace detail {
-  ad::ExpressionTreeData expression_tree_data(Expression::const_ptr root) {
+  ad::ExpressionTreeData expression_tree_data(Expression::const_ptr root,
+					      index_t num_variables) {
     std::vector<Expression::const_ptr> nodes;
     std::set<std::uintptr_t> seen = {root->uid()};
     std::deque<Expression::const_ptr> to_visit = {root};
@@ -49,12 +50,15 @@ namespace detail {
     ad::ExpressionTreeData::Storage storage = ad::ExpressionTreeData::Storage::map;
     // by reversing we hopefully retain ordering of children
     std::reverse(nodes.begin(), nodes.end());
+    if (num_variables > 0) {
+      return ad::ExpressionTreeData(nodes, storage, num_variables);
+    }
     return ad::ExpressionTreeData(nodes, storage);
   }
 }
 
-ad::ExpressionTreeData Expression::expression_tree_data() const {
-  return detail::expression_tree_data(self());
+ad::ExpressionTreeData Expression::expression_tree_data(index_t num_variables) const {
+  return detail::expression_tree_data(self(), num_variables);
 }
 
 } // namespace expression

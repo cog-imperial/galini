@@ -36,9 +36,19 @@ class ExpressionTreeData {
 public:
   using Storage = ExpressionTreeDataStorage;
 
+  explicit ExpressionTreeData(const std::vector<Expression::const_ptr>& vertices,
+			      Storage storage, index_t num_variables)
+    : vertices_(vertices), storage_(storage), num_variables_(num_variables) {
+  }
+
   explicit ExpressionTreeData(const std::vector<Expression::const_ptr>& vertices, Storage storage)
     : vertices_(vertices), storage_(storage) {
     compute_num_variables();
+  }
+
+  explicit ExpressionTreeData(std::vector<Expression::const_ptr>&& vertices,
+			      Storage storage, index_t num_variables)
+    : vertices_(vertices), storage_(storage), num_variables_(num_variables) {
   }
 
   explicit ExpressionTreeData(std::vector<Expression::const_ptr>&& vertices, Storage storage)
@@ -47,8 +57,9 @@ public:
   }
 
   ExpressionTreeData(ExpressionTreeData&& other)
-    : vertices_(std::move(other.vertices_)), storage_(other.storage_) {
-    compute_num_variables();
+    : vertices_(std::move(other.vertices_))
+    , storage_(other.storage_)
+    , num_variables_(other.num_variables_) {
   }
 
   ExpressionTreeData(const ExpressionTreeData&) = delete;

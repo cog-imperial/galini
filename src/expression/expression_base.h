@@ -134,7 +134,7 @@ public:
     return this->shared_from_this();
   }
 
-  ad::ExpressionTreeData expression_tree_data() const;
+  ad::ExpressionTreeData expression_tree_data(index_t num_variables = 0) const;
 
   virtual ADFloat eval(values_ptr<ADFloat>& values) const = 0;
   virtual ADObject eval(values_ptr<ADObject>& values) const = 0;

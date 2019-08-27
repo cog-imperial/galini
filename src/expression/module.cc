@@ -41,7 +41,7 @@ void init_module(py::module& m) {
     .def_property_readonly("num_children", &Expression::num_children)
     .def_property_readonly("children", &Expression::children)
     .def_property_readonly("args", &Expression::children)
-    .def("expression_tree_data", &Expression::expression_tree_data)
+    .def("expression_tree_data", &Expression::expression_tree_data, py::arg("num_variables") = 0)
     .def("nargs", [](const Expression &ex) { return ex.num_children(); })
     .def("polynomial_degree", &Expression::polynomial_degree)
     .def("nth_children", &Expression::nth_children)
