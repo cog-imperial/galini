@@ -21,8 +21,9 @@ class CutType(Enum):
     LOCAL = 2
 
 
-class Cut(object):
-    def __init__(self, type_, name, expr, lower_bound, upper_bound, is_objective=False):
+class Cut:
+    def __init__(self, type_, name, expr, lower_bound, upper_bound,
+                 is_objective=False):
         if not isinstance(type_, CutType):
             raise ValueError('type_ must be a valid CutType')
         self.type_ = type_
@@ -31,14 +32,27 @@ class Cut(object):
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
         self.is_objective = is_objective
+        self._index = None
+
+    @property
+    def index(self):
+        """Get cut index in cut pool."""
+        return self._index
+
+    @index.setter
+    def index(self, index):
+        """Set index after adding to cut pool."""
+        if self._index is not None:
+            raise RuntimeError('Trying to set index of already indexed cut')
+        self._index = index
 
     @property
     def is_global(self):
-        return self._type == CutType.GLOBAL
+        return self.type_ == CutType.GLOBAL
 
     @property
     def is_local(self):
-        return self._type == CutType.LOCAL
+        return self.type_ == CutType.LOCAL
 
 
 class CutsGenerator(metaclass=abc.ABCMeta):

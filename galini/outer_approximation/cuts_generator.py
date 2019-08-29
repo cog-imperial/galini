@@ -71,6 +71,8 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         super().__init__(galini, config)
         self.galini = galini
 
+        self._counter = 0
+
         self._round = 0
         self._feasibility_problem = None
         self._nlp_solution = None
@@ -364,6 +366,7 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         cut_name = self._cut_name(i, constraint.name)
         cut_expr = LinearExpression(x, d_fg, -np.dot(d_fg, x_k) + g_x[i])
 
+        self._counter += 1
         return Cut(
             CutType.LOCAL,
             cut_name,
@@ -374,7 +377,9 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         )
 
     def _cut_name(self, i, name):
-        return '_outer_approximation_{}_{}_r_{}'.format(i, name, self._round)
+        return '_outer_approximation_{}_{}_r_{}_{}'.format(
+            i, name, self._round, self._counter
+        )
 
 
 def _mip_variable_value(problem, sol):
