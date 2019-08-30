@@ -133,6 +133,8 @@ class BranchAndCutAlgorithm:
         self.branching_strategy = KSectionBranchingStrategy(2)
         self.node_selection_strategy = BestLowerBoundSelectionStrategy()
 
+        self._parent_cuts = \
+            galini.telemetry.create_counter('branch_and_cut.parent_cuts', 0)
         self._bounds = None
         self._monotonicity = None
         self._convexity = None
@@ -352,65 +354,10 @@ class BranchAndCutAlgorithm:
                     linear_problem.relaxed.set_domain(var, Domain.REAL)
 
         if node.parent:
-            logger.info(run_id, 'Adding inherit cuts.')
-            first_loop = True
-            while first_loop or num_violated_cuts > 0:
-                first_loop = False
-                num_violated_cuts = 0
-
-                lp_solution = self._mip_solver.solve(linear_problem.relaxed)
-                variables_x = [
-                    v.value
-                    for v in lp_solution.variables[:relaxed_problem.num_variables]
-                ]
-
-                for cut in relaxed_problem.parent.cut_node_storage.cuts:
-                    expr_tree_data = cut.expr.expression_tree_data(
-                        relaxed_problem.num_variables
-                    )
-                    fg = expr_tree_data.eval(variables_x)
-                    fg_x = fg.forward(0, variables_x)[0]
-                    violated = False
-                    if cut.lower_bound is not None:
-                        if not almost_ge(fg_x, cut.lower_bound, atol=mc.epsilon):
-                            violated = True
-                    if cut.upper_bound is not None:
-                        if not almost_le(fg_x, cut.upper_bound, atol=mc.epsilon):
-                            violated = True
-
-                    if violated:
-                        logger.debug(
-                            run_id,
-                            'Cut {} was violated. Adding back to problem.',
-                            cut.name,
-                        )
-                        num_violated_cuts += 1
-                        if not cut.is_objective:
-                            linear_problem.add_constraint(
-                                cut.name,
-                                cut.expr,
-                                cut.lower_bound,
-                                cut.upper_bound,
-                            )
-                        else:
-                            objvar = linear_problem.relaxed.variable('_objvar')
-                            assert cut.lower_bound is None
-                            assert cut.upper_bound is None
-                            new_root_expr = SumExpression([
-                                cut.expr,
-                                LinearExpression([objvar], [-1.0], 0.0)
-                            ])
-                            linear_problem.add_constraint(
-                                cut.name,
-                                new_root_expr,
-                                None,
-                                0.0
-                            )
-                logger.info(
-                    run_id,
-                    'Number of violated cuts at end of loop: {}',
-                    num_violated_cuts,
-                )
+            parent_cuts_count = self._add_cuts_from_parent(
+                run_id, relaxed_problem, linear_problem
+            )
+            self._parent_cuts.increment(parent_cuts_count)
 
         while (not self._cuts_converged(cuts_state) and
                not self._timeout() and
@@ -424,32 +371,9 @@ class BranchAndCutAlgorithm:
                 return NodeSolution(mip_solution, feasible_solution)
 
             # Add cuts as constraints
-            # TODO(fra): use problem global and local cuts
             for cut in new_cuts:
-
                 relaxed_problem.add_cut_to_pool(cut)
-
-                if not cut.is_objective:
-                    linear_problem.add_constraint(
-                        cut.name,
-                        cut.expr,
-                        cut.lower_bound,
-                        cut.upper_bound,
-                    )
-                else:
-                    objvar = linear_problem.relaxed.variable('_objvar')
-                    assert cut.lower_bound is None
-                    assert cut.upper_bound is None
-                    new_root_expr = SumExpression([
-                        cut.expr,
-                        LinearExpression([objvar], [-1.0], 0.0)
-                    ])
-                    linear_problem.add_constraint(
-                        cut.name,
-                        new_root_expr,
-                        None,
-                        0.0
-                    )
+                _add_cut_to_problem(linear_problem, cut)
 
             logger.debug(
                 run_id, 'Updating CutState: State={}, Solution={}',
@@ -690,6 +614,51 @@ class BranchAndCutAlgorithm:
             problem.unfix(v)
 
         return feasible_solution
+
+    def _add_cuts_from_parent(self, run_id, relaxed_problem, linear_problem):
+        logger.info(run_id, 'Adding inherit cuts.')
+        first_loop = True
+        inherit_cuts_count = 0
+        while first_loop or num_violated_cuts > 0:
+            first_loop = False
+            num_violated_cuts = 0
+
+            lp_solution = self._mip_solver.solve(linear_problem.relaxed)
+            variables_x = [
+                v.value
+                for v in lp_solution.variables[:relaxed_problem.num_variables]
+            ]
+
+            for cut in relaxed_problem.parent.cut_node_storage.cuts:
+                expr_tree_data = cut.expr.expression_tree_data(
+                    relaxed_problem.num_variables
+                )
+                fg = expr_tree_data.eval(variables_x)
+                fg_x = fg.forward(0, variables_x)[0]
+                violated = False
+                if cut.lower_bound is not None:
+                    if not almost_ge(fg_x, cut.lower_bound, atol=mc.epsilon):
+                        violated = True
+                if cut.upper_bound is not None:
+                    if not almost_le(fg_x, cut.upper_bound, atol=mc.epsilon):
+                        violated = True
+
+                if violated:
+                    logger.debug(
+                        run_id,
+                        'Cut {} was violated. Adding back to problem.',
+                        cut.name,
+                    )
+                    num_violated_cuts += 1
+                    inherit_cuts_count += 1
+                    _add_cut_to_problem(linear_problem, cut)
+
+            logger.info(
+                run_id,
+                'Number of violated cuts at end of loop: {}',
+                num_violated_cuts,
+            )
+        return inherit_cuts_count
 
     def _solve_primal(self, problem, mip_solution):
         solution = self._solve_primal_with_solution(problem, mip_solution)
@@ -934,3 +903,27 @@ def _constraint_is_convex(cvx_map, cons):
 
     # LB <= g(x) <= UB
     return cvx.is_linear()
+
+
+def _add_cut_to_problem(problem, cut):
+    if not cut.is_objective:
+        problem.add_constraint(
+            cut.name,
+            cut.expr,
+            cut.lower_bound,
+            cut.upper_bound,
+        )
+    else:
+        objvar = problem.relaxed.variable('_objvar')
+        assert cut.lower_bound is None
+        assert cut.upper_bound is None
+        new_root_expr = SumExpression([
+            cut.expr,
+            LinearExpression([objvar], [-1.0], 0.0)
+        ])
+        problem.add_constraint(
+            cut.name,
+            new_root_expr,
+            None,
+            0.0
+        )
