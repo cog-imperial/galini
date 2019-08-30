@@ -258,6 +258,19 @@ class BranchAndCutAlgorithm:
             abs_gap <= self.tolerance
         )
 
+    def _cuts_converged(self, state):
+        return self._cuts_generators_manager.has_converged(state)
+
+    def _cuts_iterations_exceeded(self, state):
+        return state.round > self.cuts_maxiter
+
+    def cut_loop_should_terminate(self, state):
+        return (
+            self._cuts_converged(state) or
+            self._cuts_iterations_exceeded(state) or
+            self._timeout()
+        )
+
     def _node_limit_exceeded(self, state):
         return state.nodes_visited > self.node_limit
 
@@ -359,9 +372,7 @@ class BranchAndCutAlgorithm:
             )
             self._parent_cuts.increment(parent_cuts_count)
 
-        while (not self._cuts_converged(cuts_state) and
-               not self._timeout() and
-               not self._cuts_iterations_exceeded(cuts_state)):
+        while self.cut_loop_should_terminate(cuts_state):
             feasible, new_cuts, mip_solution = self._perform_cut_round(
                 run_id, problem, relaxed_problem,
                 linear_problem.relaxed, cuts_state, tree, node
@@ -718,12 +729,6 @@ class BranchAndCutAlgorithm:
     def _solve_convex_problem(self, problem):
         solution = self._nlp_solver.solve(problem)
         return NodeSolution(solution, solution)
-
-    def _cuts_converged(self, state):
-        return self._cuts_generators_manager.has_converged(state)
-
-    def _cuts_iterations_exceeded(self, state):
-        return state.round > self.cuts_maxiter
 
     def _perform_fbbt(self, run_id, problem, _tree, node):
         logger.debug(run_id, 'Performing FBBT')
