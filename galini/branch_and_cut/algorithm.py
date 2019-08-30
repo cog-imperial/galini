@@ -367,12 +367,12 @@ class BranchAndCutAlgorithm:
                     linear_problem.relaxed.set_domain(var, Domain.REAL)
 
         if node.parent:
-            parent_cuts_count = self._add_cuts_from_parent(
+            parent_cuts_count, mip_solution = self._add_cuts_from_parent(
                 run_id, relaxed_problem, linear_problem
             )
             self._parent_cuts.increment(parent_cuts_count)
 
-        while self.cut_loop_should_terminate(cuts_state):
+        while not self.cut_loop_should_terminate(cuts_state):
             feasible, new_cuts, mip_solution = self._perform_cut_round(
                 run_id, problem, relaxed_problem,
                 linear_problem.relaxed, cuts_state, tree, node
@@ -669,7 +669,7 @@ class BranchAndCutAlgorithm:
                 'Number of violated cuts at end of loop: {}',
                 num_violated_cuts,
             )
-        return inherit_cuts_count
+        return inherit_cuts_count, lp_solution
 
     def _solve_primal(self, problem, mip_solution):
         solution = self._solve_primal_with_solution(problem, mip_solution)
