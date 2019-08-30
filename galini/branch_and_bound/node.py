@@ -90,6 +90,11 @@ class Node:
             return -np.inf
         if not solution.status.is_success():
             return -np.inf
+        if self.parent:
+            return max(
+                solution.objective_value(),
+                self.parent.lower_bound,
+            )
         return solution.objective_value()
 
     @property
