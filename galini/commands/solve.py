@@ -56,7 +56,10 @@ class SolveCommand(CliCommandWithProblem):
         start_timelimit()
 
         solver.before_solve(model, problem)
-        solution = solver.solve(problem)
+        solution = solver.solve(
+            problem,
+            known_optimal_objective=args.known_optimal_objective
+        )
 
         if solution is None:
             raise RuntimeError('Solver did not return a solution')
@@ -96,7 +99,18 @@ class SolveCommand(CliCommandWithProblem):
         return "Solve a MINLP"
 
     def add_extra_parser_arguments(self, parser):
-        parser.add_argument('--solver', help='Specify the solver to use', default=DEFAULT_SOLVER)
-        parser.add_argument('--config', help='Specify the configuration file')
-
+        parser.add_argument(
+            '--solver',
+            help='Specify the solver to use',
+            default=DEFAULT_SOLVER,
+        )
+        parser.add_argument(
+            '--config',
+            help='Specify the configuration file',
+        )
+        parser.add_argument(
+            '--known-optimal-objective',
+            help='Specify the known optimal objective',
+            type=float,
+        )
         add_output_format_parser_arguments(parser)

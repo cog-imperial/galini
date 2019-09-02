@@ -19,6 +19,7 @@ from galini.branch_and_cut.algorithm import BranchAndCutAlgorithm
 from galini.branch_and_bound.solution import BabSolution, BabStatusInterrupted
 from galini.branch_and_bound.tree import BabTree
 from galini.branch_and_cut.node_storage import NodeStorage
+from galini.branch_and_cut.telemetry import BranchAndCountTelemetry
 from galini.config import (
     SolverOptions,
     NumericOption,
@@ -28,6 +29,8 @@ from galini.config import (
 from galini.logging import get_logger
 from galini.math import is_close
 from galini.solvers import Solver, OptimalObjective, OptimalVariable
+from galini.timelimit import elapsed_time
+
 
 logger = get_logger(__name__)
 
@@ -41,16 +44,13 @@ class BranchAndBoundSolver(Solver):
         super().__init__(galini)
         config = galini.get_configuration_group(self.name)
         self._catch_keyboard_interrupt = config.get('catch_keyboard_interrupt', True)
-        self._algo = BranchAndCutAlgorithm(galini, solver=self)
         self._tree = None
         self._solution = None
         self._telemetry = galini.telemetry
-        self._upper_bound = \
-            self._telemetry.create_gauge('branch_and_cut.upper_bound', np.inf)
-        self._lower_bound = \
-            self._telemetry.create_gauge('branch_and_cut.lower_bound', -np.inf)
-        self._visited_nodes_counter = \
-            self._telemetry.create_counter('branch_and_cut.visited_nodes', 0)
+        self._bac_telemetry = BranchAndCountTelemetry(galini.telemetry)
+        self._algo = BranchAndCutAlgorithm(
+            galini, solver=self, telemetry=self._bac_telemetry
+        )
 
     @staticmethod
     def solver_options():
@@ -86,6 +86,16 @@ class BranchAndBoundSolver(Solver):
         return self._solution_from_tree(problem, self._tree)
 
     def _bab_loop(self, problem, run_id, **kwargs):
+        known_optimal_objective = kwargs.get('known_optimal_objective', None)
+        if known_optimal_objective is not None:
+            if problem.objective.original_sense.is_minimization():
+                known_optimal_objective = -known_optimal_objective
+
+        self._bac_telemetry.start_timing(
+            known_optimal_objective,
+            elapsed_time(),
+        )
+
         branching_strategy = self._algo.branching_strategy
         node_selection_strategy = self._algo.node_selection_strategy
 
@@ -102,9 +112,7 @@ class BranchAndBoundSolver(Solver):
             run_id, problem, tree, tree.root
         )
         tree.update_root(root_solution)
-        self._upper_bound.set_value(tree.upper_bound)
-        self._lower_bound.set_value(tree.lower_bound)
-        self._visited_nodes_counter.increment(1)
+        self._bac_telemetry.update_at_end_of_iteration(tree, elapsed_time())
         self._telemetry.log_at_end_of_iteration(run_id, bab_iteration)
         bab_iteration += 1
 
@@ -160,9 +168,7 @@ class BranchAndBoundSolver(Solver):
                 )
                 logger.log_prune_bab_node(run_id, current_node.coordinate)
                 tree.phatom_node(current_node)
-                self._upper_bound.set_value(tree.upper_bound)
-                self._lower_bound.set_value(tree.lower_bound)
-                self._visited_nodes_counter.increment(1)
+                self._bac_telemetry.update_at_end_of_iteration(tree, elapsed_time())
                 self._telemetry.log_at_end_of_iteration(run_id, bab_iteration)
                 bab_iteration += 1
                 continue
@@ -200,9 +206,7 @@ class BranchAndBoundSolver(Solver):
                 solution.lower_bound_solution,
                 solution.upper_bound_solution,
             )
-            self._upper_bound.set_value(tree.upper_bound)
-            self._lower_bound.set_value(tree.lower_bound)
-            self._visited_nodes_counter.increment(1)
+            self._bac_telemetry.update_at_end_of_iteration(tree, elapsed_time())
             self._telemetry.log_at_end_of_iteration(run_id, bab_iteration)
             bab_iteration += 1
 

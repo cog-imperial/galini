@@ -37,6 +37,13 @@ class Timelimit(object):
     def set_timelimit(self, t):
         self.timelimit = t
 
+    def elapsed_time(self):
+        if self.start is None:
+            raise RuntimeError('elapsed_time requires started time')
+        now = datetime.datetime.utcnow()
+        difference = now - self.start
+        return difference.total_seconds()
+
     def seconds_left(self):
         if self.start is None:
             return DEFAULT_TIMELIMIT
@@ -48,6 +55,7 @@ class Timelimit(object):
 
 _timelimit = Timelimit(DEFAULT_TIMELIMIT)
 set_timelimit = lambda t: _timelimit.set_timelimit(t)
+elapsed_time = lambda: _timelimit.elapsed_time()
 seconds_left = lambda: _timelimit.seconds_left()
 start_timelimit = lambda: _timelimit.start_now()
 

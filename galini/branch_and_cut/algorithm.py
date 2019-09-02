@@ -106,12 +106,13 @@ class BranchAndCutAlgorithm:
     """Branch and Cut algorithm."""
     name = 'branch_and_cut'
 
-    def __init__(self, galini, solver):
+    def __init__(self, galini, solver, telemetry):
         self.galini = galini
         self.solver = solver
         self._nlp_solver = galini.instantiate_solver('ipopt')
         self._mip_solver = galini.instantiate_solver('mip')
         self._cuts_generators_manager = galini.cuts_generators_manager
+        self._bac_telemetry = telemetry
 
         bab_config = galini.get_configuration_group(solver.name)
 
@@ -133,8 +134,6 @@ class BranchAndCutAlgorithm:
         self.branching_strategy = KSectionBranchingStrategy(2)
         self.node_selection_strategy = BestLowerBoundSelectionStrategy()
 
-        self._parent_cuts = \
-            galini.telemetry.create_counter('branch_and_cut.parent_cuts', 0)
         self._bounds = None
         self._monotonicity = None
         self._convexity = None
@@ -370,7 +369,7 @@ class BranchAndCutAlgorithm:
             parent_cuts_count, mip_solution = self._add_cuts_from_parent(
                 run_id, relaxed_problem, linear_problem
             )
-            self._parent_cuts.increment(parent_cuts_count)
+            self._bac_telemetry.increment_inherited_cuts(parent_cuts_count)
 
         while not self.cut_loop_should_terminate(cuts_state):
             feasible, new_cuts, mip_solution = self._perform_cut_round(
