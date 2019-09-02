@@ -15,6 +15,9 @@
 """Branch & Cut node storage. Contains original and convex problem."""
 
 from galini.branch_and_bound.branching import branch_at_point
+from galini.underestimators.bilinear import (
+    BILINEAR_AUX_VAR_META,
+)
 
 
 class NodeStorage:
@@ -32,8 +35,24 @@ class NodeStorage:
         )
         assert len(problem_children) == len(convex_problem_children)
 
+        # Copy aux variables metadata to children
+        for child_problem in convex_problem_children:
+            _copy_bilinear_aux_var_metadata(self.convex_problem, child_problem)
+
         return [
             NodeStorage(problem, convex_problem)
             for problem, convex_problem
             in zip(problem_children, convex_problem_children)
         ]
+
+def _copy_bilinear_aux_var_metadata(original_problem, child_problem):
+    if BILINEAR_AUX_VAR_META in original_problem.metadata:
+        original_bilinear_aux = \
+            original_problem.metadata[BILINEAR_AUX_VAR_META]
+        relaxed_bilinear_aux = dict()
+
+        for xy_tuple, var in original_bilinear_aux.items():
+            child_var = child_problem.variable(var)
+            relaxed_bilinear_aux[xy_tuple] = child_var
+
+        child_problem.metadata[BILINEAR_AUX_VAR_META] = relaxed_bilinear_aux
