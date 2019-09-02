@@ -88,7 +88,7 @@ class BranchAndBoundSolver(Solver):
     def _bab_loop(self, problem, run_id, **kwargs):
         known_optimal_objective = kwargs.get('known_optimal_objective', None)
         if known_optimal_objective is not None:
-            if problem.objective.original_sense.is_minimization():
+            if not problem.objective.original_sense.is_minimization():
                 known_optimal_objective = -known_optimal_objective
 
         self._bac_telemetry.start_timing(

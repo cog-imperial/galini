@@ -42,22 +42,23 @@ class PrimalDualIntegral:
         self._lower_bound_pct = \
             telemetry.create_gauge('branch_and_cut.lower_bound_integral_pct', 1.0)
 
-    def _compute_gamma(self, optimal_obj, upper_bound):
+    def _compute_gamma(self, optimal_obj, value):
         # Unknown primal
-        if upper_bound is None or is_inf(upper_bound):
+        print(optimal_obj, value)
+        if value is None or is_inf(value):
             return 1.0
 
         # |opt| = |obj| = 0.0
         if is_close(np.abs(optimal_obj), 0.0, atol=mc.epsilon):
-            if is_close(np.abs(upper_bound), 0.0, atol=mc.epsilon):
+            if is_close(np.abs(value), 0.0, atol=mc.epsilon):
                 return 0.0
 
         # opt * obj < 0
-        if optimal_obj * upper_bound < 0:
+        if np.sign(optimal_obj) * np.sign(value) < 0:
             return 1.0
 
-        num = np.abs(optimal_obj - upper_bound)
-        den = max(np.abs(optimal_obj), np.abs(upper_bound))
+        num = np.abs(optimal_obj - value)
+        den = max(np.abs(optimal_obj), np.abs(value))
         return num / den
 
     def start_timing(self, optimal_objective, elapsed_time):
