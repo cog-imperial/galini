@@ -639,6 +639,9 @@ class BranchAndCutAlgorithm:
                 for v in lp_solution.variables[:relaxed_problem.num_variables]
             ]
 
+            if not lp_solution.status.is_success():
+                break
+
             for cut in relaxed_problem.parent.cut_node_storage.cuts:
                 expr_tree_data = cut.expr.expression_tree_data(
                     relaxed_problem.num_variables
