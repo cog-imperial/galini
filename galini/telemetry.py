@@ -32,6 +32,17 @@ class Telemetry:
         self._counters.append(gauge)
         return gauge
 
+    def counters_values(self):
+        def _counter_to_dict(counter):
+            return {
+            'name': counter.name,
+            'value': counter.value,
+            }
+        return [
+            _counter_to_dict(counter)
+            for counter in self._counters
+        ]
+
     def log_at_end_of_iteration(self, run_id, iteration):
         self._logger.info(
             run_id,

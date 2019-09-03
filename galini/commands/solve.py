@@ -92,7 +92,14 @@ class SolveCommand(CliCommandWithProblem):
                 'value': var.value,
             })
 
-        print_output_table([obj_table, var_table], args)
+        counter_table = OutputTable('Counters', [
+            {'id': 'name', 'name': 'Name', 'type': 't'},
+            {'id': 'value', 'name': 'Value', 'type': 'f'},
+        ])
+        for counter in galini.telemetry.counters_values():
+            counter_table.add_row(counter)
+
+        print_output_table([obj_table, var_table, counter_table], args)
 
 
     def help_message(self):

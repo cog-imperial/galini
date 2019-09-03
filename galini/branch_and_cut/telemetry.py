@@ -44,7 +44,6 @@ class PrimalDualIntegral:
 
     def _compute_gamma(self, optimal_obj, value):
         # Unknown primal
-        print(optimal_obj, value)
         if value is None or is_inf(value):
             return 1.0
 
