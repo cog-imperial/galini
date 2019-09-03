@@ -643,24 +643,37 @@ class BranchAndCutAlgorithm:
                 break
 
             for cut in relaxed_problem.parent.cut_node_storage.cuts:
+                is_duplicate = False
+                for constraint in linear_problem.relaxed.constraints:
+                    if constraint.name == cut.name:
+                        is_duplicate = True
+                if is_duplicate:
+                    continue
                 expr_tree_data = cut.expr.expression_tree_data(
                     relaxed_problem.num_variables
                 )
                 fg = expr_tree_data.eval(variables_x)
                 fg_x = fg.forward(0, variables_x)[0]
                 violated = False
+                violation_lb = None
+                violation_ub = None
+
                 if cut.lower_bound is not None:
                     if not almost_ge(fg_x, cut.lower_bound, atol=mc.epsilon):
+                        violation_lb = fg_x - cut.lower_bound
                         violated = True
                 if cut.upper_bound is not None:
                     if not almost_le(fg_x, cut.upper_bound, atol=mc.epsilon):
+                        violation_ub = fg_x - cut.upper_bound
                         violated = True
 
                 if violated:
                     logger.debug(
                         run_id,
-                        'Cut {} was violated. Adding back to problem.',
+                        'Cut {} was violated. Adding back to problem. Violation: LB={}; UB={}',
                         cut.name,
+                        violation_lb,
+                        violation_ub,
                     )
                     num_violated_cuts += 1
                     inherit_cuts_count += 1
@@ -914,7 +927,7 @@ def _constraint_is_convex(cvx_map, cons):
 
 def _add_cut_to_problem(problem, cut):
     if not cut.is_objective:
-        problem.add_constraint(
+        return problem.add_constraint(
             cut.name,
             cut.expr,
             cut.lower_bound,
@@ -928,7 +941,7 @@ def _add_cut_to_problem(problem, cut):
             cut.expr,
             LinearExpression([objvar], [-1.0], 0.0)
         ])
-        problem.add_constraint(
+        return problem.add_constraint(
             cut.name,
             new_root_expr,
             None,

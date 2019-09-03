@@ -45,6 +45,7 @@ class NodeStorage:
             in zip(problem_children, convex_problem_children)
         ]
 
+
 def _copy_bilinear_aux_var_metadata(original_problem, child_problem):
     if BILINEAR_AUX_VAR_META in original_problem.metadata:
         original_bilinear_aux = \

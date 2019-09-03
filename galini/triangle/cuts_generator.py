@@ -47,6 +47,7 @@ class TriangleCutsGenerator(CutsGenerator):
         # Problem info related to triangle cuts associated with every node of BabAlgorithm
         self.__problem_info_triangle = None
         self._nb_vars = 0   # number of variables in problem
+        self._cut_outer_iteration = 0
         self._cut_round = 0
         self._lbs = None    # lower bounds
         self._ubs = None    # upper bounds
@@ -117,6 +118,7 @@ class TriangleCutsGenerator(CutsGenerator):
     def generate(self, run_id, problem, relaxed_problem, linear_problem, solution, tree, node):
         cuts = list(self._generate(run_id, problem, relaxed_problem, linear_problem, solution, tree, node))
         self._cut_round += 1
+        self._cut_outer_iteration += 1
         return cuts
 
     def _generate(self, run_id, problem, _relaxed_problem, linear_problem, solution, tree, node):
@@ -213,7 +215,9 @@ class TriangleCutsGenerator(CutsGenerator):
                                         +l[i]*l[j]/d[i]/d[j] -l[i]*l[k]/d[i]/d[k] - l[j]*l[k]/d[j]/d[k] - l[k]/d[k])
                     ])
 
-            cut_name = 'triangle_cut_{}_{}_{}'.format(self._cut_round, ix, ineq_type)
+            cut_name = 'triangle_cut_{}_{}_{}_{}'.format(
+                self._cut_outer_iteration, self._cut_round, ix, ineq_type
+            )
             yield Cut(CutType.LOCAL, cut_name, sum_expr, cut_lb, None)
 
     def _get_triangle_info(self, problem):

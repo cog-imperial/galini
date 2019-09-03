@@ -29,3 +29,4 @@ class RelaxedProblem:
             self.relaxed,
             constraint,
         )
+        return relaxed_constraint
