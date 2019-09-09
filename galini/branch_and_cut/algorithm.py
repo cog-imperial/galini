@@ -370,9 +370,12 @@ class BranchAndCutAlgorithm:
                         originally_integer.append(var)
                         linear_problem.relaxed.set_domain(var, core.Domain.REAL)
 
-            cuts_state, mip_solution = self._perform_cut_loop(
-                run_id, tree, node, problem, relaxed_problem, linear_problem
+            feasible, cuts_state, mip_solution = self._perform_cut_loop(
+                run_id, tree, node, problem, relaxed_problem, linear_problem,
             )
+
+            if not feasible:
+                return NodeSolution(mip_solution, feasible_solution)
 
             for var in originally_integer:
                 linear_problem.relaxed.set_domain(var, core.Domain.INTEGER)
@@ -381,9 +384,12 @@ class BranchAndCutAlgorithm:
             mip_solution = self._mip_solver.solve(linear_problem.relaxed)
 
         if self._use_milp_cut_phase:
-            cuts_state, mip_solution = self._perform_cut_loop(
-                run_id, tree, node, problem, relaxed_problem, linear_problem
+            feasible, cuts_state, mip_solution = self._perform_cut_loop(
+                run_id, tree, node, problem, relaxed_problem, linear_problem,
             )
+
+            if not feasible:
+                return NodeSolution(mip_solution, feasible_solution)
 
         assert cuts_state is not None
 
@@ -415,6 +421,7 @@ class BranchAndCutAlgorithm:
                           linear_problem):
         cuts_state = CutsState()
         mip_solution = None
+
         if node.parent:
             parent_cuts_count, mip_solution = self._add_cuts_from_parent(
                 run_id, node, relaxed_problem, linear_problem
@@ -429,7 +436,7 @@ class BranchAndCutAlgorithm:
             )
 
             if not feasible:
-                return NodeSolution(mip_solution, feasible_solution)
+                return False, cuts_state, mip_solution
 
             # Add cuts as constraints
             for cut in new_cuts:
@@ -452,7 +459,7 @@ class BranchAndCutAlgorithm:
             if not new_cuts:
                 break
 
-        return cuts_state, mip_solution
+        return True, cuts_state, mip_solution
 
     def solve_problem_at_root(self, run_id, problem, tree, node):
         """Solve problem at root node."""
@@ -956,6 +963,14 @@ def _add_cut_from_pool_to_problem(problem, cut):
         if isinstance(expr, core.SumExpression):
             children = [_duplicate_expr(ch) for ch in expr.children]
             return core.SumExpression(children)
+        if isinstance(expr, core.NegationExpression):
+            children = [_duplicate_expr(ch) for ch in expr.children]
+            return core.NegationExpression(children)
+        if isinstance(expr, core.QuadraticExpression):
+            vars1 = [_duplicate_expr(t.var1) for t in expr.terms]
+            vars2 = [_duplicate_expr(t.var2) for t in expr.terms]
+            coefs = [t.coefficient for t in expr.terms]
+            return core.QuadraticExpression(vars1, vars2, coefs)
         raise RuntimeError('Cut contains expr of type {}', type(expr))
 
     new_expr = _duplicate_expr(cut.expr)
