@@ -130,7 +130,12 @@ class BranchAndCutAlgorithm:
 
         bac_config = galini.get_configuration_group('branch_and_cut.cuts')
         self.cuts_maxiter = bac_config['maxiter']
-        self._use_milp_relaxation = bac_config['use_milp_relaxation']
+
+        self._use_lp_cut_phase = bac_config['use_lp_cut_phase']
+        self._use_milp_cut_phase = bac_config['use_milp_cut_phase']
+
+        if not self._use_lp_cut_phase and not self._use_milp_cut_phase:
+            raise RuntimeError('One of LP or MILP cut phase must be active')
 
         self.branching_strategy = KSectionBranchingStrategy(2)
         self.node_selection_strategy = BestLowerBoundSelectionStrategy()
@@ -145,7 +150,8 @@ class BranchAndCutAlgorithm:
         """Return options for BranchAndCutAlgorithm"""
         return OptionsGroup('cuts', [
             IntegerOption('maxiter', default=20, description='Number of cut rounds'),
-            BoolOption('use_milp_relaxation', default=False, description='Solve MILP relaxations, not LP')
+            BoolOption('use_lp_cut_phase', default=True, description='Solve LP in cut loop'),
+            BoolOption('use_milp_cut_phase', default=False, description='Add additional cut loop solving MILP')
         ])
 
     # pylint: disable=too-many-branches
@@ -354,24 +360,68 @@ class BranchAndCutAlgorithm:
 
         linear_problem = self._build_linear_relaxation(relaxed_problem)
 
+        cuts_state = None
+        if self._use_lp_cut_phase:
+            originally_integer = []
+            if not self._use_milp_cut_phase:
+                for var in linear_problem.relaxed.variables:
+                    vv = linear_problem.relaxed.variable_view(var)
+                    if vv.domain.is_integer():
+                        originally_integer.append(var)
+                        linear_problem.relaxed.set_domain(var, core.Domain.REAL)
+
+            cuts_state, mip_solution = self._perform_cut_loop(
+                run_id, tree, node, problem, relaxed_problem, linear_problem
+            )
+
+            for var in originally_integer:
+                linear_problem.relaxed.set_domain(var, core.Domain.INTEGER)
+
+            # Solve MILP to obtain MILP solution
+            mip_solution = self._mip_solver.solve(linear_problem.relaxed)
+
+        if self._use_milp_cut_phase:
+            cuts_state, mip_solution = self._perform_cut_loop(
+                run_id, tree, node, problem, relaxed_problem, linear_problem
+            )
+
+        assert cuts_state is not None
+
+        if cuts_state.lower_bound >= tree.upper_bound and \
+                not is_close(cuts_state.lower_bound, tree.upper_bound,
+                             atol=mc.epsilon):
+            # No improvement
+            return NodeSolution(mip_solution, None)
+
+        if self._timeout():
+            # No time for finding primal solution
+            return NodeSolution(mip_solution, None)
+
+        primal_solution = self._solve_primal_with_solution(
+            problem, mip_solution, fix_all=True
+        )
+        new_primal_solution = self._solve_primal(problem, mip_solution)
+        if new_primal_solution is not None:
+            primal_solution = new_primal_solution
+
+        if not primal_solution.status.is_success() and \
+                feasible_solution is not None:
+            # Could not get primal solution, but have a feasible solution
+            return NodeSolution(mip_solution, feasible_solution)
+
+        return NodeSolution(mip_solution, primal_solution)
+
+    def _perform_cut_loop(self, run_id, tree, node, problem, relaxed_problem,
+                          linear_problem):
         cuts_state = CutsState()
-
         mip_solution = None
-
-        originally_integer = []
-        if not self._use_milp_relaxation:
-            for var in linear_problem.relaxed.variables:
-                vv = linear_problem.relaxed.variable_view(var)
-                if vv.domain.is_integer():
-                    originally_integer.append(var)
-                    linear_problem.relaxed.set_domain(var, core.Domain.REAL)
-
         if node.parent:
             parent_cuts_count, mip_solution = self._add_cuts_from_parent(
                 run_id, node, relaxed_problem, linear_problem
             )
             if self._bac_telemetry:
                 self._bac_telemetry.increment_inherited_cuts(parent_cuts_count)
+
         while not self.cut_loop_should_terminate(cuts_state):
             feasible, new_cuts, mip_solution = self._perform_cut_round(
                 run_id, problem, relaxed_problem,
@@ -402,43 +452,7 @@ class BranchAndCutAlgorithm:
             if not new_cuts:
                 break
 
-        logger.debug(
-            run_id,
-            'Lower Bound from MIP = {}; Tree Upper Bound = {}',
-            cuts_state.lower_bound,
-            tree.upper_bound
-        )
-
-        if not self._use_milp_relaxation:
-            for var in originally_integer:
-                linear_problem.relaxed.set_domain(var, core.Domain.INTEGER)
-
-            # Solve MILP to obtain MILP solution
-            mip_solution = self._mip_solver.solve(linear_problem.relaxed)
-
-        if cuts_state.lower_bound >= tree.upper_bound and \
-                not is_close(cuts_state.lower_bound, tree.upper_bound,
-                             atol=mc.epsilon):
-            # No improvement
-            return NodeSolution(mip_solution, None)
-
-        if self._timeout():
-            # No time for finding primal solution
-            return NodeSolution(mip_solution, None)
-
-        primal_solution = self._solve_primal_with_solution(
-            problem, mip_solution, fix_all=True
-        )
-        new_primal_solution = self._solve_primal(problem, mip_solution)
-        if new_primal_solution is not None:
-            primal_solution = new_primal_solution
-
-        if not primal_solution.status.is_success() and \
-                feasible_solution is not None:
-            # Could not get primal solution, but have a feasible solution
-            return NodeSolution(mip_solution, feasible_solution)
-
-        return NodeSolution(mip_solution, primal_solution)
+        return cuts_state, mip_solution
 
     def solve_problem_at_root(self, run_id, problem, tree, node):
         """Solve problem at root node."""
