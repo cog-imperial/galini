@@ -15,45 +15,31 @@
 """Branch & Cut node storage. Contains original and convex problem."""
 
 from galini.branch_and_bound.branching import branch_at_point
-from galini.underestimators.bilinear import (
-    BILINEAR_AUX_VAR_META,
-)
+from galini.cuts.pool import CutNodeStorage, CutPool
 
-
-class NodeStorage:
-    def __init__(self, problem, convex_problem):
+class _NodeStorageBase:
+    def __init__(self, problem):
         self.problem = problem
-        self.convex_problem = convex_problem
 
     def branching_data(self):
         return self.problem
 
     def branch_at_point(self, branching_point):
         problem_children = branch_at_point(self.problem, branching_point)
-        convex_problem_children = branch_at_point(
-            self.convex_problem, branching_point
-        )
-        assert len(problem_children) == len(convex_problem_children)
 
-        # Copy aux variables metadata to children
-        for child_problem in convex_problem_children:
-            _copy_bilinear_aux_var_metadata(self.convex_problem, child_problem)
-
-        return [
-            NodeStorage(problem, convex_problem)
-            for problem, convex_problem
-            in zip(problem_children, convex_problem_children)
-        ]
+        return [NodeStorage(problem, self) for problem in problem_children]
 
 
-def _copy_bilinear_aux_var_metadata(original_problem, child_problem):
-    if BILINEAR_AUX_VAR_META in original_problem.metadata:
-        original_bilinear_aux = \
-            original_problem.metadata[BILINEAR_AUX_VAR_META]
-        relaxed_bilinear_aux = dict()
+class NodeStorage(_NodeStorageBase):
+    def __init__(self, problem, parent):
+        super().__init__(problem)
+        self.cut_pool = parent.cut_pool
+        self.cut_node_storage = \
+            CutNodeStorage(parent.cut_node_storage, parent.cut_pool)
 
-        for xy_tuple, var in original_bilinear_aux.items():
-            child_var = child_problem.variable(var)
-            relaxed_bilinear_aux[xy_tuple] = child_var
 
-        child_problem.metadata[BILINEAR_AUX_VAR_META] = relaxed_bilinear_aux
+class RootNodeStorage(_NodeStorageBase):
+    def __init__(self, problem):
+        super().__init__(problem)
+        self.cut_pool = CutPool(problem)
+        self.cut_node_storage = CutNodeStorage(None, self.cut_pool)

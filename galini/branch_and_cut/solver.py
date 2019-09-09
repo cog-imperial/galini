@@ -18,7 +18,7 @@ import numpy as np
 from galini.branch_and_cut.algorithm import BranchAndCutAlgorithm
 from galini.branch_and_bound.solution import BabSolution, BabStatusInterrupted
 from galini.branch_and_bound.tree import BabTree
-from galini.branch_and_cut.node_storage import NodeStorage
+from galini.branch_and_cut.node_storage import RootNodeStorage
 from galini.branch_and_cut.telemetry import BranchAndCountTelemetry
 from galini.config import (
     SolverOptions,
@@ -101,7 +101,7 @@ class BranchAndBoundSolver(Solver):
 
         bab_iteration = 0
 
-        root_node_storage = NodeStorage(problem, None)
+        root_node_storage = RootNodeStorage(problem)
         tree = BabTree(
             root_node_storage, branching_strategy, node_selection_strategy
         )

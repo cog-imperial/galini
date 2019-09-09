@@ -35,11 +35,12 @@ from galini.config import (
     IntegerOption,
     BoolOption,
 )
-from galini.core import LinearExpression, SumExpression, Domain
+import galini.core as core
 from galini.logging import get_logger, DEBUG
 from galini.math import mc, is_close, almost_ge, almost_le
 from galini.quantities import relative_gap, absolute_gap
 from galini.relaxations.relaxed_problem import RelaxedProblem
+from galini.cuts.generator import Cut, CutType
 from galini.special_structure import (
     propagate_special_structure,
     perform_fbbt,
@@ -363,14 +364,13 @@ class BranchAndCutAlgorithm:
                 vv = linear_problem.relaxed.variable_view(var)
                 if vv.domain.is_integer():
                     originally_integer.append(var)
-                    linear_problem.relaxed.set_domain(var, Domain.REAL)
+                    linear_problem.relaxed.set_domain(var, core.Domain.REAL)
 
         if node.parent:
             parent_cuts_count, mip_solution = self._add_cuts_from_parent(
-                run_id, relaxed_problem, linear_problem
+                run_id, node, relaxed_problem, linear_problem
             )
             self._bac_telemetry.increment_inherited_cuts(parent_cuts_count)
-
         while not self.cut_loop_should_terminate(cuts_state):
             feasible, new_cuts, mip_solution = self._perform_cut_round(
                 run_id, problem, relaxed_problem,
@@ -382,7 +382,8 @@ class BranchAndCutAlgorithm:
 
             # Add cuts as constraints
             for cut in new_cuts:
-                relaxed_problem.add_cut_to_pool(cut)
+                node.storage.cut_pool.add_cut(cut)
+                node.storage.cut_node_storage.add_cut(cut)
                 _add_cut_to_problem(linear_problem, cut)
 
             logger.debug(
@@ -409,7 +410,7 @@ class BranchAndCutAlgorithm:
 
         if not self._use_milp_relaxation:
             for var in originally_integer:
-                linear_problem.relaxed.set_domain(var, Domain.INTEGER)
+                linear_problem.relaxed.set_domain(var, core.Domain.INTEGER)
 
             # Solve MILP to obtain MILP solution
             mip_solution = self._mip_solver.solve(linear_problem.relaxed)
@@ -445,10 +446,6 @@ class BranchAndCutAlgorithm:
         self._cuts_generators_manager.before_start_at_root(
             run_id, problem, relaxed_problem.relaxed
         )
-        node.storage.convex_problem = relaxed_problem.relaxed
-
-        # Add cut pool to convex problem.
-        node.storage.convex_problem.add_cut_pool()
 
         solution = self._solve_problem_at_node(
             run_id, problem, relaxed_problem.relaxed, tree, node
@@ -466,22 +463,14 @@ class BranchAndCutAlgorithm:
         self._perform_fbbt(run_id, problem, tree, node)
         relaxed_problem = self._build_convex_relaxation(problem)
 
-        assert node.storage.convex_problem.has_cut_pool()
-
-        for v in node.storage.convex_problem.variables:
-            relaxed_var = relaxed_problem.relaxed.variable_view(v)
-            vv = node.storage.convex_problem.variable_view(v)
-            vv.set_lower_bound(relaxed_var.lower_bound())
-            vv.set_upper_bound(relaxed_var.upper_bound())
-
         self._cuts_generators_manager.before_start_at_node(
-            run_id, problem, node.storage.convex_problem
+            run_id, problem, relaxed_problem.relaxed
         )
         solution = self._solve_problem_at_node(
-            run_id, problem, node.storage.convex_problem, tree, node
+            run_id, problem, relaxed_problem.relaxed, tree, node
         )
         self._cuts_generators_manager.after_end_at_node(
-            run_id, problem, node.storage.convex_problem, solution
+            run_id, problem, relaxed_problem.relaxed, solution
         )
         self._bounds = None
         self._convexity = None
@@ -625,7 +614,7 @@ class BranchAndCutAlgorithm:
 
         return feasible_solution
 
-    def _add_cuts_from_parent(self, run_id, relaxed_problem, linear_problem):
+    def _add_cuts_from_parent(self, run_id, node, relaxed_problem, linear_problem):
         logger.info(run_id, 'Adding inherit cuts.')
         first_loop = True
         inherit_cuts_count = 0
@@ -639,10 +628,25 @@ class BranchAndCutAlgorithm:
                 for v in lp_solution.variables[:relaxed_problem.num_variables]
             ]
 
+            # If the LP does not contain a variable, it's solution will be
+            # None. Fix to (valid) numerical value so that we can evaluate
+            # the expression.
+            for i, var in enumerate(relaxed_problem.variables):
+                if variables_x[i] is None:
+                    lb = relaxed_problem.lower_bound(var)
+                    if lb is not None:
+                        variables_x[i] = lb
+                        continue
+                    ub = relaxed_problem.upper_bound(var)
+                    if ub is not None:
+                        variables_x[i] = ub
+                        continue
+                    variables_x[i] = 0.0
+
             if not lp_solution.status.is_success():
                 break
 
-            for cut in relaxed_problem.parent.cut_node_storage.cuts:
+            for cut in node.storage.cut_node_storage.cuts:
                 is_duplicate = False
                 for constraint in linear_problem.relaxed.constraints:
                     if constraint.name == cut.name:
@@ -677,7 +681,7 @@ class BranchAndCutAlgorithm:
                     )
                     num_violated_cuts += 1
                     inherit_cuts_count += 1
-                    _add_cut_to_problem(linear_problem, cut)
+                    _add_cut_from_pool_to_problem(linear_problem, cut)
 
             logger.info(
                 run_id,
@@ -722,7 +726,7 @@ class BranchAndCutAlgorithm:
             else:
                 value = sv.value
 
-            if domain != Domain.REAL:
+            if domain != core.Domain.REAL:
                 # Solution (from pool) can contain non integer values for
                 # integer variables. Simply round these values up
                 if not is_close(np.trunc(value), value, atol=mc.epsilon):
@@ -860,7 +864,7 @@ def _convert_linear_expr(linear_problem, expr, objvar=None):
         children.append(objvar)
         coeffs.append(1.0)
 
-    return LinearExpression(children, coeffs, const)
+    return core.LinearExpression(children, coeffs, const)
 
 
 
@@ -925,6 +929,32 @@ def _constraint_is_convex(cvx_map, cons):
     return cvx.is_linear()
 
 
+def _add_cut_from_pool_to_problem(problem, cut):
+    # Cuts from pool are weird because they belong to other problems. So we
+    # duplicate the (linear) cuts and insert that instead.
+    def _duplicate_expr(expr):
+        if expr.is_variable():
+            return problem.relaxed.variable(expr.name)
+        if isinstance(expr, core.LinearExpression):
+            vars = [_duplicate_expr(v) for v in expr.children]
+            return core.LinearExpression(vars, expr.linear_coefs, expr.constant_term)
+        if isinstance(expr, core.SumExpression):
+            children = [_duplicate_expr(ch) for ch in expr.children]
+            return core.SumExpression(children)
+        raise RuntimeError('Cut contains expr of type {}', type(expr))
+
+    new_expr = _duplicate_expr(cut.expr)
+    new_cut = Cut(
+        cut.type_,
+        cut.name,
+        new_expr,
+        cut.lower_bound,
+        cut.upper_bound,
+        cut.is_objective
+    )
+    return _add_cut_to_problem(problem, new_cut)
+
+
 def _add_cut_to_problem(problem, cut):
     if not cut.is_objective:
         return problem.add_constraint(
@@ -937,9 +967,9 @@ def _add_cut_to_problem(problem, cut):
         objvar = problem.relaxed.variable('_objvar')
         assert cut.lower_bound is None
         assert cut.upper_bound is None
-        new_root_expr = SumExpression([
+        new_root_expr = core.SumExpression([
             cut.expr,
-            LinearExpression([objvar], [-1.0], 0.0)
+            core.LinearExpression([objvar], [-1.0], 0.0)
         ])
         return problem.add_constraint(
             cut.name,

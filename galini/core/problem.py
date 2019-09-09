@@ -18,7 +18,6 @@ import warnings
 import numpy as np
 import galini_core as core
 from galini.core.reference import BilinearTermReference
-from galini.core.cut_pool import CutPool, CutNodeStorage
 
 
 # Redefine here to avoid circular import
@@ -113,8 +112,6 @@ class _ProblemBase:  # pylint: disable=too-many-public-methods
         self._values = []
         self._values_mask = []
         self._fixed_mask = []
-        self._cut_pool = None
-        self._cut_node_storage = None
         self.metadata = dict()
 
     @property
@@ -222,32 +219,6 @@ class _ProblemBase:  # pylint: disable=too-many-public-methods
 
     def expression_tree_data(self):
         return self._graph.expression_tree_data()
-
-    def add_cut_to_pool(self, cut):
-        self.cut_pool.add_cut(cut)
-        self.cut_node_storage.add_cut(cut)
-
-    def add_to_cut_storage_only(self, cut):
-        self.cut_node_storage.add_cut(cut)
-
-    def add_cut_pool(self):
-        if self.has_cut_pool():
-            raise RuntimeError(
-                'Trying to add cut pool to problem that already has one.'
-            )
-        self._cut_pool = CutPool(self)
-        self._cut_node_storage = CutNodeStorage(None, self._cut_pool)
-
-    @property
-    def cut_pool(self):
-        raise NotImplementedError('cut_pool')
-
-    @property
-    def cut_node_storage(self):
-        raise NotImplementedError('cut_pool')
-
-    def has_cut_pool(self):
-        raise NotImplementedError('has_cut_pool')
 
 
 def _make_relaxed(parent, name, relaxation=None):
@@ -426,17 +397,6 @@ class Problem(_ProblemBase):
     def _graph(self):
         return self._dag
 
-    @property
-    def cut_pool(self):
-        return self._cut_pool
-
-    @property
-    def cut_node_storage(self):
-        return self._cut_node_storage
-
-    def has_cut_pool(self):
-        return self._cut_pool is not None
-
 
 class ChildProblem(_ProblemBase):
     def __init__(self, parent):
@@ -444,10 +404,6 @@ class ChildProblem(_ProblemBase):
         self._copy_variable_info(parent)
         self.parent = parent
         self.root = parent.root
-        if self.parent.has_cut_pool():
-            self._cut_node_storage = CutNodeStorage(
-                self.parent.cut_node_storage, self.parent.cut_pool
-            )
 
     def _copy_variable_info(self, parent):
         self._domains = parent._domains.copy()
@@ -502,17 +458,6 @@ class ChildProblem(_ProblemBase):
     @property
     def _graph(self):
         return self.parent._graph
-
-    @property
-    def cut_pool(self):
-        return self.root.cut_pool
-
-    @property
-    def cut_node_storage(self):
-        return self._cut_node_storage
-
-    def has_cut_pool(self):
-        return self.root.has_cut_pool()
 
 
 class RelaxedProblem(Problem):
