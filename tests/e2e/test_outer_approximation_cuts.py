@@ -21,6 +21,7 @@ from galini.branch_and_cut.solver import BranchAndBoundSolver
 from galini.galini import Galini
 from galini.math import is_close
 from galini.pyomo import read_pyomo_model, problem_from_pyomo_model
+from galini.timelimit import start_timelimit, set_timelimit
 
 
 @pytest.mark.parametrize('model_name', [
@@ -59,6 +60,8 @@ def test_ipopt_solver(model_name):
             },
         },
     })
+    set_timelimit(30)
+    start_timelimit()
     solver = BranchAndBoundSolver(galini)
     solution = solver.solve(problem)
 

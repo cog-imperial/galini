@@ -45,7 +45,7 @@ class Status(metaclass=abc.ABCMeta):
         pass
 
 
-class Solution(object):
+class Solution:
     """Base class for all solutions.
 
     Solvers can subclass this class to add solver-specific information

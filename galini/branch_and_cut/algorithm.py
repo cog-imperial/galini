@@ -370,7 +370,8 @@ class BranchAndCutAlgorithm:
             parent_cuts_count, mip_solution = self._add_cuts_from_parent(
                 run_id, node, relaxed_problem, linear_problem
             )
-            self._bac_telemetry.increment_inherited_cuts(parent_cuts_count)
+            if self._bac_telemetry:
+                self._bac_telemetry.increment_inherited_cuts(parent_cuts_count)
         while not self.cut_loop_should_terminate(cuts_state):
             feasible, new_cuts, mip_solution = self._perform_cut_round(
                 run_id, problem, relaxed_problem,

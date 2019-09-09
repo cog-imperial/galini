@@ -109,7 +109,7 @@ def test_cut_selection_strategy(problem, cut_selection_strategy, expected_soluti
     })
     config = galini._config
     sdp_cuts_gen = SdpCutsGenerator(galini, config.cuts_generator.sdp)
-    algo = BranchAndCutAlgorithm(galini, FakeSolver())
+    algo = BranchAndCutAlgorithm(galini, FakeSolver(), telemetry=None)
     relaxed_problem = relaxation.relax(problem)
     algo._cuts_generators_manager.before_start_at_root(run_id, problem, None)
     nbs_cuts = []
@@ -166,7 +166,7 @@ def test_sdp_cuts_after_branching(problem):
     })
     config = galini._config
     sdp_cuts_gen = SdpCutsGenerator(galini, config.cuts_generator.sdp)
-    algo = BranchAndCutAlgorithm(galini, FakeSolver())
+    algo = BranchAndCutAlgorithm(galini, FakeSolver(), telemetry=None)
     relaxed_problem = relaxation.relax(problem)
     algo._cuts_generators_manager.before_start_at_root(run_id, problem, None)
     mip_sols = []
