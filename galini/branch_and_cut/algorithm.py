@@ -374,11 +374,11 @@ class BranchAndCutAlgorithm:
                 run_id, tree, node, problem, relaxed_problem, linear_problem,
             )
 
-            if not feasible:
-                return NodeSolution(mip_solution, feasible_solution)
-
             for var in originally_integer:
                 linear_problem.relaxed.set_domain(var, core.Domain.INTEGER)
+
+            if not feasible:
+                return NodeSolution(mip_solution, feasible_solution)
 
             # Solve MILP to obtain MILP solution
             mip_solution = self._mip_solver.solve(linear_problem.relaxed)
