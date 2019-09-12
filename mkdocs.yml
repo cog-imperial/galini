@@ -8,6 +8,9 @@ nav:
   - special_structure: commands/special_structure.md
   - plugins: commands/plugins.md
 - Configuration: configuration.md
+- Branch & Cut:
+  - Algorithm: branch_and_cut/algorithm.md
+  - Cut Generation: branch_and_cut/cuts.md
 - Algorithms:
   - Outer Approximation: algorithms/outer_approximation.md
 - Logging: logging.md
