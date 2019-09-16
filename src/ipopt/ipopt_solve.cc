@@ -55,7 +55,10 @@ std::shared_ptr<IpoptSolution> solve(Ipopt::SmartPtr<Ipopt::IpoptApplication>& a
 				     const DVector& gl,
 				     const DVector& gu,
 				     FGEval& fg_eval,
-				     py::object stream) {
+				     py::object stream,
+				     bool retape,
+				     bool sparse_forward,
+				     bool sparse_reverse) {
   typedef typename FGEval::ADvector ADvector;
 
   CppAD::ipopt::solve_result<std::vector<double>> solution;
@@ -63,9 +66,6 @@ std::shared_ptr<IpoptSolution> solve(Ipopt::SmartPtr<Ipopt::IpoptApplication>& a
   std::size_t nx = xi.size();
   std::size_t ng = gl.size();
   std::size_t nf = 1;
-  bool retape          = false;
-  bool sparse_forward  = false;
-  bool sparse_reverse = false;
 
   Ipopt::SmartPtr<Ipopt::TNLP> cppad_nlp =
     new CppAD::ipopt::solve_callback<DVector, ADvector, FGEval>(
@@ -96,9 +96,10 @@ ipopt_solve(Ipopt::SmartPtr<Ipopt::IpoptApplication>& app,
 	    const std::vector<index_t> &out_indexes,
 	    const std::vector<double>& xi, const std::vector<double> &xl,
 	    const std::vector<double>& xu, const std::vector<double> &gl,
-	    const std::vector<double>& gu, py::object stream) {
+	    const std::vector<double>& gu, py::object stream,
+	    bool retape, bool sparse_forward, bool sparse_reverse) {
   detail::FGEval fg_eval(expression_tree_data, out_indexes);
-  return detail::solve(app, xi, xl, xu, gl, gu, fg_eval, stream);
+  return detail::solve(app, xi, xl, xu, gl, gu, fg_eval, stream, retape, sparse_forward, sparse_reverse);
 }
 
 } // namespace ipopt

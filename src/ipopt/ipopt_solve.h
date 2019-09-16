@@ -59,7 +59,8 @@ ipopt_solve(Ipopt::SmartPtr<Ipopt::IpoptApplication>& app,
 	    const std::vector<index_t> &out_vector,
 	    const std::vector<double>& xi, const std::vector<double> &xl,
 	    const std::vector<double>& xu, const std::vector<double> &gl,
-	    const std::vector<double>& gu, py::object stream);
+	    const std::vector<double>& gu, py::object stream,
+	    bool retape, bool sparse_forward, bool sparse_reverse);
 
 } // namespace ipopt
 

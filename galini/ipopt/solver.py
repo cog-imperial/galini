@@ -19,6 +19,7 @@ import numpy as np
 from galini.config.options import (
     SolverOptions,
     ExternalSolverOptions,
+    BoolOption,
     OptionsGroup,
     StringOption,
 )
@@ -51,6 +52,9 @@ class IpoptNLPSolver(Solver):
     def solver_options():
         return SolverOptions(IpoptNLPSolver.name, [
             ExternalSolverOptions('ipopt'),
+            BoolOption('retape', default=False),
+            BoolOption('sparse_forward', default=True),
+            BoolOption('sparse_reverse', default=True),
             OptionsGroup('logging', [
                 StringOption('level', default='J_ITERSUMMARY'),
             ]),
@@ -75,6 +79,10 @@ class IpoptNLPSolver(Solver):
 
         self._configure_ipopt_application(app, config, timelimit)
 
+        retape = config['retape']
+        sparse_forward = config['sparse_forward']
+        sparse_reverse = config['sparse_reverse']
+
         xi, xl, xu = self.get_starting_point_and_bounds(run_id, problem)
         gl, gu, constraints_root_expr_idxs = \
             self.get_constraints_bounds(run_id, problem)
@@ -90,7 +98,8 @@ class IpoptNLPSolver(Solver):
 
         logger.debug(run_id, 'Calling in IPOPT')
         ipopt_solution = ipopt_solve(
-            app, tree_data, out_indexes, xi, xl, xu, gl, gu, logger_adapter
+            app, tree_data, out_indexes, xi, xl, xu, gl, gu, logger_adapter,
+            retape, sparse_forward, sparse_reverse,
         )
         solution = build_solution(
             run_id, problem, ipopt_solution, tree_data, out_indexes
