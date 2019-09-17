@@ -113,6 +113,8 @@ class TriangleCutsGenerator(CutsGenerator):
 
         improvement = state.latest_solution - state.previous_solution
         lower_bound_improvement = state.latest_solution - state.first_solution
+        if is_close(lower_bound_improvement, 0.0, atol=mc.epsilon):
+            return True
         return (improvement / lower_bound_improvement) <= self._cuts_relative_tolerance
 
     def generate(self, run_id, problem, relaxed_problem, linear_problem, solution, tree, node):
