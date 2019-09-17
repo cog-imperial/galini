@@ -81,7 +81,9 @@ class BoundsTightener:
 
     def tighten(self, problem, bounds):
         """Tighten bounds of ``problem`` storing them in ``bounds``."""
-        self._forward_iterator.iterate(problem, BoundsInitializationVisitor(), bounds)
+        self._forward_iterator.iterate(
+            problem, BoundsInitializationVisitor(), bounds
+        )
         if self._stop_criterion._max_iter == 0:
             return
 
@@ -101,8 +103,10 @@ class BoundsTightener:
             changes_tigh = self._backward_iterator.iterate(
                 problem, tigh_visitor, bounds, starting_vertices=changes_prop
             )
+
             if len(changes_prop) == 0 and len(changes_tigh) == 0:
                 return
+
             self._stop_criterion.iteration_end()
 
 
@@ -115,7 +119,7 @@ class FBBTStopCriterion(BaseFBBTStopCriterion):
     def should_stop(self):
         iterations_exceeded = super().should_stop()
         elapsed = seconds_elapsed_since(self.start_time)
-        return iterations_exceeded and elapsed > self.timelimit
+        return iterations_exceeded or elapsed > self.timelimit
 
 
 def update_fbbt_settings(galini):
