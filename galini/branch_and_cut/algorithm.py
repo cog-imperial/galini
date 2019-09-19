@@ -771,13 +771,17 @@ class BranchAndCutAlgorithm:
         solution = self._nlp_solver.solve(problem)
         return NodeSolution(solution, solution)
 
-    def _perform_fbbt(self, run_id, problem, _tree, node):
+    def _perform_fbbt(self, run_id, problem, tree, node):
         logger.debug(run_id, 'Performing FBBT')
         try:
+            objective_upper_bound = None
+            if tree.upper_bound is not None:
+                objective_upper_bound = tree.upper_bound
             bounds = perform_fbbt(
                 problem,
                 maxiter=self.fbbt_maxiter,
                 timelimit=self.fbbt_timelimit,
+                objective_upper_bound=objective_upper_bound,
             )
 
             self._bounds, self._monotonicity, self._convexity = \

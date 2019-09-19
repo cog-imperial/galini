@@ -35,7 +35,7 @@ from galini.suspect import (
 from galini.timelimit import timeout
 
 
-def perform_fbbt(problem, maxiter, timelimit):
+def perform_fbbt(problem, maxiter, timelimit, objective_upper_bound=None):
     """Perform FBBT on `problem` with the given `maxiter` and `timelimit`."""
     bounds = ExpressionDict(problem)
     bounds_tightener = BoundsTightener(
@@ -46,6 +46,16 @@ def perform_fbbt(problem, maxiter, timelimit):
         lb = problem.lower_bound(variable)
         ub = problem.upper_bound(variable)
         bounds[variable] = Interval(lb, ub)
+
+    if objective_upper_bound is not None:
+        root_expr = problem.objective.root_expr
+        expr_bounds = Interval(None, objective_upper_bound)
+        if root_expr not in bounds:
+            bounds[root_expr] = expr_bounds
+        else:
+            existing_bounds = bounds[root_expr]
+            new_bounds = existing_bounds.intersect(expr_bounds)
+            bounds[root_expr] = new_bounds
 
     # set bounds of root_expr to constraints bounds
     # since GALINI doesn't consider constraints as expression we have
