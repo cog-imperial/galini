@@ -8,7 +8,7 @@
 GALINI has not been released to Pypi yet. You will need to install it manually.
 The first step is to download GALINI source:
 
-    git clone https://github.com/fracek/galini.git
+    git clone https://github.com/cog-imperial/galini.git
 
 GALINI requires a working installation of Ipopt to work.
 Refer to [Ipopt documentation](https://www.coin-or.org/Ipopt/documentation/node10.html), set the `IPOPT_INCLUDE_DIR`
