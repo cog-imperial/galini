@@ -31,10 +31,12 @@ from galini.core import (
 )
 from galini.underestimators.bilinear import (
     McCormickUnderestimator,
-    BILINEAR_AUX_VAR_META,
 )
 from galini.underestimators.underestimator import Underestimator, \
     UnderestimatorResult, UnderestimatorSide
+
+
+DISAGGREGATE_VAR_AUX_META = 'disaggregate_var_aux_meta'
 
 
 class DisaggregateBilinearUnderestimator(Underestimator):
@@ -92,9 +94,9 @@ class DisaggregateBilinearUnderestimator(Underestimator):
         aux_vars = []
         aux_coefs = []
         constraints = []
-        if BILINEAR_AUX_VAR_META not in ctx.metadata:
-            ctx.metadata[BILINEAR_AUX_VAR_META] = dict()
-        bilinear_aux = ctx.metadata[BILINEAR_AUX_VAR_META]
+        if DISAGGREGATE_VAR_AUX_META not in ctx.metadata:
+            ctx.metadata[DISAGGREGATE_VAR_AUX_META] = dict()
+        bilinear_aux = ctx.metadata[DISAGGREGATE_VAR_AUX_META]
         for quadratic_expr in convex_exprs:
             if len(quadratic_expr.terms) == 1:
                 term = quadratic_expr.terms[0]
@@ -121,10 +123,8 @@ class DisaggregateBilinearUnderestimator(Underestimator):
                 term = quadratic_expr.terms[0]
                 xy_idx = (term.var1.idx, term.var2.idx)
                 bilinear_aux[xy_idx] = aux_w
-                aux_w.reference = BilinearTermReference(term.var1, term.var2)
-            else:
-                aux_w.reference = ExpressionReference(quadratic_expr)
 
+            aux_w.reference = ExpressionReference(quadratic_expr)
             aux_vars.append(aux_w)
             aux_coefs.append(1.0)
 

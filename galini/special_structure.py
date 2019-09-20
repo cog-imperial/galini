@@ -27,12 +27,51 @@ from galini.fbbt import (
     FBBTStopCriterion,
     _GaliniBoundsPropagationVisitor,
 )
+from galini.math import is_inf
 from galini.suspect import (
     ProblemContext,
     ExpressionDict,
     ProblemForwardIterator,
 )
 from galini.timelimit import timeout
+
+
+def _initialize_bounds(problem, bounds, get_bound, set_bound):
+    """Set bounds of root_expr to constraints bounds.
+    Since GALINI doesn't consider constraints as expression we have
+    to do this manually.
+    """
+    for constraint in problem.constraints:
+        root_expr = constraint.root_expr
+        expr_bounds = Interval(constraint.lower_bound, constraint.upper_bound)
+        if root_expr not in bounds:
+            set_bound(root_expr, expr_bounds)
+        else:
+            existing_bounds = get_bound(root_expr)
+            new_bounds = existing_bounds.intersect(expr_bounds)
+            set_bound(root_expr, new_bounds)
+
+
+def _manage_infinity_bounds(problem, _bounds, get_bound, set_bound):
+    """In some cases variables bounds are numbers that are bigger than
+    mc.infinity. Change them back to None.
+    """
+    for variable in problem.variables:
+        expr_bounds = get_bound(variable)
+        lower_bound = expr_bounds.lower_bound
+        upper_bound = expr_bounds.upper_bound
+
+        if is_inf(lower_bound):
+            new_lower_bound = None
+        else:
+            new_lower_bound = lower_bound
+
+        if is_inf(upper_bound):
+            new_upper_bound = None
+        else:
+            new_upper_bound = upper_bound
+
+        set_bound(variable, Interval(new_lower_bound, new_upper_bound))
 
 
 def perform_fbbt(problem, maxiter, timelimit, objective_upper_bound=None):
@@ -57,18 +96,17 @@ def perform_fbbt(problem, maxiter, timelimit, objective_upper_bound=None):
             new_bounds = existing_bounds.intersect(expr_bounds)
             bounds[root_expr] = new_bounds
 
-    # set bounds of root_expr to constraints bounds
-    # since GALINI doesn't consider constraints as expression we have
-    # to do this manually.
-    for constraint in problem.constraints:
-        root_expr = constraint.root_expr
-        expr_bounds = Interval(constraint.lower_bound, constraint.upper_bound)
-        if root_expr not in bounds:
-            bounds[root_expr] = expr_bounds
-        else:
-            existing_bounds = bounds[root_expr]
-            new_bounds = existing_bounds.intersect(expr_bounds)
-            bounds[root_expr] = new_bounds
+    def get_bound(b):
+        def _f(expr):
+            return b[expr]
+        return _f
+
+    def set_bound(b):
+        def _f(expr, value):
+            b[expr] = value
+        return _f
+
+    _initialize_bounds(problem, bounds, get_bound(bounds), set_bound(bounds))
 
     try:
         with timeout(timelimit, 'Timeout in FBBT'):
@@ -76,6 +114,9 @@ def perform_fbbt(problem, maxiter, timelimit, objective_upper_bound=None):
     except TimeoutError:
         pass
 
+    _manage_infinity_bounds(
+        problem, bounds, get_bound(bounds), set_bound(bounds)
+    )
     return bounds
 
 
@@ -86,20 +127,12 @@ def detect_special_structure(problem, maxiter, timelimit):
         FBBTStopCriterion(max_iter=maxiter, timelimit=timelimit),
     )
 
-    # set bounds of root_expr to constraints bounds
-    # since GALINI doesn't consider constraints as expression we have
-    # to do this manually.
-    for constraint in problem.constraints:
-        root_expr = constraint.root_expr
-        expr_bounds = Interval(constraint.lower_bound, constraint.upper_bound)
-        if root_expr not in ctx.bounds:
-            ctx.set_bounds(root_expr, expr_bounds)
-        else:
-            existing_bounds = ctx.get_bounds(root_expr)
-            new_bounds = existing_bounds.intersect(expr_bounds)
-            ctx.set_bounds(root_expr, new_bounds)
+    _initialize_bounds(problem, ctx.bounds, ctx.get_bounds, ctx.set_bounds)
 
     bounds_tightener.tighten(problem, ctx.bounds)
+
+    _manage_infinity_bounds(problem, ctx.bounds, ctx.get_bounds, ctx.set_bounds)
+
     propagate_special_structure(problem, ctx)
 
     return ctx

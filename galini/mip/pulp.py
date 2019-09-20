@@ -47,6 +47,8 @@ def dag_to_pulp(problem):
         elif constraint.upper_bound is None:
             lp += expr >= constraint.lower_bound
         else:
+            assert constraint.lower_bound is not None
+            assert constraint.upper_bound is not None
             lp += constraint.lower_bound <= expr
             lp += expr <= constraint.upper_bound
     return lp, variables

@@ -87,10 +87,13 @@ class BoundsTightener:
         if self._stop_criterion._max_iter == 0:
             return
 
-        prop_visitor = self._stop_criterion.intercept_changes(_GaliniBoundsPropagationVisitor())
-        tigh_visitor = self._stop_criterion.intercept_changes(_GaliniBoundsTighteningVisitor())
+        prop_visitor = self._stop_criterion.intercept_changes(
+            _GaliniBoundsPropagationVisitor()
+        )
+        tigh_visitor = self._stop_criterion.intercept_changes(
+            _GaliniBoundsTighteningVisitor()
+        )
         changes_tigh = None
-        changes_prop = None
         while not self._stop_criterion.should_stop():
             changes_prop = self._forward_iterator.iterate(
                 problem, prop_visitor, bounds, starting_vertices=changes_tigh
