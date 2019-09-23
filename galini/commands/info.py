@@ -45,7 +45,7 @@ class InfoCommand(CliCommandWithProblem):
     def _output_objectives_information(self, problem):
         table = OutputTable('Objectives', ['name', 'sense'])
         for obj in problem.objectives:
-            table.add_row({'name': obj.name, 'sense': obj.sense})
+            table.add_row({'name': obj.name, 'sense': obj.original_sense})
         return table
 
     def _output_constraints_information(self, problem):
