@@ -5,6 +5,7 @@
 To build GALINI you need:
 
  * A recent version of [pybind11](https://github.com/pybind/pybind11)
+ * [Coramin](https://github.com/Coramin/Coramin)
  * CPLEX
  * Ipopt
 
@@ -22,6 +23,14 @@ Then install pybind11:
 
     pip install pybind11
     
+Install Coramin and its dependencies:
+
+    git clone git@github.com:Coramin/Coramin.git
+    cd Coramin
+    pip install pyomo scipy numpy
+    python setup.py install
+
+
 You need to install Ipopt, you can find more details on the [Coin OR](https://www.coin-or.org/Ipopt/documentation/node10.html)
 website.
 
