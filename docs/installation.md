@@ -25,6 +25,12 @@ Then install pybind11:
 You need to install Ipopt, you can find more details on the [Coin OR](https://www.coin-or.org/Ipopt/documentation/node10.html)
 website.
 
+You also need to install CPLEX and its python library. If you installed CPLEX
+in `/opt/cplex` then:
+
+    cd /opt/cplex/python/3.6/x86-64_linux
+    python3 setup.py install
+
 Create a local clone of GALINI:
 
     git clone https://github.com/cog-imperial/galini.git
