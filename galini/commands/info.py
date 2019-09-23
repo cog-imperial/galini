@@ -13,7 +13,6 @@
 # limitations under the License.
 
 """GALINI info command."""
-from texttable import Texttable
 from galini.commands import (
     CliCommandWithProblem,
     OutputTable,
@@ -25,10 +24,11 @@ from galini.commands import (
 class InfoCommand(CliCommandWithProblem):
     """Command to output information about a problem."""
     def execute_with_problem(self, _model, problem, args):
-        tables = []
-        tables.append(self._output_variables_information(problem))
-        tables.append(self._output_objectives_information(problem))
-        tables.append(self._output_constraints_information(problem))
+        tables = [
+            self._output_variables_information(problem),
+            self._output_objectives_information(problem),
+            self._output_constraints_information(problem),
+        ]
         print_output_table(tables, args)
 
     def _output_variables_information(self, problem):

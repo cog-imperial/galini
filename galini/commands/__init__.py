@@ -12,7 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__all__ = ['CliCommand', 'CliCommandWithProblem']
+__all__ = [
+    'OutputTable', 'add_output_format_parser_arguments',
+    'print_output_table', 'CliCommand', 'CliCommandWithProblem'
+]
 
+from .command_output import (
+    OutputTable,
+    add_output_format_parser_arguments,
+    print_output_table,
+)
 from .commands import CliCommand, CliCommandWithProblem
-from .command_output import OutputTable, add_output_format_parser_arguments, print_output_table
