@@ -3,10 +3,8 @@ import pytest
 import numpy as np
 import pyomo.environ as aml
 from galini.pyomo import problem_from_pyomo_model
-from galini.solvers import SolversRegistry
 from galini.galini import Galini
-from galini.config import ConfigurationManager
-from galini.cuts import CutsGeneratorsRegistry
+from galini.timelimit import set_timelimit
 from galini.branch_and_cut.algorithm import BranchAndCutAlgorithm
 from galini.branch_and_bound.relaxations import LinearRelaxation
 from galini.special_structure import propagate_special_structure, perform_fbbt
@@ -78,22 +76,18 @@ def problem():
 ])
 def test_cut_selection_strategy(problem, cut_selection_strategy, expected_solution):
     galini = Galini()
-    galini.update_configuration({
-        'cuts_generator': {
-            'generators': ['sdp'],
-            'sdp': {
-                'selection_size': 2,
-            },
-        }
-    })
-    solver_ipopt = galini.instantiate_solver("ipopt")
-    solver_mip = galini.instantiate_solver("mip")
-
     relaxation = _linear_relaxation(problem)
     run_id = 'test_run_sdp'
 
     galini.update_configuration({
+        'branch_and_cut': {
+            'cuts': {
+                'use_lp_cut_phase': True,
+                'use_milp_cut_phase': True,
+            },
+        },
         'cuts_generator': {
+            'generators': ['sdp'],
             'sdp': {
                 'domain_eps': 1e-3,
                 'thres_sdp_viol': -1e-15,
@@ -117,6 +111,7 @@ def test_cut_selection_strategy(problem, cut_selection_strategy, expected_soluti
     if cut_selection_strategy == "RANDOM":
         np.random.seed(0)
     for iteration in range(5):
+        set_timelimit(60)
         mip_solution = algo._mip_solver.solve(relaxed_problem)
         assert mip_solution.status.is_success()
         mip_sols.append(mip_solution.objectives[0].value)
@@ -140,8 +135,6 @@ def test_sdp_cuts_after_branching(problem):
             },
         }
     })
-    solver_ipopt = galini.instantiate_solver("ipopt")
-    solver_mip = galini.instantiate_solver("mip")
     run_id = 'test_run_sdp'
 
     relaxation = _linear_relaxation(problem)
@@ -150,6 +143,12 @@ def test_sdp_cuts_after_branching(problem):
     x0 = problem.variable_view(problem.variables[0])
     x0.set_lower_bound(0.5)
     galini.update_configuration({
+        'branch_and_cut': {
+            'cuts': {
+                'use_lp_cut_phase': True,
+                'use_milp_cut_phase': True,
+            },
+        },
         'cuts_generator': {
             'sdp': {
                 'domain_eps': 1e-3,
@@ -172,6 +171,7 @@ def test_sdp_cuts_after_branching(problem):
     mip_sols = []
     mip_solution = None
     for iteration in range(5):
+        set_timelimit(60)
         mip_solution = algo._mip_solver.solve(relaxed_problem)
         assert mip_solution.status.is_success()
         mip_sols.append(mip_solution.objectives[0].value)
