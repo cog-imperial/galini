@@ -639,7 +639,9 @@ class BranchAndCutAlgorithm:
     def _add_cuts_from_parent(self, run_id, node, relaxed_problem, linear_problem):
         logger.info(run_id, 'Adding inherit cuts.')
         first_loop = True
+        num_violated_cuts = 0
         inherit_cuts_count = 0
+        lp_solution = None
         while first_loop or num_violated_cuts > 0:
             first_loop = False
             num_violated_cuts = 0
@@ -773,26 +775,19 @@ class BranchAndCutAlgorithm:
 
     def _perform_fbbt(self, run_id, problem, tree, node):
         logger.debug(run_id, 'Performing FBBT')
-        try:
-            objective_upper_bound = None
-            if tree.upper_bound is not None:
-                objective_upper_bound = tree.upper_bound
-            bounds = perform_fbbt(
-                problem,
-                maxiter=self.fbbt_maxiter,
-                timelimit=self.fbbt_timelimit,
-                objective_upper_bound=objective_upper_bound,
-            )
 
-            self._bounds, self._monotonicity, self._convexity = \
-                propagate_special_structure(problem, bounds)
+        objective_upper_bound = None
+        if tree.upper_bound is not None:
+            objective_upper_bound = tree.upper_bound
+        bounds = perform_fbbt(
+            problem,
+            maxiter=self.fbbt_maxiter,
+            timelimit=self.fbbt_timelimit,
+            objective_upper_bound=objective_upper_bound,
+        )
 
-        # pylint: disable=broad-except
-        except Exception as ex:
-            logger.warning(run_id, 'FBBT Failed: {}', str(ex))
-            self._bounds, self._monotonicity, self._convexity = \
-                propagate_special_structure(problem)
-            return
+        self._bounds, self._monotonicity, self._convexity = \
+            propagate_special_structure(problem, bounds)
 
         logger.debug(run_id, 'Set FBBT Bounds')
         cause_infeasibility = None

@@ -16,9 +16,11 @@
 from suspect.fbbt.main import FBBTStopCriterion as BaseFBBTStopCriterion
 from suspect.fbbt.initialization import BoundsInitializationVisitor
 from suspect.fbbt.propagation import BoundsPropagationVisitor
+from suspect.interfaces import Rule
 import suspect.fbbt.propagation.rules as prop
 from suspect.fbbt.tightening import BoundsTighteningVisitor
 import suspect.fbbt.tightening.rules as tight
+from suspect.fbbt.tightening.quadratic import UnivariateQuadraticRule
 from galini.suspect import ProblemForwardIterator, ProblemBackwardIterator
 from galini.timelimit import (
     current_time,
@@ -43,10 +45,33 @@ class _GaliniBoundsPropagationVisitor(BoundsPropagationVisitor):
         return True, rule.apply(expr, bounds)
 
 
+class _SumRule(Rule):
+    def __init__(self):
+        self._sum_rule = tight.SumRule()
+        self._univariate_rule = UnivariateQuadraticRule()
+
+    @property
+    def max_expr_children(self):
+        return self._sum_rule.max_expr_children
+
+    @max_expr_children.setter
+    def max_expr_children(self, value):
+        self._sum_rule.max_expr_children = value
+
+    def apply(self, expr, bounds):
+        sum_result = self._sum_rule.apply(expr, bounds)
+        univariate_result = self._univariate_rule.apply(expr, bounds)
+        if univariate_result is None:
+            return sum_result
+        for result, arg in zip(sum_result, expr.args):
+            univariate_result[arg] = result
+        return univariate_result
+
+
 _expr_to_tight = dict()
 _expr_to_tight[core.LinearExpression] = tight.LinearRule()
 _expr_to_tight[core.QuadraticExpression] = tight.QuadraticRule()
-_expr_to_tight[core.SumExpression] = tight.SumRule()
+_expr_to_tight[core.SumExpression] = _SumRule()
 
 
 class _GaliniBoundsTighteningVisitor(BoundsTighteningVisitor):

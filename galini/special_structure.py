@@ -17,7 +17,7 @@ import pkg_resources
 import suspect.convexity.rules as cvx_rules
 import suspect.monotonicity.rules as mono_rules
 from suspect.convexity import ConvexityPropagationVisitor
-from suspect.interval import Interval
+from suspect.interval import Interval, EmptyIntervalError
 from suspect.monotonicity import MonotonicityPropagationVisitor
 from suspect.propagation import SpecialStructurePropagationVisitor
 
@@ -110,7 +110,10 @@ def perform_fbbt(problem, maxiter, timelimit, objective_upper_bound=None):
 
     try:
         with timeout(timelimit, 'Timeout in FBBT'):
-            bounds_tightener.tighten(problem, bounds)
+            try:
+                bounds_tightener.tighten(problem, bounds)
+            except EmptyIntervalError:
+                pass
     except TimeoutError:
         pass
 
