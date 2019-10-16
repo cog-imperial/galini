@@ -168,10 +168,17 @@ class IpoptNLPSolver(Solver):
                 xl[i] = lb
                 xu[i] = ub
 
+                use_starting_point = False
+                starting_point = 0.0
                 if v.has_starting_point():
                     starting_point = v.starting_point()
-                    if is_inf(starting_point):
-                        starting_point = max(lb, min(ub, 0))
+                    if not is_inf(starting_point):
+                        use_starting_point = (
+                            starting_point >= lb and
+                            starting_point <= ub
+                        )
+
+                if use_starting_point:
                     xi[i] = starting_point
                 else:
                     xi[i] = max(lb, min(ub, 0))
