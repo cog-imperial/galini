@@ -69,10 +69,11 @@ class CplexSolver:
             pass
         cplex_pool = self._inner.solverModel.solution.pool
         num_sol = cplex_pool.get_num()
+        variables_names = self._inner.solverModel.variables.get_names()
         if num_sol > 0:
             pool = []
             for i in range(num_sol):
-                x_i = cplex_pool.get_values(i)
+                x_i = dict(zip(variables_names, cplex_pool.get_values(i)))
                 obj_i = cplex_pool.get_objective_value(i)
                 pool.append((obj_i, x_i))
             self.solution_pool = pool
