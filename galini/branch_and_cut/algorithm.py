@@ -27,9 +27,14 @@ from suspect.expression import ExpressionType
 from suspect.interval import Interval
 
 from galini.branch_and_bound.node import NodeSolution
-from galini.branch_and_bound.relaxations import ConvexRelaxation, LinearRelaxation
+from galini.branch_and_bound.relaxations import (
+    ConvexRelaxation, LinearRelaxation
+)
 from galini.branch_and_bound.selection import BestLowerBoundSelectionStrategy
 from galini.branch_and_bound.strategy import KSectionBranchingStrategy
+from galini.branch_and_cut.primal import (
+    solve_primal, solve_primal_with_solution
+)
 from galini.config import (
     OptionsGroup,
     IntegerOption,
@@ -403,10 +408,12 @@ class BranchAndCutAlgorithm:
             # No time for finding primal solution
             return NodeSolution(mip_solution, None)
 
-        primal_solution = self._solve_primal_with_solution(
-            problem, mip_solution, fix_all=True
+        primal_solution = solve_primal_with_solution(
+            run_id, problem, mip_solution, self._nlp_solver, fix_all=True
         )
-        new_primal_solution = self._solve_primal(problem, mip_solution)
+        new_primal_solution = solve_primal(
+            run_id, problem, mip_solution, self._nlp_solver
+        )
         if new_primal_solution is not None:
             primal_solution = new_primal_solution
 
@@ -713,61 +720,6 @@ class BranchAndCutAlgorithm:
                 num_violated_cuts,
             )
         return inherit_cuts_count, lp_solution
-
-    def _solve_primal(self, problem, mip_solution):
-        solution = self._solve_primal_with_solution(problem, mip_solution)
-        if solution.status.is_success():
-            return solution
-        # Try solutions from mip solution pool, if available
-        if mip_solution.solution_pool is None:
-            return solution
-        for mip_solution_from_pool in mip_solution.solution_pool:
-            if seconds_left() <= 0:
-                return solution
-            solution_from_pool = self._solve_primal_with_solution(
-                problem, mip_solution_from_pool.inner
-            )
-            if solution_from_pool.status.is_success():
-                return solution_from_pool
-        # No solution from pool was feasible, return original infeasible sol
-        return solution
-
-    def _solve_primal_with_solution(self, problem, mip_solution, fix_all=False):
-        # Solve original problem
-        # Use mip solution as starting point
-        for v, sv in zip(problem.variables, mip_solution.variables):
-            domain = problem.domain(v)
-            view = problem.variable_view(v)
-            if sv.value is None:
-                lb = view.lower_bound()
-                if lb is None:
-                    lb = -mc.infinity
-                ub = view.upper_bound()
-                if ub is None:
-                    ub = mc.infinity
-
-                value = lb + (ub - lb) / 2.0
-            else:
-                value = sv.value
-
-            if domain != core.Domain.REAL:
-                # Solution (from pool) can contain non integer values for
-                # integer variables. Simply round these values up
-                if not is_close(np.trunc(value), value, atol=mc.epsilon):
-                    value = min(view.upper_bound(), np.ceil(value))
-                problem.fix(v, value)
-            elif fix_all:
-                problem.fix(v, value)
-            else:
-                problem.set_starting_point(v, value)
-
-        solution = self._nlp_solver.solve(problem)
-
-        # unfix all variables
-        for v in problem.variables:
-            problem.unfix(v)
-
-        return solution
 
     def _solve_convex_problem(self, problem):
         solution = self._nlp_solver.solve(problem)
