@@ -194,7 +194,7 @@ setup(
     },
     install_requires=[
         'pyomo>=5.6',
-        'cog-suspect>=1.5.5',
+        'cog-suspect>=1.5.7',
         'galini-io>=0.3.1',
         'pulp>=1.6',
         'numpy',
