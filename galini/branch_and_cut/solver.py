@@ -239,7 +239,7 @@ class BranchAndBoundSolver(Solver):
 
         return BabSolution(
             primal_solution.status,
-            primal_solution.objectives,
+            primal_solution.objective,
             primal_solution.variables,
             dual_bound=tree.state.lower_bound,
             nodes_visited=nodes_visited,

@@ -94,7 +94,7 @@ class MIPSolver(Solver):
 
             return MIPSolution(
                 PulpStatus(status),
-                [OptimalObjective(problem.objective.name, pulp.value(pulp_problem.objective))],
+                OptimalObjective(problem.objective.name, pulp.value(pulp_problem.objective)),
                 optimal_variables,
                 dual_values,
                 pool=pool,
@@ -109,7 +109,7 @@ class MIPSolver(Solver):
 
         return MIPSolution(
             PulpStatus(status),
-            [OptimalObjective(problem.objective.name, pulp.value(problem.objective))],
+            OptimalObjective(problem.objective.name, pulp.value(problem.objective)),
             [OptimalVariable(var.name, pulp.value(var)) for var in problem.variables()],
             dual_values,
         )

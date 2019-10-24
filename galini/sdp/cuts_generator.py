@@ -385,12 +385,15 @@ class SdpCutsGenerator(CutsGenerator):
         nb_vars = problem.num_variables
         dim = self._dim
         agg_list = []
-        quad_terms_per_con = [[] for _ in range(len(problem.objectives) + len(problem.constraints))]
+        quad_terms_per_con = [
+            []
+            for _ in range(1 + len(problem.constraints))
+        ]
 
         # Find all quadratic terms (across all objectives + constraints) and form an adjacency matrix for their indices
         adj_mat = np.zeros((nb_vars, nb_vars))
         vars_dict = dict([(v.name, v_idx) for v_idx, v in enumerate(problem.variables)])
-        for con_idx, constraint in enumerate([*problem.objectives, *problem.constraints]):
+        for con_idx, constraint in enumerate([problem.objective, *problem.constraints]):
             root_expr = constraint.root_expr
             quadratic_expr = None
             if root_expr.expression_type == ExpressionType.Quadratic:
@@ -425,8 +428,8 @@ class SdpCutsGenerator(CutsGenerator):
         agg_list = [(x, []) for x in agg_list if not any(x <= y for y in agg_list if x is not y)]
 
         # Look in each constraint at a time for cliques up to dim in size
-        nb_objs = len(problem.objectives)
-        for con_idx, constraint in enumerate([*problem.objectives, *problem.constraints]):
+        nb_objs = 1
+        for con_idx, constraint in enumerate([problem.objective, *problem.constraints]):
             adj_mat_con = np.zeros((nb_vars, nb_vars))
             coeff_mat_con = np.zeros((nb_vars, nb_vars))
             for (quad_idxs, term_coeff) in quad_terms_per_con[con_idx]:

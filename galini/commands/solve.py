@@ -69,18 +69,15 @@ class SolveCommand(CliCommandWithProblem):
             {'id': 'value', 'name': 'Value', 'type': 'f'},
         ])
 
-        for sol, obj in zip(solution.objectives, problem.objectives):
-            if obj.original_sense.is_minimization():
-                value = sol.value
-            else:
-                if sol.value is not None:
-                    value = -sol.value
-                else:
-                    value = None
-            obj_table.add_row({
-                'name': sol.name,
-                'value': value,
-            })
+        value = solution.objective.value
+        if not problem.objective.original_sense.is_minimization():
+            if value is not None:
+                value = -value
+
+        obj_table.add_row({
+            'name': solution.objective.name,
+            'value': value,
+        })
 
         var_table = OutputTable('Variables', [
             {'id': 'name', 'name': 'Variable', 'type': 't'},
