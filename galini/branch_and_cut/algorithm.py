@@ -33,7 +33,7 @@ from galini.branch_and_bound.relaxations import (
 from galini.branch_and_bound.selection import BestLowerBoundSelectionStrategy
 from galini.branch_and_bound.strategy import KSectionBranchingStrategy
 from galini.branch_and_cut.primal import (
-    solve_primal, solve_primal_with_solution
+    solve_primal, solve_primal_with_starting_point
 )
 from galini.config import (
     OptionsGroup,
@@ -42,7 +42,7 @@ from galini.config import (
 )
 import galini.core as core
 from galini.logging import get_logger, DEBUG
-from galini.math import mc, is_close, almost_ge, almost_le
+from galini.math import mc, is_close, almost_ge, almost_le, is_inf
 from galini.quantities import relative_gap, absolute_gap
 from galini.relaxations.relaxed_problem import RelaxedProblem
 from galini.cuts.generator import Cut, CutType
@@ -408,8 +408,9 @@ class BranchAndCutAlgorithm:
             # No time for finding primal solution
             return NodeSolution(mip_solution, None)
 
-        primal_solution = solve_primal_with_solution(
-            run_id, problem, mip_solution, self._nlp_solver, fix_all=True
+        starting_point = [v.value for v in mip_solution.variables]
+        primal_solution = solve_primal_with_starting_point(
+            run_id, problem, starting_point, self._nlp_solver, fix_all=True
         )
         new_primal_solution = solve_primal(
             run_id, problem, mip_solution, self._nlp_solver
@@ -559,89 +560,24 @@ class BranchAndCutAlgorithm:
             logger.info(run_id, 'Use numpy seed {}', seed)
             np.random.seed(seed)
 
-        if not problem.has_integer_variables():
-            return self._find_root_node_feasible_solution_continuous(
-                run_id, problem
-            )
-
-        return self._find_root_node_feasible_solution_mixed_integer(
-            run_id, problem
+        starting_point = [0.0] * problem.num_variables
+        for i, v in enumerate(problem.variables):
+            if problem.has_starting_point(v):
+                starting_point[i] = problem.starting_point(v)
+            elif problem.domain(v).is_integer():
+                # Variable is integer and will be fixed, but we don't have a
+                # starting point for it. Use lower or upper bound.
+                has_lb = is_inf(problem.lower_bound(v))
+                has_ub = is_inf(problem.upper_bound(v))
+                if has_lb:
+                    starting_point[i] = problem.lower_bound(v)
+                elif has_ub:
+                    starting_point[i] = problem.upper_bound(v)
+                else:
+                    starting_point[i] = 0
+        return solve_primal_with_starting_point(
+            run_id, problem, starting_point, self._nlp_solver
         )
-
-    def _find_root_node_feasible_solution_continuous(self, _run_id, problem):
-        start_time = current_time()
-        feasible_solution_search_time = min(
-            datetime.timedelta(
-                seconds=self.root_node_feasible_solution_search_timelimit
-            ),
-            datetime.timedelta(seconds=seconds_left())
-        )
-        end_time = start_time + feasible_solution_search_time
-        # Can't pass 0 as time limit to ipopt
-        now = current_time()
-        if end_time <= start_time:
-            return None
-        time_left = max(1, (end_time - now).seconds)
-        return self._nlp_solver.solve(problem, timelimit=time_left)
-
-    def _find_root_node_feasible_solution_mixed_integer(self, run_id, problem):
-        feasible_solution = None
-        is_timeout = False
-        start_time = current_time()
-        feasible_solution_search_time = min(
-            datetime.timedelta(
-                seconds=self.root_node_feasible_solution_search_timelimit
-            ),
-            datetime.timedelta(seconds=seconds_left())
-        )
-        end_time = start_time + feasible_solution_search_time
-        iteration = 1
-
-        if end_time <= start_time:
-            return None
-
-        while not feasible_solution and not is_timeout:
-            if self._timeout():
-                is_timeout = True
-                break
-
-            for v in problem.variables:
-                vv = problem.variable_view(v)
-                if not vv.domain.is_real():
-                    # check if it has starting point
-                    lb = vv.lower_bound()
-                    ub = vv.upper_bound()
-                    is_integer = vv.domain.is_integer()
-                    if is_close(lb, ub, atol=mc.epsilon):
-                        fixed_point = lb
-                    else:
-                        if is_integer:
-                            lb = min(lb, -mc.integer_infinity)
-                            ub = min(ub + 1, mc.integer_infinity)
-                        fixed_point = np.random.randint(lb, ub)
-                    vv.fix(fixed_point)
-
-            now = current_time()
-            if now > end_time or self._timeout():
-                is_timeout = True
-            else:
-                # Can't pass 0 as time limit to ipopt
-                time_left = max(1, (end_time - now).seconds)
-                solution = self._nlp_solver.solve(problem, timelimit=time_left)
-                if solution.status.is_success():
-                    feasible_solution = solution
-
-            logger.info(
-                run_id, 'Iteration {}: Solution is {}',
-                iteration, solution.status.description()
-            )
-            iteration += 1
-
-        # unfix all variables
-        for v in problem.variables:
-            problem.unfix(v)
-
-        return feasible_solution
 
     def _add_cuts_from_parent(self, run_id, node, relaxed_problem, linear_problem):
         logger.info(run_id, 'Adding inherit cuts.')

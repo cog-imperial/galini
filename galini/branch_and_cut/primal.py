@@ -37,7 +37,10 @@ def solve_primal(run_id, problem, mip_solution, solver):
     solver : Solver
         the NLP solver used to solve the problem
     """
-    solution = solve_primal_with_solution(run_id, problem, mip_solution, solver)
+    starting_point = [v.value for v in mip_solution.variables]
+    solution = solve_primal_with_starting_point(
+        run_id, problem, starting_point, solver
+    )
     if solution.status.is_success():
         return solution
     # Try solutions from mip solution pool, if available
@@ -46,8 +49,12 @@ def solve_primal(run_id, problem, mip_solution, solver):
     for mip_solution_from_pool in mip_solution.solution_pool:
         if seconds_left() <= 0:
             return solution
-        solution_from_pool = solve_primal_with_solution(
-            run_id, problem, mip_solution_from_pool.inner, solver
+        starting_point = [
+            v.value
+            for v in mip_solution_from_pool.inner.variables
+        ]
+        solution_from_pool = solve_primal_with_starting_point(
+            run_id, problem, starting_point, solver
         )
         if solution_from_pool.status.is_success():
             return solution_from_pool
@@ -56,8 +63,8 @@ def solve_primal(run_id, problem, mip_solution, solver):
 
 
 
-def solve_primal_with_solution(
-        run_id, problem, mip_solution, solver, fix_all=False):
+def solve_primal_with_starting_point(
+        run_id, problem, starting_point, solver, fix_all=False):
     """Solve primal using mip_solution as starting point and fixing variables.
 
     Parameters
@@ -66,8 +73,8 @@ def solve_primal_with_solution(
         the run_id used for logging
     problem
         the mixed integer, (possibly) non convex problem
-    mip_solution
-        the linear relaxation solution
+    starting_point : array-like
+        the starting point
     solver : Solver
         the NLP solver used to solve the problem
     fix_all
@@ -76,10 +83,10 @@ def solve_primal_with_solution(
     -------
     A solution to the problem
     """
-    for v, sv in zip(problem.variables, mip_solution.variables):
+    for v, point in zip(problem.variables, starting_point):
         domain = problem.domain(v)
         view = problem.variable_view(v)
-        if sv.value is None:
+        if point is None:
             lb = view.lower_bound()
             if lb is None:
                 lb = -mc.infinity
@@ -89,7 +96,7 @@ def solve_primal_with_solution(
 
             value = lb + (ub - lb) / 2.0
         else:
-            value = sv.value
+            value = point
 
         if domain != Domain.REAL:
             # Solution (from pool) can contain non integer values for
