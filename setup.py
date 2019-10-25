@@ -192,6 +192,7 @@ setup(
         'test': PyTestCommand,
         'build_ext': BuildExt,
     },
+    include_package_data=True,
     install_requires=[
         'pyomo>=5.6',
         'cog-suspect>=1.5.7',

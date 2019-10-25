@@ -1,2 +1,4 @@
 include README.rst CHANGELOG.rst LICENSE
+include galini/sdp/NNs.so
+include galini/sdp/NNs.dll
 recursive-include tests *.py
