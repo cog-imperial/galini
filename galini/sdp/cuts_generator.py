@@ -183,6 +183,8 @@ class SdpCutsGenerator(CutsGenerator):
         return (improvement / lower_bound_improvement) <= self._cuts_relative_tolerance
 
     def generate(self, run_id, problem, relaxed_problem, linear_problem, solution, tree, node):
+        if not np.all(np.isfinite(self._dbs)):
+            return
         cuts = list(self._generate(run_id, problem, relaxed_problem, linear_problem, solution, tree, node))
         self._cut_round += 1
         return cuts
