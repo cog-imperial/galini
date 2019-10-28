@@ -267,6 +267,8 @@ class SdpCutsGenerator(CutsGenerator):
             obj_improve = 0
             dim_act = len(clique)
             x_vals = [solution.variables[var_idx].value for var_idx in clique]
+            if any(v is None for v in x_vals):
+                continue
             cl_idxs = list(combinations_with_replacement(clique, 2))
             X_slice = np.asarray(itemgetter(*cl_idxs)(lifted_mat))
 

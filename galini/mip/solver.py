@@ -78,7 +78,7 @@ class MIPSolver(Solver):
                 pool = SolutionPool(10)
                 for (obj, x_i) in solver.solution_pool:
                     pool_vars = [
-                        OptimalVariable(var.name, x_i[var.name])
+                        OptimalVariable(var.name, x_i.get(var.name, None))
                         for var in problem.variables
                     ]
 
