@@ -159,95 +159,107 @@ class BranchAndCutAlgorithm:
             BoolOption('use_milp_cut_phase', default=False, description='Add additional cut loop solving MILP')
         ])
 
+    def _perform_obbt(self, model, problem):
+        obbt_timelimit = self.solver.config['obbt_timelimit']
+        obbt_start_time = current_time()
+
+        for var in model.component_data_objects(ctype=pe.Var):
+            var.domain = pe.Reals
+
+            if not (var.lb is None or np.isfinite(var.lb)):
+                var.setlb(None)
+
+            if not (var.ub is None or np.isfinite(var.ub)):
+                var.setub(None)
+
+        relaxed_model = relax(model)
+
+        for obj in relaxed_model.component_data_objects(ctype=pe.Objective):
+            relaxed_model.del_component(obj)
+
+        solver = pe.SolverFactory('cplex_persistent')
+        solver.set_instance(relaxed_model)
+        obbt_simplex_maxiter = self.solver.config['obbt_simplex_maxiter']
+        # TODO(fra): make this non-cplex specific
+        simplex_limits = solver._solver_model.parameters.simplex.limits # pylint: disable=protected-access
+        simplex_limits.iterations.set(obbt_simplex_maxiter)
+        # collect variables in nonlinear constraints
+        nonlinear_variables = ComponentSet()
+        for constraint in model.component_data_objects(ctype=pe.Constraint):
+            # skip linear constraint
+            if constraint.body.polynomial_degree() == 1:
+                continue
+
+            for var in identify_variables(constraint.body,
+                                          include_fixed=False):
+                # Coramin will complain about variables that are fixed
+                # Note: Coramin uses an hard-coded 1e-6 tolerance
+                if var.lb is None or var.ub is None:
+                    nonlinear_variables.add(var)
+                else:
+                    if not var.ub - var.lb < 1e-6:
+                        nonlinear_variables.add(var)
+
+        relaxed_vars = [
+            getattr(relaxed_model, v.name)
+            for v in nonlinear_variables
+        ]
+
+        logger.info(0, 'Performing OBBT on {} variables', len(relaxed_vars))
+
+        time_left = obbt_timelimit - seconds_elapsed_since(obbt_start_time)
+        with timeout(time_left, 'Timeout in OBBT'):
+            result = coramin_obbt.perform_obbt(
+                relaxed_model, solver, relaxed_vars
+            )
+
+        if result is None:
+            return
+
+        logger.debug(0, 'New Bounds')
+        for v, new_lb, new_ub in zip(relaxed_vars, *result):
+            vv = problem.variable_view(v.name)
+            if new_lb is None or new_ub is None:
+                logger.warning(0, 'Could not tighten variable {}', v.name)
+            old_lb = vv.lower_bound()
+            old_ub = vv.upper_bound()
+            new_lb = _safe_lb(vv.domain, new_lb, old_lb)
+            new_ub = _safe_ub(vv.domain, new_ub, old_ub)
+            if not new_lb is None and not new_ub is None:
+                if is_close(new_lb, new_ub, atol=mc.epsilon):
+                    if old_lb is not None and \
+                            is_close(new_lb, old_lb, atol=mc.epsilon):
+                        new_ub = new_lb
+                    else:
+                        new_lb = new_ub
+            vv.set_lower_bound(new_lb)
+            vv.set_upper_bound(new_ub)
+            logger.debug(
+                0, '  {}: [{}, {}]',
+                v.name, vv.lower_bound(), vv.upper_bound()
+            )
+
     # pylint: disable=too-many-branches
     def before_solve(self, model, problem):
         """Callback called before solve."""
+        obbt_start_time = current_time()
         try:
-            obbt_timelimit = self.solver.config['obbt_timelimit']
-            obbt_start_time = current_time()
-
-            for var in model.component_data_objects(ctype=pe.Var):
-                var.domain = pe.Reals
-
-                if not (var.lb is None or np.isfinite(var.lb)):
-                    var.setlb(None)
-
-                if not (var.ub is None or np.isfinite(var.ub)):
-                    var.setub(None)
-
-            relaxed_model = relax(model)
-
-            for obj in relaxed_model.component_data_objects(ctype=pe.Objective):
-                relaxed_model.del_component(obj)
-
-            solver = pe.SolverFactory('cplex_persistent')
-            solver.set_instance(relaxed_model)
-            obbt_simplex_maxiter = self.solver.config['obbt_simplex_maxiter']
-            # TODO(fra): make this non-cplex specific
-            simplex_limits = solver._solver_model.parameters.simplex.limits # pylint: disable=protected-access
-            simplex_limits.iterations.set(obbt_simplex_maxiter)
-            # collect variables in nonlinear constraints
-            nonlinear_variables = ComponentSet()
-            for constraint in model.component_data_objects(ctype=pe.Constraint):
-                # skip linear constraint
-                if constraint.body.polynomial_degree() == 1:
-                    continue
-
-                for var in identify_variables(constraint.body,
-                                              include_fixed=False):
-                    # Coramin will complain about variables that are fixed
-                    # Note: Coramin uses an hard-coded 1e-6 tolerance
-                    if var.lb is None or var.ub is None:
-                        nonlinear_variables.add(var)
-                    else:
-                        if not var.ub - var.lb < 1e-6:
-                            nonlinear_variables.add(var)
-
-            relaxed_vars = [
-                getattr(relaxed_model, v.name)
-                for v in nonlinear_variables
-            ]
-
-            logger.info(0, 'Performing OBBT on {} variables', len(relaxed_vars))
-
-            time_left = obbt_timelimit - seconds_elapsed_since(obbt_start_time)
-            with timeout(time_left, 'Timeout in OBBT'):
-                result = coramin_obbt.perform_obbt(
-                    relaxed_model, solver, relaxed_vars
-                )
-
-            if result is None:
-                return
-
-            logger.debug(0, 'New Bounds')
-            for v, new_lb, new_ub in zip(relaxed_vars, *result):
-                vv = problem.variable_view(v.name)
-                if new_lb is None or new_ub is None:
-                    logger.warning(0, 'Could not tighten variable {}', v.name)
-                old_lb = vv.lower_bound()
-                old_ub = vv.upper_bound()
-                new_lb = _safe_lb(vv.domain, new_lb, old_lb)
-                new_ub = _safe_ub(vv.domain, new_ub, old_ub)
-                if not new_lb is None and not new_ub is None:
-                    if is_close(new_lb, new_ub, atol=mc.epsilon):
-                        if old_lb is not None and \
-                                is_close(new_lb, old_lb, atol=mc.epsilon):
-                            new_ub = new_lb
-                        else:
-                            new_lb = new_ub
-                vv.set_lower_bound(new_lb)
-                vv.set_upper_bound(new_ub)
-                logger.debug(
-                    0, '  {}: [{}, {}]',
-                    v.name, vv.lower_bound(), vv.upper_bound()
-                )
-
+            self._perform_obbt(model, problem)
+            self._bac_telemetry.increment_obbt_time(
+                seconds_elapsed_since(obbt_start_time)
+            )
         except TimeoutError:
             logger.info(0, 'OBBT timed out')
+            self._bac_telemetry.increment_obbt_time(
+                seconds_elapsed_since(obbt_start_time)
+            )
             return
 
         except Exception as ex:
             logger.warning(0, 'Error performing OBBT: {}', ex)
+            self._bac_telemetry.increment_obbt_time(
+                seconds_elapsed_since(obbt_start_time)
+            )
             raise
 
     def _has_converged(self, state):
@@ -366,6 +378,7 @@ class BranchAndCutAlgorithm:
         linear_problem = self._build_linear_relaxation(relaxed_problem)
 
         cuts_state = None
+        lower_bound_search_start_time = current_time()
         if self._use_lp_cut_phase:
             originally_integer = []
             if not self._use_milp_cut_phase:
@@ -383,6 +396,9 @@ class BranchAndCutAlgorithm:
                 linear_problem.relaxed.set_domain(var, core.Domain.INTEGER)
 
             if not feasible:
+                self._bac_telemetry.increment_lower_bound_time(
+                    seconds_elapsed_since(lower_bound_search_start_time)
+                )
                 return NodeSolution(mip_solution, feasible_solution)
 
             # Solve MILP to obtain MILP solution
@@ -394,9 +410,15 @@ class BranchAndCutAlgorithm:
             )
 
             if not feasible:
+                self._bac_telemetry.increment_lower_bound_time(
+                    seconds_elapsed_since(lower_bound_search_start_time)
+                )
                 return NodeSolution(mip_solution, feasible_solution)
 
         assert cuts_state is not None
+        self._bac_telemetry.increment_lower_bound_time(
+            seconds_elapsed_since(lower_bound_search_start_time)
+        )
 
         if cuts_state.lower_bound >= tree.upper_bound and \
                 not is_close(cuts_state.lower_bound, tree.upper_bound,
@@ -408,6 +430,8 @@ class BranchAndCutAlgorithm:
             # No time for finding primal solution
             return NodeSolution(mip_solution, None)
 
+        upper_bound_search_start_time = current_time()
+
         starting_point = [v.value for v in mip_solution.variables]
         primal_solution = solve_primal_with_starting_point(
             run_id, problem, starting_point, self._nlp_solver, fix_all=True
@@ -417,6 +441,10 @@ class BranchAndCutAlgorithm:
         )
         if new_primal_solution is not None:
             primal_solution = new_primal_solution
+
+        self._bac_telemetry.increment_upper_bound_time(
+            seconds_elapsed_since(upper_bound_search_start_time)
+        )
 
         if not primal_solution.status.is_success() and \
                 feasible_solution is not None:
@@ -662,6 +690,7 @@ class BranchAndCutAlgorithm:
         return NodeSolution(solution, solution)
 
     def _perform_fbbt(self, run_id, problem, tree, node):
+        fbbt_start_time = current_time()
         logger.debug(run_id, 'Performing FBBT')
 
         objective_upper_bound = None
@@ -741,6 +770,9 @@ class BranchAndCutAlgorithm:
         group_name = '_'.join([str(c) for c in node.coordinate])
         logger.tensor(run_id, group_name, 'lb', problem.lower_bounds)
         logger.tensor(run_id, group_name, 'ub', problem.upper_bounds)
+        self._bac_telemetry.increment_fbbt_time(
+            seconds_elapsed_since(fbbt_start_time)
+        )
 
 
 def _convert_linear_expr(linear_problem, expr, objvar=None):

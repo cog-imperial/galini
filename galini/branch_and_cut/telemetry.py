@@ -94,6 +94,14 @@ class BranchAndCountTelemetry:
             telemetry.create_counter('branch_and_cut.nodes_visited', 0)
         self._inherited_cuts = \
             telemetry.create_counter('branch_and_cut.inherited_cuts')
+        self._obbt_time = \
+            telemetry.create_counter('branch_and_cut.obbt_time', 0)
+        self._fbbt_time = \
+            telemetry.create_counter('branch_and_cut.fbbt_time', 0)
+        self._lower_bound_time = \
+            telemetry.create_counter('branch_and_cut.lower_bound_time', 0)
+        self._upper_bound_time = \
+            telemetry.create_counter('branch_and_cut.upper_bound_time', 0)
 
     def start_timing(self, optimal_objective, elapsed_time):
         self._primal_dual.start_timing(optimal_objective, elapsed_time)
@@ -101,6 +109,22 @@ class BranchAndCountTelemetry:
     def increment_inherited_cuts(self, count):
         """Increment inherited cuts counter."""
         self._inherited_cuts.increment(count)
+
+    def increment_obbt_time(self, elapsed):
+        """Increment OBBT elapsed time counter."""
+        self._obbt_time.increment(elapsed)
+
+    def increment_fbbt_time(self, elapsed):
+        """Increment FBBT elapsed time counter."""
+        self._fbbt_time.increment(elapsed)
+
+    def increment_lower_bound_time(self, elapsed):
+        """Increment lower bound search elapsed time counter."""
+        self._lower_bound_time.increment(elapsed)
+
+    def increment_upper_bound_time(self, elapsed):
+        """Increment upper bound search elapsed time counter."""
+        self._upper_bound_time.increment(elapsed)
 
     def update_at_end_of_iteration(self, tree, elapsed_time=None):
         """Update tree state counters at end of iteration."""

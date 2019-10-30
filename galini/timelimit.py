@@ -67,7 +67,7 @@ def current_time():
 def seconds_elapsed_since(time):
     now = current_time()
     diff = now - time
-    return diff.seconds
+    return diff.total_seconds()
 
 
 class timeout(object):
@@ -80,7 +80,7 @@ class timeout(object):
 
     def __enter__(self):
         signal.signal(signal.SIGALRM, self.handle_timeout)
-        signal.alarm(self.seconds)
+        signal.alarm(int(self.seconds))
 
     def __exit__(self, type, value, traceback):
         signal.alarm(0)
