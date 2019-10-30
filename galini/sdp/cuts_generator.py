@@ -31,6 +31,7 @@ from galini.core import LinearExpression, SumExpression, QuadraticExpression
 from galini.cuts import CutType, Cut, CutsGenerator
 from galini.logging import get_logger
 from galini.math import mc, is_close
+from galini.quantities import relative_bound_improvement
 
 
 logger = get_logger(__name__)
@@ -165,22 +166,17 @@ class SdpCutsGenerator(CutsGenerator):
         self._agg_list_rescaled = None
 
     def has_converged(self, state):
-        """Termination criteria for cut generation loop.
-
-        Termination criteria on lower bound improvement between two consecutive
-        cut rounds <= relative_tolerance % of lower bound improvement from cut round.
-        """
+        """Termination criteria for cut generation loop."""
         if (state.first_solution is None or
             state.previous_solution is None or
             state.latest_solution is None):
             return False
 
-        if is_close(state.latest_solution, state.previous_solution, atol=mc.epsilon):
-            return True
-
-        improvement = state.latest_solution - state.previous_solution
-        lower_bound_improvement = state.latest_solution - state.first_solution
-        return (improvement / lower_bound_improvement) <= self._cuts_relative_tolerance
+        return relative_bound_improvement(
+            state.first_solution,
+            state.previous_solution,
+            state.latest_solution
+        ) <= self._cuts_relative_tolerance
 
     def generate(self, run_id, problem, relaxed_problem, linear_problem, solution, tree, node):
         if not np.all(np.isfinite(self._dbs)):

@@ -13,6 +13,7 @@
 # limitations under the License.
 """Compute quantities such as absolute and relative gap."""
 import numpy as np
+from galini.math import is_close, mc
 
 
 _finfo = np.finfo(np.float64)
@@ -36,3 +37,21 @@ def relative_gap(lb, ub):
     if np.isclose(ub, 0):
         return (ub - lb) / _finfo.eps
     return (ub - lb) / np.abs(ub)
+
+
+def relative_bound_improvement(first_solution, prev_solution, latest_solution):
+    """ Lower bound improvement between two consecutive cut rounds.
+
+    Parameters
+    ----------
+    first_solution : float
+    prev_solution : float
+    latest_solution : float
+    """
+    if is_close(latest_solution, prev_solution, atol=mc.epsilon):
+        return 0.0
+    improvement = latest_solution - prev_solution
+    lower_bound_improvement = latest_solution - first_solution
+    if is_close(lower_bound_improvement, 0.0, atol=mc.epsilon):
+        return 0.0
+    return improvement / lower_bound_improvement
