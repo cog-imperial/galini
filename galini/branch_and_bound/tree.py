@@ -85,8 +85,9 @@ class BabTree:
 
     def _update_node(self, node, solution, is_root_node):
         assert isinstance(solution, NodeSolution)
-        node.update(solution)
-        del self.open_nodes[node.coordinate_hash]
+        node.update(solution, can_override=is_root_node)
+        if node.coordinate_hash in self.open_nodes:
+            del self.open_nodes[node.coordinate_hash]
         self._update_state(solution, is_root_node)
 
     @property

@@ -115,7 +115,7 @@ def solve_primal_with_starting_point(
         # unfix all variables
         for v in problem.variables:
             problem.unfix(v)
-    except ex:
+    except Exception as ex:
         # unfix all variables, then rethrow
         for v in problem.variables:
             problem.unfix(v)

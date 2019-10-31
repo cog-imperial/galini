@@ -145,6 +145,7 @@ class BranchAndCutAlgorithm:
         self.branching_strategy = KSectionBranchingStrategy(2)
         self.node_selection_strategy = BestLowerBoundSelectionStrategy()
 
+        self._user_model = None
         self._bounds = None
         self._monotonicity = None
         self._convexity = None
@@ -239,9 +240,11 @@ class BranchAndCutAlgorithm:
                 v.name, vv.lower_bound(), vv.upper_bound()
             )
 
-    # pylint: disable=too-many-branches
-    def before_solve(self, model, problem):
-        """Callback called before solve."""
+    def _before_root_node(self, problem):
+        if self._user_model is None:
+            raise RuntimeError("No user model. Did you call 'before_solve'?")
+
+        model = self._user_model
         obbt_start_time = current_time()
         try:
             self._perform_obbt(model, problem)
@@ -261,6 +264,11 @@ class BranchAndCutAlgorithm:
                 seconds_elapsed_since(obbt_start_time)
             )
             raise
+
+    # pylint: disable=too-many-branches
+    def before_solve(self, model, problem):
+        """Callback called before solve."""
+        self._user_model = model
 
     def _has_converged(self, state):
         rel_gap = relative_gap(state.lower_bound, state.upper_bound)
@@ -497,8 +505,30 @@ class BranchAndCutAlgorithm:
 
         return True, cuts_state, mip_solution
 
+    def find_initial_solution(self, run_id, problem, tree, node):
+        self._perform_fbbt(run_id, problem, tree, node, maxiter=1)
+        for variable in problem.variables:
+            if is_inf(problem.lower_bound(variable)):
+                return
+            if is_inf(problem.upper_bound(variable)):
+                return
+
+        relaxed_problem = self._build_convex_relaxation(problem)
+        self._cuts_generators_manager.before_start_at_root(
+            run_id, problem, relaxed_problem.relaxed
+        )
+
+        solution = self._solve_problem_at_node(
+            run_id, problem, relaxed_problem.relaxed, tree, node
+        )
+        self._cuts_generators_manager.after_end_at_root(
+            run_id, problem, relaxed_problem.relaxed, solution
+        )
+        return solution
+
     def solve_problem_at_root(self, run_id, problem, tree, node):
         """Solve problem at root node."""
+        self._before_root_node(problem)
         self._perform_fbbt(run_id, problem, tree, node)
         relaxed_problem = self._build_convex_relaxation(problem)
         self._cuts_generators_manager.before_start_at_root(
@@ -689,16 +719,20 @@ class BranchAndCutAlgorithm:
         solution = self._nlp_solver.solve(problem)
         return NodeSolution(solution, solution)
 
-    def _perform_fbbt(self, run_id, problem, tree, node):
+    def _perform_fbbt(self, run_id, problem, tree, node, maxiter=None):
         fbbt_start_time = current_time()
         logger.debug(run_id, 'Performing FBBT')
 
         objective_upper_bound = None
         if tree.upper_bound is not None:
             objective_upper_bound = tree.upper_bound
+
+        fbbt_maxiter = self.fbbt_maxiter
+        if maxiter is not None:
+            fbbt_maxiter = maxiter
         bounds = perform_fbbt(
             problem,
-            maxiter=self.fbbt_maxiter,
+            maxiter=fbbt_maxiter,
             timelimit=self.fbbt_timelimit,
             objective_upper_bound=objective_upper_bound,
         )

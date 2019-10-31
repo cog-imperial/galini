@@ -15,7 +15,7 @@
 """Branch & Bound branching strategies."""
 import numpy as np
 from galini.core import Problem
-from galini.math import mc, is_inf
+from galini.math import mc, is_inf, is_close
 from galini.branch_and_bound.branching import BranchingPoint
 
 
@@ -58,6 +58,8 @@ class KSectionBranchingStrategy(BranchingStrategy):
         root_problem = tree.root.storage.branching_data()
         node_problem = node.storage.branching_data()
         var = least_reduced_variable(node_problem, root_problem)
+        if is_close(var.upper_bound(), var.lower_bound(), atol=mc.epsilon):
+            return None
         return self._branch_on_var(var)
 
     def _branch_on_var(self, var):

@@ -56,6 +56,7 @@ class SolveCommand(CliCommandWithProblem):
         start_timelimit()
 
         solver.before_solve(model, problem)
+
         solution = solver.solve(
             problem,
             known_optimal_objective=args.known_optimal_objective

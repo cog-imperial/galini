@@ -107,11 +107,19 @@ class BranchAndBoundSolver(Solver):
         )
         self._tree = tree
 
+        logger.info(run_id, 'Finding initial feasible solution')
+        initial_solution = self._algo.find_initial_solution(
+            run_id, problem, tree, tree.root
+        )
+        if initial_solution is not None:
+            tree.update_root(initial_solution)
+
         logger.info(run_id, 'Solving root problem')
         root_solution = self._algo.solve_problem_at_root(
             run_id, problem, tree, tree.root
         )
         tree.update_root(root_solution)
+
         self._bac_telemetry.update_at_end_of_iteration(tree, elapsed_time())
         self._telemetry.log_at_end_of_iteration(run_id, bab_iteration)
         bab_iteration += 1
