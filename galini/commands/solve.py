@@ -23,7 +23,9 @@ from galini.commands import (
 )
 from galini.galini import Galini
 from galini.logging import apply_config as apply_logging_config
-from galini.timelimit import start_timelimit, set_timelimit
+from galini.timelimit import (
+    start_timelimit, set_timelimit, seconds_elapsed_since, current_time
+)
 
 DEFAULT_SOLVER = 'bac'
 
@@ -51,9 +53,11 @@ class SolveCommand(CliCommandWithProblem):
 
         galini_group = galini.get_configuration_group('galini')
         timelimit = galini_group.get('timelimit')
+        elapsed_counter = galini.telemetry.create_gauge('elapsed_time', 0.0)
 
         set_timelimit(timelimit)
         start_timelimit()
+        start_time = current_time()
 
         solver.before_solve(model, problem)
 
@@ -61,6 +65,8 @@ class SolveCommand(CliCommandWithProblem):
             problem,
             known_optimal_objective=args.known_optimal_objective
         )
+
+        elapsed_counter.set_value(seconds_elapsed_since(start_time))
 
         if solution is None:
             raise RuntimeError('Solver did not return a solution')
