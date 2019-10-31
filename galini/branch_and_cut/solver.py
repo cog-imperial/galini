@@ -113,6 +113,10 @@ class BranchAndBoundSolver(Solver):
         )
         if initial_solution is not None:
             tree.update_root(initial_solution)
+            self._bac_telemetry.update_at_end_of_iteration(tree, elapsed_time())
+            self._telemetry.log_at_end_of_iteration(run_id, bab_iteration)
+            if self._algo.should_terminate(tree.state):
+                return
 
         logger.info(run_id, 'Solving root problem')
         root_solution = self._algo.solve_problem_at_root(

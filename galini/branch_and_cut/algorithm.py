@@ -506,25 +506,23 @@ class BranchAndCutAlgorithm:
         return True, cuts_state, mip_solution
 
     def find_initial_solution(self, run_id, problem, tree, node):
-        self._perform_fbbt(run_id, problem, tree, node, maxiter=1)
-        for variable in problem.variables:
-            if is_inf(problem.lower_bound(variable)):
-                return
-            if is_inf(problem.upper_bound(variable)):
-                return
+        try:
+            self._perform_fbbt(run_id, problem, tree, node, maxiter=1)
+            relaxed_problem = self._build_convex_relaxation(problem)
+            self._cuts_generators_manager.before_start_at_root(
+                run_id, problem, relaxed_problem.relaxed
+            )
 
-        relaxed_problem = self._build_convex_relaxation(problem)
-        self._cuts_generators_manager.before_start_at_root(
-            run_id, problem, relaxed_problem.relaxed
-        )
-
-        solution = self._solve_problem_at_node(
-            run_id, problem, relaxed_problem.relaxed, tree, node
-        )
-        self._cuts_generators_manager.after_end_at_root(
-            run_id, problem, relaxed_problem.relaxed, solution
-        )
-        return solution
+            solution = self._solve_problem_at_node(
+                run_id, problem, relaxed_problem.relaxed, tree, node
+            )
+            self._cuts_generators_manager.after_end_at_root(
+                run_id, problem, relaxed_problem.relaxed, solution
+            )
+            return solution
+        except Exception as ex:
+            logger.info(run_id, 'Exception in find_initial_solution: {}', ex)
+            return None
 
     def solve_problem_at_root(self, run_id, problem, tree, node):
         """Solve problem at root node."""
