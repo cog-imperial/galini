@@ -84,9 +84,10 @@ class ProblemForwardIterator(ForwardIterator):
 
 class ProblemBackwardIterator(BackwardIterator):
     def iterate(self, problem, visitor, *args, **kwargs):
-        changed_vertices = []
+        changed_vertices = set()
         for vertex in reversed(problem.vertices):
             has_changed = visitor.visit(vertex, *args)
             if has_changed:
-                changed_vertices.append(vertex)
-        return changed_vertices
+                for child in vertex.children:
+                    changed_vertices.add(child)
+        return list(changed_vertices)
