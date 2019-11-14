@@ -32,18 +32,30 @@ def range_ratio(problem, root_problem):
     root_upper_bounds = np.array(root_problem.upper_bounds)
     denominator = np.abs(root_upper_bounds - root_lower_bounds) + mc.epsilon
     numerator = upper_bounds - lower_bounds
+
     numerator_mask = ~is_inf(numerator)
     denominator_mask = ~is_inf(denominator)
     finite_numerator = np.zeros_like(numerator)
     finite_denominator = np.zeros_like(denominator) + mc.epsilon
     finite_numerator[numerator_mask] = numerator[numerator_mask]
     finite_denominator[denominator_mask] = denominator[denominator_mask]
+
+    # All bounded variables are fixed, range ratio is not possible to compute
+    if is_close(np.sum(np.abs(finite_numerator)), 0.0, atol=mc.epsilon):
+        return None
     return np.nan_to_num(finite_numerator / finite_denominator)
 
 
 def least_reduced_variable(problem, root_problem):
     assert problem.num_variables == root_problem.num_variables
     r = range_ratio(problem, root_problem)
+    # Could not compute range ratio, for example all bounded variables are fixed
+    # Return the first variable to be unbounded.
+    if r is None:
+        for v in problem.variables:
+            if is_inf(problem.lower_bound(v)) or is_inf(problem.upper_bound(v)):
+                return problem.variable_view(v)
+        return None
     var_idx = np.argmax(r)
     return problem.variable_view(var_idx)
 

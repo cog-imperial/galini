@@ -85,9 +85,17 @@ class ProblemForwardIterator(ForwardIterator):
 class ProblemBackwardIterator(BackwardIterator):
     def iterate(self, problem, visitor, *args, **kwargs):
         changed_vertices = set()
-        for vertex in reversed(problem.vertices):
+        starting_vertices = kwargs.pop('starting_vertices', None)
+        if starting_vertices is None:
+            vertices = [con.root_expr for con in problem.constraints]
+        else:
+            vertices = starting_vertices
+
+        while vertices:
+            vertex = vertices.pop()
             has_changed = visitor.visit(vertex, *args)
             if has_changed:
                 for child in vertex.children:
                     changed_vertices.add(child)
+                    vertices.append(child)
         return list(changed_vertices)
