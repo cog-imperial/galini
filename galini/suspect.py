@@ -88,6 +88,7 @@ class ProblemBackwardIterator(BackwardIterator):
         starting_vertices = kwargs.pop('starting_vertices', None)
         if starting_vertices is None:
             vertices = [con.root_expr for con in problem.constraints]
+            vertices.append(problem.objective.root_expr)
         else:
             vertices = starting_vertices
 

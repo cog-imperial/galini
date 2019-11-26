@@ -128,9 +128,14 @@ class BoundsTightener:
             if self._stop_criterion.should_stop():
                 return
 
-            changes_tigh = self._backward_iterator.iterate(
-                problem, tigh_visitor, bounds, starting_vertices=changes_prop
-            )
+            if changes_tigh is None:
+                changes_tigh = self._backward_iterator.iterate(
+                    problem, tigh_visitor, bounds, starting_vertices=None
+                )
+            else:
+                changes_tigh = self._backward_iterator.iterate(
+                    problem, tigh_visitor, bounds, starting_vertices=changes_prop
+                )
 
             if len(changes_prop) == 0 and len(changes_tigh) == 0:
                 return
