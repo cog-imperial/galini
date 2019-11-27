@@ -76,6 +76,7 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         self._round = 0
         self._feasibility_problem = None
         self._nlp_solution = None
+        self._relaxation_is_linear = None
 
         self._nlp_solver = galini.instantiate_solver('ipopt')
 
@@ -87,6 +88,18 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         self._feasibility_problem = None
         self._nlp_solution = None
 
+    def _check_if_problem_is_nolinear(self, relaxed_problem):
+        self._relaxation_is_linear = True
+
+        if relaxed_problem.objective.root_expr.polynomial_degree() > 1:
+            self._relaxation_is_linear = False
+            return
+
+        for con in relaxed_problem.constraints:
+            if con.root_expr.polynomial_degree() > 1:
+                self._relaxation_is_linear = False
+                return
+
     @staticmethod
     def cuts_generator_options():
         """Outer Approximation cuts generator options"""
@@ -97,12 +110,14 @@ class OuterApproximationCutsGenerator(CutsGenerator):
 
     def before_start_at_root(self, run_id, problem, relaxed_problem):
         self._reset_node_local_storage()
+        self._check_if_problem_is_nolinear(relaxed_problem)
 
     def after_end_at_root(self, run_id, problem, relaxed_problem, solution):
         pass
 
     def before_start_at_node(self, run_id, problem, relaxed_problem):
         self._reset_node_local_storage()
+        self._check_if_problem_is_nolinear(relaxed_problem)
 
     def after_end_at_node(self, run_id, problem, relaxed_problem, solution):
         pass
@@ -123,6 +138,12 @@ class OuterApproximationCutsGenerator(CutsGenerator):
     def generate(self, run_id, problem, relaxed_problem, linear_problem,
                  mip_solution, tree, node):
         logger.debug(run_id, 'Starting cut round={}', self._round)
+        if self._relaxation_is_linear:
+            logger.debug(
+                run_id,
+                'Convex Relaxation is linear. No Outer Approximation cuts will be generated.'
+            )
+            return []
 
         noninteger_values = self._compute_noninteger_values(
             run_id, relaxed_problem, mip_solution
