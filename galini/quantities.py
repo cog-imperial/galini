@@ -35,7 +35,7 @@ def relative_gap(lb, ub):
     if not np.isfinite(ub) or not np.isfinite(lb):
         return np.inf
     if np.isclose(ub, 0):
-        return (ub - lb) / _finfo.eps
+        return (ub - lb) / mc.epsilon
     return (ub - lb) / np.abs(ub)
 
 
