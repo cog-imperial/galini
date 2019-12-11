@@ -92,6 +92,8 @@ class BranchAndCountTelemetry:
             telemetry.create_gauge('branch_and_cut.lower_bound', -np.inf)
         self._nodes_visited = \
             telemetry.create_counter('branch_and_cut.nodes_visited', 0)
+        self._total_cut_rounds = \
+            telemetry.create_counter('branch_and_cut.total_cut_rounds', 0)
         self._inherited_cuts = \
             telemetry.create_counter('branch_and_cut.inherited_cuts')
         self._obbt_time = \
@@ -109,6 +111,10 @@ class BranchAndCountTelemetry:
     def increment_inherited_cuts(self, count):
         """Increment inherited cuts counter."""
         self._inherited_cuts.increment(count)
+
+    def increment_total_cut_rounds(self):
+        """Increment total cut rounds by 1."""
+        self._total_cut_rounds.increment(1)
 
     def increment_obbt_time(self, elapsed):
         """Increment OBBT elapsed time counter."""

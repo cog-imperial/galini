@@ -498,6 +498,8 @@ class BranchAndCutAlgorithm:
                 rtol=self.relative_tolerance,
             )
 
+            self._bac_telemetry.increment_total_cut_rounds()
+
             if not new_cuts:
                 break
 
