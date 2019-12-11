@@ -39,19 +39,26 @@ def relative_gap(lb, ub):
     return (ub - lb) / np.abs(ub)
 
 
-def relative_bound_improvement(first_solution, prev_solution, latest_solution):
-    """ Lower bound improvement between two consecutive cut rounds.
+def relative_bound_improvement(prev_prev_solution, prev_solution,
+                               latest_solution):
+    """ Lower bound improvement between three consecutive cut rounds.
+
+    The relative bound improvement is defined as:
+
+        (latest_solution - prev_solution)
+        --------------------------------------
+        (latest_solution - prev_prev_solution)
 
     Parameters
     ----------
-    first_solution : float
+    prev_prev_solution : float
     prev_solution : float
     latest_solution : float
     """
     if is_close(latest_solution, prev_solution, atol=mc.epsilon):
         return 0.0
     improvement = latest_solution - prev_solution
-    lower_bound_improvement = latest_solution - first_solution
+    lower_bound_improvement = latest_solution - prev_prev_solution
     if is_close(lower_bound_improvement, 0.0, atol=mc.epsilon):
         return 0.0
     return improvement / lower_bound_improvement
