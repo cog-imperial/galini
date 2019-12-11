@@ -18,6 +18,7 @@ import galini.core as core
 from galini.config.options import OptionsGroup, StringListOption
 from galini.logging import get_logger
 from galini.registry import Registry
+from galini.timelimit import current_time, seconds_elapsed_since
 from galini.util import expr_to_str
 
 logger = get_logger(__name__)
@@ -27,6 +28,16 @@ class CutsGeneratorsRegistry(Registry):
     """Registry of CutsGenerators."""
     def group_name(self):
         return 'galini.cuts_generators'
+
+
+class _CutGeneratorCounter:
+    def __init__(self, telemetry, name):
+        self._cut_count = telemetry.create_counter('{}.cuts_count'.format(name))
+        self._cut_time = telemetry.create_counter('{}.time'.format(name))
+
+    def increment(self, cuts_count, time):
+        self._cut_count.increment(cuts_count)
+        self._cut_time.increment(time)
 
 
 class CutsGeneratorsManager:
@@ -53,7 +64,7 @@ class CutsGeneratorsManager:
             generators.append(generator_cls(galini, generator_config))
             counter_name = "{}.cuts_count".format(generator_cls.name)
             self._cuts_counters.append(
-                self.galini.telemetry.create_counter(counter_name)
+                _CutGeneratorCounter(self.galini.telemetry, counter_name)
             )
         return generators
 
@@ -106,12 +117,16 @@ class CutsGeneratorsManager:
         paranoid_mode = self.galini.paranoid_mode
 
         for gen, counter in zip(self._generators, self._cuts_counters):
+            start_time = current_time()
             cuts = gen.generate(
                 run_id, problem, relaxed_problem, linear_problem, mip_solution,
                 tree, node
             )
+            elapsed_time = seconds_elapsed_since(start_time)
+
             if cuts is None:
                 cuts = []
+
             if not isinstance(cuts, list):
                 raise ValueError(
                     'CutsGenerator.generate must return a list of cuts.'
@@ -119,11 +134,12 @@ class CutsGeneratorsManager:
             logger.info(
                 run_id, '  * {} generated {} cuts.', gen.name, len(cuts)
             )
+
             for cut in cuts:
                 if paranoid_mode:
                     _check_cut_coefficients(cut)
                 all_cuts.append(cut)
-            counter.increment(len(cuts))
+            counter.increment(len(cuts), elapsed_time)
         return all_cuts
 
 
