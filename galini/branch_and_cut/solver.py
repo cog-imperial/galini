@@ -171,7 +171,13 @@ class BranchAndBoundSolver(Solver):
                 current_node.parent.state.upper_bound_solution,
             )
 
-            if current_node.parent.lower_bound >= tree.upper_bound:
+            node_can_not_improve_solution = is_close(
+                current_node.parent.lower_bound,
+                tree.upper_bound,
+                atol=self._algo.tolerance,
+                rtol=self._algo.relative_tolerance,
+            ) or current_node.parent.lower_bound > tree.upper_bound
+            if node_can_not_improve_solution:
                 logger.info(
                     run_id,
                     "Phatom node because it won't improve bound: node.lower_bound={}, tree.upper_bound={}",
@@ -179,7 +185,7 @@ class BranchAndBoundSolver(Solver):
                     tree.upper_bound,
                 )
                 logger.log_prune_bab_node(run_id, current_node.coordinate)
-                tree.phatom_node(current_node)
+                tree.fathom_node(current_node)
                 self._bac_telemetry.update_at_end_of_iteration(tree, elapsed_time())
                 self._telemetry.log_at_end_of_iteration(run_id, bab_iteration)
                 bab_iteration += 1
@@ -201,10 +207,10 @@ class BranchAndBoundSolver(Solver):
                 logger.info(run_id, 'Branched at point {}', branching_point)
             else:
                 # We won't explore this part of the tree anymore.
-                # Add to phatomed nodes.
+                # Add to fathomed nodes.
                 logger.info(run_id, 'Phatom node {}', current_node.coordinate)
                 logger.log_prune_bab_node(run_id, current_node.coordinate)
-                tree.phatom_node(current_node)
+                tree.fathom_node(current_node)
 
             self._log_problem_information_at_node(
                 run_id, current_node.storage.problem, solution, current_node)

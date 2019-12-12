@@ -44,7 +44,7 @@ class BabTree:
             nodes_visited=0,
         )
         self.open_nodes = {}
-        self.phatomed_nodes = []
+        self.fathomed_nodes = []
         self.solution_pool = SolutionPool(5)
 
         self._add_node(self.root)
@@ -102,8 +102,8 @@ class BabTree:
     def nodes_visited(self):
         return self.state.nodes_visited
 
-    def phatom_node(self, node):
-        self.phatomed_nodes.append(node)
+    def fathom_node(self, node):
+        self.fathomed_nodes.append(node)
         self._update_lower_bound()
 
     def node(self, coord):
@@ -164,7 +164,7 @@ class BabTree:
         # If there are open nodes, then the lower bound is the lowest
         # of their lower bounds.
         # If there are no open nodes, then the lower bound is the lowest
-        # of the phatomed nodes lower bounds.
+        # of the fathomed nodes lower bounds.
         if (upper_bound_solution is None or
                 not upper_bound_solution.status.is_success()):
             new_upper_bound = None
@@ -178,8 +178,8 @@ class BabTree:
             new_lower_bound = self._open_nodes_lower_bound(new_upper_bound)
             return self._set_new_state(new_lower_bound, new_upper_bound)
 
-        if self.phatomed_nodes:
-            new_lower_bound = self._phatomed_nodes_lower_bound(new_upper_bound)
+        if self.fathomed_nodes:
+            new_lower_bound = self._fathomed_nodes_lower_bound(new_upper_bound)
             return self._set_new_state(new_lower_bound, new_upper_bound)
 
         return self._set_new_state(None, new_upper_bound)
@@ -189,8 +189,8 @@ class BabTree:
             new_lower_bound = self._open_nodes_lower_bound()
             return self._set_new_state(new_lower_bound, None)
 
-        if self.phatomed_nodes:
-            new_lower_bound = self._phatomed_nodes_lower_bound()
+        if self.fathomed_nodes:
+            new_lower_bound = self._fathomed_nodes_lower_bound()
             return self._set_new_state(new_lower_bound, None)
 
     def _set_new_state(self, new_lower_bound, new_upper_bound):
@@ -210,9 +210,9 @@ class BabTree:
             upper_bound,
         )
 
-    def _phatomed_nodes_lower_bound(self, upper_bound=None):
+    def _fathomed_nodes_lower_bound(self, upper_bound=None):
         return self._nodes_minimum_lower_bound(
-            self.phatomed_nodes,
+            self.fathomed_nodes,
             upper_bound,
         )
 
