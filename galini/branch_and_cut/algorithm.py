@@ -133,6 +133,7 @@ class BranchAndCutAlgorithm:
 
         bac_config = galini.get_configuration_group('branch_and_cut.cuts')
         self.cuts_maxiter = bac_config['maxiter']
+        self._cuts_timelimit = bac_config['timelimit']
 
         self._use_lp_cut_phase = bac_config['use_lp_cut_phase']
         self._use_milp_cut_phase = bac_config['use_milp_cut_phase']
@@ -153,9 +154,26 @@ class BranchAndCutAlgorithm:
     def algorithm_options():
         """Return options for BranchAndCutAlgorithm"""
         return OptionsGroup('cuts', [
-            IntegerOption('maxiter', default=20, description='Number of cut rounds'),
-            BoolOption('use_lp_cut_phase', default=True, description='Solve LP in cut loop'),
-            BoolOption('use_milp_cut_phase', default=False, description='Add additional cut loop solving MILP')
+            IntegerOption(
+                'maxiter',
+                default=20,
+                description='Number of cut rounds'
+            ),
+            IntegerOption(
+                'timelimit',
+                default=120,
+                description='Total timelimit for cut rounds'
+            ),
+            BoolOption(
+                'use_lp_cut_phase',
+                default=True,
+                description='Solve LP in cut loop'
+            ),
+            BoolOption(
+                'use_milp_cut_phase',
+                default=False,
+                description='Add additional cut loop solving MILP'
+            ),
         ])
 
     def _perform_obbt(self, model, problem):
@@ -293,11 +311,13 @@ class BranchAndCutAlgorithm:
     def _cuts_iterations_exceeded(self, state):
         return state.round > self.cuts_maxiter
 
-    def cut_loop_should_terminate(self, state):
+    def cut_loop_should_terminate(self, state, start_time):
+        elapsed_time = seconds_elapsed_since(start_time)
         return (
             self._cuts_converged(state) or
             self._cuts_iterations_exceeded(state) or
-            self._timeout()
+            self._timeout() or
+            elapsed_time > self._cuts_timelimit
         )
 
     def _node_limit_exceeded(self, state):
@@ -471,7 +491,8 @@ class BranchAndCutAlgorithm:
             if self._bac_telemetry:
                 self._bac_telemetry.increment_inherited_cuts(parent_cuts_count)
 
-        while not self.cut_loop_should_terminate(cuts_state):
+        cut_loop_start_time = current_time()
+        while not self.cut_loop_should_terminate(cuts_state, cut_loop_start_time):
             feasible, new_cuts, mip_solution = self._perform_cut_round(
                 run_id, problem, relaxed_problem,
                 linear_problem.relaxed, cuts_state, tree, node
