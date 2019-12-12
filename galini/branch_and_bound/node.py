@@ -19,7 +19,7 @@ from galini.core import VariableView
 
 NodeState = namedtuple(
     'NodeState',
-    ['lower_bound_solution', 'upper_bound_solution']
+    ['lower_bound_solution']
 )
 
 
@@ -81,18 +81,11 @@ class Node:
                 solution.lower_bound_solution,
                 lambda a, b: b > a
             )
-            new_upper_bound_solution = _best_solution(
-                self.state.upper_bound_solution,
-                solution.upper_bound_solution,
-                lambda a, b: b < a
-            )
         else:
             new_lower_bound_solution = solution.lower_bound_solution
-            new_upper_bound_solution = solution.upper_bound_solution
 
         self.state = NodeState(
             lower_bound_solution=new_lower_bound_solution,
-            upper_bound_solution=new_upper_bound_solution,
         )
 
     @property
@@ -116,16 +109,6 @@ class Node:
                 solution.objective_value(),
                 self.parent.lower_bound,
             )
-        return solution.objective_value()
-
-    @property
-    def upper_bound(self):
-        assert self.state is not None
-        solution = self.state.upper_bound_solution
-        if solution is None:
-            return np.inf
-        if not solution.status.is_success():
-            return np.inf
         return solution.objective_value()
 
     def branch(self, strategy=None):

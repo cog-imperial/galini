@@ -132,8 +132,8 @@ class BranchAndBoundSolver(Solver):
         logger.log_add_bab_node(
             run_id,
             coordinate=[0],
-            lower_bound=tree.root.lower_bound,
-            upper_bound=tree.root.upper_bound,
+            lower_bound=root_solution.lower_bound,
+            upper_bound=root_solution.upper_bound,
         )
 
         while not self._algo.should_terminate(tree.state):
@@ -153,22 +153,11 @@ class BranchAndBoundSolver(Solver):
                 var_view = \
                     current_node_problem.variable_view(current_node.variable)
 
-                logger.log_add_bab_node(
-                    run_id,
-                    coordinate=current_node.coordinate,
-                    lower_bound=current_node.parent.lower_bound,
-                    upper_bound=current_node.parent.upper_bound,
-                    branching_variables=[
-                        (current_node.variable.name, var_view.lower_bound(), var_view.upper_bound())
-                    ],
-                )
-
             logger.info(
                 run_id,
-                'Visiting node {}: parent state={}, parent solution={}',
+                'Visiting node {}: parent state={}',
                 current_node.coordinate,
                 current_node.parent.state,
-                current_node.parent.state.upper_bound_solution,
             )
 
             node_can_not_improve_solution = is_close(
@@ -177,10 +166,11 @@ class BranchAndBoundSolver(Solver):
                 atol=self._algo.tolerance,
                 rtol=self._algo.relative_tolerance,
             ) or current_node.parent.lower_bound > tree.upper_bound
+
             if node_can_not_improve_solution:
                 logger.info(
                     run_id,
-                    "Phatom node because it won't improve bound: node.lower_bound={}, tree.upper_bound={}",
+                    "Fathom node because it won't improve bound: node.lower_bound={}, tree.upper_bound={}",
                     current_node.parent.lower_bound,
                     tree.upper_bound,
                 )
@@ -228,10 +218,18 @@ class BranchAndBoundSolver(Solver):
             self._telemetry.log_at_end_of_iteration(run_id, bab_iteration)
             bab_iteration += 1
 
-        logger.info(run_id, 'Branch & Bound Finished: {}', tree.state)
-        logger.info(run_id, 'Branch & Bound Converged?: {}', self._algo._has_converged(tree.state))
-        logger.info(run_id, 'Branch & Bound Timeout?: {}', self._algo._timeout())
-        logger.info(run_id, 'Branch & Bound Node Limit Exceeded?: {}', self._algo._node_limit_exceeded(tree.state))
+        logger.info(
+            run_id, 'Branch & Bound Finished: {}', tree.state)
+        logger.info(
+            run_id,
+            'Branch & Bound Converged?: {}',
+            self._algo._has_converged(tree.state))
+        logger.info(
+            run_id, 'Branch & Bound Timeout?: {}', self._algo._timeout())
+        logger.info(
+            run_id,
+            'Branch & Bound Node Limit Exceeded?: {}',
+            self._algo._node_limit_exceeded(tree.state))
 
     def _solution_from_tree(self, problem, tree):
         nodes_visited = tree.nodes_visited
