@@ -41,7 +41,7 @@ def is_close(a, b, atol=None, rtol=None):
 
 
 def is_inf(n):
-    """Test elemnt-whise for positive and negative infinity.
+    """Test element-wise for positive and negative infinity.
 
     This version of is_inf also tests for values greater than
     `mc.infinity` or less than `-mc.infinity`.

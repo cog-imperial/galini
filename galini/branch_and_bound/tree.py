@@ -16,6 +16,7 @@
 from collections import namedtuple
 import numpy as np
 from galini.branch_and_bound.node import Node, NodeSolution
+from galini.math import is_inf
 from galini.solvers.solution import SolutionPool
 
 
@@ -57,6 +58,16 @@ class BabTree:
         for child in children:
             self._add_node(child)
         return children, point
+
+    def add_initial_solution(self, solution):
+        assert is_inf(self.lower_bound)
+        assert is_inf(self.upper_bound)
+        self._update_node(
+            self.root,
+            NodeSolution(None, solution),
+            is_root_node=True,
+        )
+        self.root.initial_feasible_solution = solution
 
     def update_root(self, solution):
         self._update_node(self.root, solution, True)

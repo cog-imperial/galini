@@ -176,7 +176,7 @@ class BranchAndCutAlgorithm:
             ),
         ])
 
-    def _perform_obbt(self, model, problem):
+    def _perform_obbt(self, model, problem, upper_bound):
         obbt_timelimit = self.solver.config['obbt_timelimit']
         obbt_start_time = current_time()
 
@@ -190,9 +190,6 @@ class BranchAndCutAlgorithm:
                 var.setub(None)
 
         relaxed_model = relax(model)
-
-        for obj in relaxed_model.component_data_objects(ctype=pe.Objective):
-            relaxed_model.del_component(obj)
 
         solver = pe.SolverFactory('cplex_persistent')
         solver.set_instance(relaxed_model)
@@ -214,7 +211,7 @@ class BranchAndCutAlgorithm:
                 if var.lb is None or var.ub is None:
                     nonlinear_variables.add(var)
                 else:
-                    if not var.ub - var.lb < 1e-6:
+                    if not np.abs(var.ub - var.lb) < 1e-6:
                         nonlinear_variables.add(var)
 
         relaxed_vars = [
@@ -227,7 +224,8 @@ class BranchAndCutAlgorithm:
         time_left = obbt_timelimit - seconds_elapsed_since(obbt_start_time)
         with timeout(time_left, 'Timeout in OBBT'):
             result = coramin_obbt.perform_obbt(
-                relaxed_model, solver, relaxed_vars
+                relaxed_model, solver, relaxed_vars,
+                objective_bound=upper_bound
             )
 
         if result is None:
@@ -256,14 +254,17 @@ class BranchAndCutAlgorithm:
                 v.name, vv.lower_bound(), vv.upper_bound()
             )
 
-    def _before_root_node(self, problem):
+    def _before_root_node(self, problem, upper_bound):
         if self._user_model is None:
             raise RuntimeError("No user model. Did you call 'before_solve'?")
+        obbt_upper_bound = None
+        if upper_bound is not None and not is_inf(upper_bound):
+            obbt_upper_bound = upper_bound
 
         model = self._user_model
         obbt_start_time = current_time()
         try:
-            self._perform_obbt(model, problem)
+            self._perform_obbt(model, problem, obbt_upper_bound)
             self._bac_telemetry.increment_obbt_time(
                 seconds_elapsed_since(obbt_start_time)
             )
@@ -366,12 +367,7 @@ class BranchAndCutAlgorithm:
                 return self._solve_convex_problem(problem)
 
         if not node.has_parent:
-            # It's root node, try to find a feasible integer solution
-            feasible_solution = \
-                self._find_root_node_feasible_solution(run_id, problem)
-            logger.info(
-                run_id, 'Initial feasible solution: {}', feasible_solution
-            )
+            feasible_solution = node.initial_feasible_solution
         else:
             feasible_solution = None
 
@@ -527,27 +523,49 @@ class BranchAndCutAlgorithm:
         return True, cuts_state, mip_solution
 
     def find_initial_solution(self, run_id, problem, tree, node):
+        def _get_starting_point(v):
+            vv = problem.variable_view(v)
+            # Use starting point if present
+            if vv.has_starting_point():
+                return vv.starting_point()
+            # If var has both bounds, use midpoint
+            if vv.lower_bound() is not None and vv.upper_bound is not None:
+                return (
+                        vv.lower_bound() +
+                        0.5 * (vv.upper_bound() - vv.lower_bound())
+                )
+            # If unbounded, use 0
+            if vv.lower_bound() is None and vv.upper_bound() is None:
+                return 0.0
+            # If no lower bound, use upper bound
+            if vv.lower_bound() is None:
+                return vv.upper_bound()
+            # Otherwise, use lower bound
+            return vv.lower_bound()
+
         try:
             self._perform_fbbt(run_id, problem, tree, node, maxiter=1)
+            # Pass the user-given starting point to the primal heuristic,
+            # then solve the problem to find an initial feasible solution.
             relaxed_problem = self._build_convex_relaxation(problem)
-            self._cuts_generators_manager.before_start_at_root(
-                run_id, problem, relaxed_problem.relaxed
-            )
+            starting_point = [
+                _get_starting_point(v)
+                for v in problem.variables
+            ]
 
-            solution = self._solve_problem_at_node(
-                run_id, problem, relaxed_problem.relaxed, tree, node
-            )
-            self._cuts_generators_manager.after_end_at_root(
-                run_id, problem, relaxed_problem.relaxed, solution
+            solution = solve_primal_with_starting_point(
+                run_id, problem, starting_point, self._nlp_solver
             )
             return solution
         except Exception as ex:
+            if self.galini.paranoid_mode:
+                raise ex
             logger.info(run_id, 'Exception in find_initial_solution: {}', ex)
             return None
 
     def solve_problem_at_root(self, run_id, problem, tree, node):
         """Solve problem at root node."""
-        self._before_root_node(problem)
+        self._before_root_node(problem, tree.upper_bound)
         self._perform_fbbt(run_id, problem, tree, node)
         relaxed_problem = self._build_convex_relaxation(problem)
         self._cuts_generators_manager.before_start_at_root(

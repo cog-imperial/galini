@@ -66,6 +66,7 @@ class Node:
         self.coordinate = coordinate
         self.variable = variable
         self.state = None
+        self.initial_feasible_solution = None
 
         if solution:
             self.update(solution)
