@@ -13,6 +13,8 @@
 #  limitations under the License.
 
 """Branch & Bound branching."""
+import numpy as np
+
 from galini.core import VariableView
 
 
@@ -62,6 +64,9 @@ def _create_child_problem(problem, branching_var, new_lower_bound,
                           new_upper_bound):
     child = problem.make_child()
     var = child.variable_view(branching_var.idx)
+    if not var.domain.is_real():
+        new_lower_bound = np.ceil(new_lower_bound)
+        new_upper_bound = np.floor(new_upper_bound)
     var.set_lower_bound(new_lower_bound)
     var.set_upper_bound(new_upper_bound)
     return child
