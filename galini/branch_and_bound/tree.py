@@ -66,11 +66,12 @@ class BabTree:
             self.root,
             NodeSolution(None, solution),
             is_root_node=True,
+            update_nodes_visited=False,
         )
         self.root.initial_feasible_solution = solution
 
-    def update_root(self, solution):
-        self._update_node(self.root, solution, True)
+    def update_root(self, solution, update_nodes_visited=True):
+        self._update_node(self.root, solution, True, update_nodes_visited)
 
     def has_nodes(self):
         return self.selection_strategy.has_nodes()
@@ -94,12 +95,13 @@ class BabTree:
     def update_node(self, node, solution):
         self._update_node(node, solution, False)
 
-    def _update_node(self, node, solution, is_root_node):
+    def _update_node(self, node, solution, is_root_node,
+                     update_nodes_visited=True):
         assert isinstance(solution, NodeSolution)
         node.update(solution, can_override=is_root_node)
         if node.coordinate_hash in self.open_nodes:
             del self.open_nodes[node.coordinate_hash]
-        self._update_state(solution, is_root_node)
+        self._update_state(solution, is_root_node, update_nodes_visited)
 
     @property
     def lower_bound(self):
@@ -113,9 +115,9 @@ class BabTree:
     def nodes_visited(self):
         return self.state.nodes_visited
 
-    def fathom_node(self, node):
+    def fathom_node(self, node, update_nodes_visited=True):
         self.fathomed_nodes.append(node)
-        self._update_lower_bound()
+        self._update_lower_bound(update_nodes_visited)
 
     def node(self, coord):
         if not isinstance(coord, list):
@@ -135,7 +137,7 @@ class BabTree:
             current = current.children[c]
         return current
 
-    def _update_state(self, solution, is_root_node):
+    def _update_state(self, solution, is_root_node, update_nodes_visited=True):
         lower_bound_solution = solution.lower_bound_solution
         upper_bound_solution = solution.upper_bound_solution
 
@@ -153,23 +155,28 @@ class BabTree:
             new_upper_bound = None
 
         if lower_bound_solution is None:
-            return self._set_new_state(None, new_upper_bound)
+            return self._set_new_state(
+                None, new_upper_bound, update_nodes_visited)
 
         if not lower_bound_solution.status.is_success():
-            return self._set_new_state(None, new_upper_bound)
+            return self._set_new_state(
+                None, new_upper_bound, update_nodes_visited)
 
         if is_root_node:
             new_lower_bound = lower_bound_solution.objective_value()
 
             if upper_bound_solution is None:
-                return self._set_new_state(new_lower_bound, None)
+                return self._set_new_state(
+                    new_lower_bound, None, update_nodes_visited)
 
             if not upper_bound_solution.status.is_success():
-                return self._set_new_state(new_lower_bound, None)
+                return self._set_new_state(
+                    new_lower_bound, None, update_nodes_visited)
 
             return self._set_new_state(
                 new_lower_bound,
                 upper_bound_solution.objective_value(),
+                update_nodes_visited
             )
 
         # If there are open nodes, then the lower bound is the lowest
@@ -187,31 +194,40 @@ class BabTree:
 
         if self.open_nodes:
             new_lower_bound = self._open_nodes_lower_bound(new_upper_bound)
-            return self._set_new_state(new_lower_bound, new_upper_bound)
+            return self._set_new_state(
+                new_lower_bound, new_upper_bound, update_nodes_visited)
 
         if self.fathomed_nodes:
             new_lower_bound = self._fathomed_nodes_lower_bound(new_upper_bound)
-            return self._set_new_state(new_lower_bound, new_upper_bound)
+            return self._set_new_state(
+                new_lower_bound, new_upper_bound, update_nodes_visited)
 
-        return self._set_new_state(None, new_upper_bound)
+        return self._set_new_state(None, new_upper_bound, update_nodes_visited)
 
-    def _update_lower_bound(self):
+    def _update_lower_bound(self, update_nodes_visited=True):
         if self.open_nodes:
             new_lower_bound = self._open_nodes_lower_bound()
-            return self._set_new_state(new_lower_bound, None)
+            return self._set_new_state(
+                new_lower_bound, None, update_nodes_visited)
 
         if self.fathomed_nodes:
             new_lower_bound = self._fathomed_nodes_lower_bound()
-            return self._set_new_state(new_lower_bound, None)
+            return self._set_new_state(
+                new_lower_bound, None, update_nodes_visited)
 
-    def _set_new_state(self, new_lower_bound, new_upper_bound):
+    def _set_new_state(self, new_lower_bound, new_upper_bound,
+                       update_nodes_visited=True):
         if new_lower_bound is None:
             new_lower_bound = self.state.lower_bound
 
         if new_upper_bound is None:
             new_upper_bound = self.state.upper_bound
 
-        new_nodes_visited = self.state.nodes_visited + 1
+        if update_nodes_visited:
+            new_nodes_visited = self.state.nodes_visited + 1
+        else:
+            new_nodes_visited = self.state.nodes_visited
+
         self.state = \
             TreeState(new_lower_bound, new_upper_bound, new_nodes_visited)
 

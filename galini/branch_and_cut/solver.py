@@ -124,7 +124,9 @@ class BranchAndBoundSolver(Solver):
         )
         tree.update_root(root_solution)
 
-        self._bac_telemetry.update_at_end_of_iteration(tree, elapsed_time())
+        self._bac_telemetry.update_at_end_of_iteration(
+            tree, elapsed_time(), update_nodes_visited=False
+        )
         self._telemetry.log_at_end_of_iteration(run_id, bab_iteration)
         bab_iteration += 1
 
@@ -175,7 +177,7 @@ class BranchAndBoundSolver(Solver):
                     tree.upper_bound,
                 )
                 logger.log_prune_bab_node(run_id, current_node.coordinate)
-                tree.fathom_node(current_node)
+                tree.fathom_node(current_node, update_nodes_visited=True)
                 self._bac_telemetry.update_at_end_of_iteration(tree, elapsed_time())
                 self._telemetry.log_at_end_of_iteration(run_id, bab_iteration)
                 bab_iteration += 1
@@ -192,15 +194,18 @@ class BranchAndBoundSolver(Solver):
                 rtol=self._algo.relative_tolerance,
             )
 
-            if not current_node_converged:
+            if not current_node_converged and solution.upper_bound_solution is not None:
                 node_children, branching_point = tree.branch_at_node(current_node)
                 logger.info(run_id, 'Branched at point {}', branching_point)
             else:
                 # We won't explore this part of the tree anymore.
                 # Add to fathomed nodes.
-                logger.info(run_id, 'Phatom node {}', current_node.coordinate)
+                logger.info(
+                    run_id, 'Fathom node {}, converged?',
+                    current_node.coordinate, current_node_converged
+                )
                 logger.log_prune_bab_node(run_id, current_node.coordinate)
-                tree.fathom_node(current_node)
+                tree.fathom_node(current_node, update_nodes_visited=False)
 
             self._log_problem_information_at_node(
                 run_id, current_node.storage.problem, solution, current_node)

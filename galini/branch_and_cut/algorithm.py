@@ -172,7 +172,7 @@ class BranchAndCutAlgorithm:
                                           include_fixed=False):
                 # Coramin will complain about variables that are fixed
                 # Note: Coramin uses an hard-coded 1e-6 tolerance
-                if var.lb is None or var.ub is None:
+                if not var.has_lb() or not var.has_ub():
                     nonlinear_variables.add(var)
                 else:
                     if not np.abs(var.ub - var.lb) < 1e-6:
@@ -188,7 +188,8 @@ class BranchAndCutAlgorithm:
         time_left = obbt_timelimit - seconds_elapsed_since(obbt_start_time)
         with timeout(time_left, 'Timeout in OBBT'):
             result = coramin_obbt.perform_obbt(
-                relaxed_model, solver, relaxed_vars,
+                relaxed_model, solver,
+                varlist=relaxed_vars,
                 objective_bound=upper_bound
             )
 
@@ -389,6 +390,13 @@ class BranchAndCutAlgorithm:
 
             # Solve MILP to obtain MILP solution
             mip_solution = self._mip_solver.solve(linear_problem.relaxed)
+            if mip_solution.status.is_success():
+                logger.update_variable(
+                    run_id,
+                    iteration=self._cut_loop_outer_iteration,
+                    var_name='milp_solution',
+                    value=mip_solution.objective_value()
+                )
 
         if self._use_milp_cut_phase:
             feasible, cuts_state, mip_solution = self._perform_cut_loop(

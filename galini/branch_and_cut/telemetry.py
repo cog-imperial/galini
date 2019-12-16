@@ -133,9 +133,11 @@ class BranchAndCutTelemetry:
         """Increment upper bound search elapsed time counter."""
         self._upper_bound_time.increment(elapsed)
 
-    def update_at_end_of_iteration(self, tree, elapsed_time=None):
+    def update_at_end_of_iteration(self, tree, elapsed_time=None,
+                                   update_nodes_visited=True):
         """Update tree state counters at end of iteration."""
         self._primal_dual.update_at_end_of_iteration(tree, elapsed_time)
         self._upper_bound.set_value(tree.upper_bound)
         self._lower_bound.set_value(tree.lower_bound)
-        self._nodes_visited.increment(1)
+        if update_nodes_visited:
+            self._nodes_visited.increment(1)
