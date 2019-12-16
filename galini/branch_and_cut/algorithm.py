@@ -42,6 +42,7 @@ from galini.config import (
 )
 import galini.core as core
 from galini.logging import get_logger, DEBUG
+from galini.branch_and_cut.state import CutsState
 from galini.math import mc, is_close, almost_ge, almost_le, is_inf
 from galini.quantities import relative_gap, absolute_gap
 from galini.relaxations.relaxed_problem import RelaxedProblem
@@ -62,47 +63,6 @@ logger = get_logger(__name__)
 
 coramin_logger = coramin_obbt.logger # pylint: disable=invalid-name
 coramin_logger.disabled = True
-
-
-class CutsState:
-    """Cut loop state."""
-    def __init__(self):
-        self.round = 0
-        self.lower_bound = -np.inf
-        self.previous_previous_solution = None
-        self.latest_solution = None
-        self.previous_solution = None
-
-    def update(self, solution, paranoid=False, atol=None, rtol=None):
-        """Update cut state with `solution`."""
-        self.round += 1
-        current_objective = solution.objective.value
-        if paranoid:
-            close = is_close(
-                current_objective, self.lower_bound, atol=atol, rtol=rtol
-            )
-            increased = (
-                current_objective >= self.lower_bound or
-                close
-            )
-            if not increased:
-                msg = 'Lower bound in cuts phase decreased: {} to {}'
-                raise RuntimeError(
-                    msg.format(self.lower_bound, current_objective)
-                )
-
-        self.lower_bound = current_objective
-        self.previous_previous_solution = self.previous_solution
-        self.previous_solution = self.latest_solution
-        self.latest_solution = current_objective
-
-    def __str__(self):
-        return 'CutsState(round={}, lower_bound={})'.format(
-            self.round, self.lower_bound
-        )
-
-    def __repr__(self):
-        return '<{} at {}>'.format(str(self), hex(id(self)))
 
 
 # pylint: disable=too-many-instance-attributes
@@ -148,6 +108,10 @@ class BranchAndCutAlgorithm:
         self._bounds = None
         self._monotonicity = None
         self._convexity = None
+
+        # TODO(fra): refactor telemetry to support nested iterations
+        self._cut_loop_outer_iteration = 0
+        self._cut_loop_inner_iteration = 0
 
     # pylint: disable=line-too-long
     @staticmethod
@@ -488,6 +452,7 @@ class BranchAndCutAlgorithm:
                 self._bac_telemetry.increment_inherited_cuts(parent_cuts_count)
 
         cut_loop_start_time = current_time()
+        self._cut_loop_inner_iteration = 0
         while not self.cut_loop_should_terminate(cuts_state, cut_loop_start_time):
             feasible, new_cuts, mip_solution = self._perform_cut_round(
                 run_id, problem, relaxed_problem,
@@ -496,6 +461,18 @@ class BranchAndCutAlgorithm:
 
             if not feasible:
                 return False, cuts_state, mip_solution
+
+            # output
+            logger.update_variable(
+                run_id,
+                iteration=[
+                    self._cut_loop_outer_iteration,
+                    self._cut_loop_inner_iteration
+                ],
+                var_name='cut_loop_lower_bound',
+                value=mip_solution.objective_value()
+            )
+            self._cut_loop_inner_iteration += 1
 
             # Add cuts as constraints
             for cut in new_cuts:
@@ -581,6 +558,7 @@ class BranchAndCutAlgorithm:
         self._bounds = None
         self._convexity = None
         self._monotonicity = None
+        self._cut_loop_outer_iteration += 1
         return solution
 
     def solve_problem_at_node(self, run_id, problem, tree, node):
@@ -600,6 +578,7 @@ class BranchAndCutAlgorithm:
         self._bounds = None
         self._convexity = None
         self._monotonicity = None
+        self._cut_loop_outer_iteration += 1
         return solution
 
     def _build_convex_relaxation(self, problem):

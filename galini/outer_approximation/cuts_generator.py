@@ -123,6 +123,9 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         pass
 
     def has_converged(self, state):
+        if self._relaxation_is_linear:
+            return True
+
         if self._nlp_solution is None:
             return False
 

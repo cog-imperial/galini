@@ -82,7 +82,8 @@ class PrimalDualIntegral:
         self._lower_bound_pct.set_value(lower_bound_gamma)
         self._lower_bound.increment(lower_bound_gamma * delta_t)
 
-class BranchAndCountTelemetry:
+
+class BranchAndCutTelemetry:
     """Collection of telemetry information of the Branch & Cut algorithm."""
     def __init__(self, telemetry):
         self._primal_dual = PrimalDualIntegral(telemetry)

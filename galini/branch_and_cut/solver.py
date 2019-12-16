@@ -19,7 +19,7 @@ from galini.branch_and_cut.algorithm import BranchAndCutAlgorithm
 from galini.branch_and_bound.solution import BabSolution, BabStatusInterrupted
 from galini.branch_and_bound.tree import BabTree
 from galini.branch_and_cut.node_storage import RootNodeStorage
-from galini.branch_and_cut.telemetry import BranchAndCountTelemetry
+from galini.branch_and_cut.telemetry import BranchAndCutTelemetry
 from galini.config import (
     SolverOptions,
     NumericOption,
@@ -47,7 +47,7 @@ class BranchAndBoundSolver(Solver):
         self._tree = None
         self._solution = None
         self._telemetry = galini.telemetry
-        self._bac_telemetry = BranchAndCountTelemetry(galini.telemetry)
+        self._bac_telemetry = BranchAndCutTelemetry(galini.telemetry)
         self._algo = BranchAndCutAlgorithm(
             galini, solver=self, telemetry=self._bac_telemetry
         )
