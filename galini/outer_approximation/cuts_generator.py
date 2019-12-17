@@ -24,8 +24,10 @@ from galini.logging import get_logger
 from galini.math import is_close, is_inf, mc, almost_ge, almost_le
 from galini.outer_approximation.feasibility_problem import \
     FeasibilityProblemRelaxation
+from galini.outer_approximation.shared import (
+    problem_is_linear, mip_variable_value
+)
 from galini.relaxations.relaxed_problem import RelaxedProblem
-from galini.util import solution_numerical_value
 
 logger = get_logger(__name__)
 
@@ -89,16 +91,7 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         self._nlp_solution = None
 
     def _check_if_problem_is_nolinear(self, relaxed_problem):
-        self._relaxation_is_linear = True
-
-        if relaxed_problem.objective.root_expr.polynomial_degree() > 1:
-            self._relaxation_is_linear = False
-            return
-
-        for con in relaxed_problem.constraints:
-            if con.root_expr.polynomial_degree() > 1:
-                self._relaxation_is_linear = False
-                return
+        self._relaxation_is_linear = problem_is_linear(relaxed_problem)
 
     @staticmethod
     def cuts_generator_options():
@@ -197,7 +190,7 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         nonlinear_expr_idx = [c.root_expr.idx for c in nonlinear_constraints]
 
         mip_values = [
-            _mip_variable_value(linear_problem, v)
+            mip_variable_value(linear_problem, v)
             for v in mip_solution.variables
         ]
         nonlinear_mip_values = mip_values[:relaxed_problem.num_variables]
@@ -404,12 +397,3 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         return '_outer_approximation_{}_{}_r_{}_{}'.format(
             i, name, self._round, self._counter
         )
-
-
-def _mip_variable_value(problem, sol):
-    v = problem.variable_view(sol.name)
-    return solution_numerical_value(
-        sol,
-        problem.lower_bound(v),
-        problem.upper_bound(v),
-    )

@@ -12,5 +12,24 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .cuts_generator import OuterApproximationCutsGenerator
-from .quadratic_cuts_generator import QuadraticOuterApproximationCutsGenerator
+from galini.util import solution_numerical_value
+
+
+def problem_is_linear(relaxed_problem):
+    if relaxed_problem.objective.root_expr.polynomial_degree() > 1:
+        return False
+
+    for con in relaxed_problem.constraints:
+        if con.root_expr.polynomial_degree() > 1:
+            return False
+
+    return True
+
+
+def mip_variable_value(problem, sol):
+    v = problem.variable_view(sol.name)
+    return solution_numerical_value(
+        sol,
+        problem.lower_bound(v),
+        problem.upper_bound(v),
+    )
