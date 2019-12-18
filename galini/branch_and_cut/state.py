@@ -23,7 +23,7 @@ class CutsState:
     def __init__(self):
         self.round = 0
         self.lower_bound = -np.inf
-        self.previous_previous_solution = None
+        self.first_solution = None
         self.latest_solution = None
         self.previous_solution = None
 
@@ -46,7 +46,8 @@ class CutsState:
                 )
 
         self.lower_bound = current_objective
-        self.previous_previous_solution = self.previous_solution
+        if self.first_solution is None:
+            self.first_solution = current_objective
         self.previous_solution = self.latest_solution
         self.latest_solution = current_objective
 

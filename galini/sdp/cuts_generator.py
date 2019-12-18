@@ -167,13 +167,13 @@ class SdpCutsGenerator(CutsGenerator):
 
     def has_converged(self, state):
         """Termination criteria for cut generation loop."""
-        if (state.previous_previous_solution is None or
+        if (state.first_solution is None or
             state.previous_solution is None or
             state.latest_solution is None):
             return False
 
         return relative_bound_improvement(
-            state.previous_previous_solution,
+            state.first_solution,
             state.previous_solution,
             state.latest_solution
         ) <= self._cuts_relative_tolerance
