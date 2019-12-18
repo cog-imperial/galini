@@ -183,8 +183,8 @@ setup(
         ],
         'galini.cuts_generators': [
             'triangle=galini.triangle:TriangleCutsGenerator',
+            'mixed_integer_outer_approximation=galini.outer_approximation:MixedIntegerOuterApproximationCutsGenerator',
             'outer_approximation=galini.outer_approximation:OuterApproximationCutsGenerator',
-            'quadratic_outer_approximation=galini.outer_approximation:QuadraticOuterApproximationCutsGenerator',
             'sdp=galini.sdp:SdpCutsGenerator',
         ],
     },
