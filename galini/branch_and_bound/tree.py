@@ -64,11 +64,11 @@ class BabTree:
         assert is_inf(self.upper_bound)
         self._update_node(
             self.root,
-            NodeSolution(None, solution),
+            solution,
             is_root_node=True,
             update_nodes_visited=False,
         )
-        self.root.initial_feasible_solution = solution
+        self.root.initial_feasible_solution = solution.upper_bound_solution
 
     def update_root(self, solution, update_nodes_visited=True):
         self._update_node(self.root, solution, True, update_nodes_visited)

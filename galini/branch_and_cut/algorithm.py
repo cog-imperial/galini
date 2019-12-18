@@ -338,15 +338,9 @@ class BranchAndCutAlgorithm:
             logger.debug(run_id, '\t{}\t({}, {})', v.name,
                          vv.lower_bound(), vv.upper_bound())
 
-        # Check if problem is convex in current domain, in that case
-        # use IPOPT to solve it (if all variables are reals)
-        if self._convexity and _is_convex(problem, self._convexity):
-            all_reals = all(
-                problem.variable_view(v).domain.is_real()
-                for v in problem.variables
-            )
-            if all_reals:
-                return self._solve_convex_problem(problem)
+        solution = self._try_solve_convex_problem(problem)
+        if solution is not None:
+            return solution
 
         if not node.has_parent:
             feasible_solution = node.initial_feasible_solution
@@ -547,6 +541,9 @@ class BranchAndCutAlgorithm:
 
         try:
             self._perform_fbbt(run_id, problem, tree, node, maxiter=1)
+            solution = self._try_solve_convex_problem(problem)
+            if solution is not None:
+                return solution
             # Pass the user-given starting point to the primal heuristic,
             # then solve the problem to find an initial feasible solution.
             relaxed_problem = self._build_convex_relaxation(problem)
@@ -558,7 +555,7 @@ class BranchAndCutAlgorithm:
             solution = solve_primal_with_starting_point(
                 run_id, problem, starting_point, self._nlp_solver
             )
-            return solution
+            return NodeSolution(None, solution)
         except Exception as ex:
             if self.galini.paranoid_mode:
                 raise ex
@@ -755,6 +752,19 @@ class BranchAndCutAlgorithm:
                 num_violated_cuts,
             )
         return inherit_cuts_count, lp_solution
+
+    def _try_solve_convex_problem(self, problem):
+        """Check if problem is convex in current domain, in that case use
+        IPOPT to solve it (if all variables are reals)
+        """
+        if self._convexity and _is_convex(problem, self._convexity):
+            all_reals = all(
+                problem.variable_view(v).domain.is_real()
+                for v in problem.variables
+            )
+            if all_reals:
+                return self._solve_convex_problem(problem)
+        return None
 
     def _solve_convex_problem(self, problem):
         solution = self._nlp_solver.solve(problem)
