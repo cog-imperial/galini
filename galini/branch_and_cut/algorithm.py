@@ -39,6 +39,7 @@ from galini.config import (
     OptionsGroup,
     IntegerOption,
     BoolOption,
+    NumericOption,
 )
 import galini.core as core
 from galini.logging import get_logger, DEBUG
@@ -94,7 +95,7 @@ class BranchAndCutAlgorithm:
         bac_config = galini.get_configuration_group('branch_and_cut.cuts')
         self.cuts_maxiter = bac_config['maxiter']
         self._cuts_timelimit = bac_config['timelimit']
-
+        self._cut_tolerance = bac_config['cut_tolerance']
         self._use_lp_cut_phase = bac_config['use_lp_cut_phase']
         self._use_milp_cut_phase = bac_config['use_milp_cut_phase']
 
@@ -122,6 +123,11 @@ class BranchAndCutAlgorithm:
                 'maxiter',
                 default=20,
                 description='Number of cut rounds'
+            ),
+            NumericOption(
+                'cut_tolerance',
+                default=1e-5,
+                description='Terminate if two consecutive cut rounds are within this tolerance'
             ),
             IntegerOption(
                 'timelimit',
@@ -272,6 +278,17 @@ class BranchAndCutAlgorithm:
         )
 
     def _cuts_converged(self, state):
+        cuts_close =  (
+                state.latest_solution is not None and
+                state.previous_solution is not None and
+                is_close(
+                    state.latest_solution,
+                    state.previous_solution,
+                    rtol=self._cut_tolerance
+                )
+        )
+        if cuts_close:
+            return True
         return self._cuts_generators_manager.has_converged(state)
 
     def _cuts_iterations_exceeded(self, state):
