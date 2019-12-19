@@ -47,6 +47,11 @@ def range_ratio(problem, root_problem):
 
 
 def least_reduced_variable(problem, root_problem):
+    # If any variable is unbounded, branch at 0.0
+    for v in problem.variables:
+        if is_inf(problem.lower_bound(v)) and is_inf(problem.upper_bound(v)):
+            return problem.variable_view(v)
+
     assert problem.num_variables == root_problem.num_variables
     r = range_ratio(problem, root_problem)
     # Could not compute range ratio, for example all bounded variables are fixed
