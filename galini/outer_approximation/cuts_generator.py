@@ -125,7 +125,7 @@ class OuterApproximationCutsGenerator(CutsGenerator):
 
         if cons_lb is None:
             # g(x) <= c
-            above_threshold = almost_ge(
+            above_threshold = not almost_le(
                 constraint_x,
                 cons_ub,
                 atol=self.threshold,
@@ -136,7 +136,7 @@ class OuterApproximationCutsGenerator(CutsGenerator):
                 )
         elif cons_ub is None:
             # c <= g(x)
-            below_threshold = almost_le(
+            below_threshold = not almost_ge(
                 constraint_x,
                 cons_lb,
                 atol=self.threshold,
