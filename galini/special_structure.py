@@ -208,3 +208,20 @@ class _GaliniSpecialStructurePropagationVisitor(SpecialStructurePropagationVisit
         for entry_point in _convexity_detection_entry_points():
             cls = entry_point.load()
             self._cvx_visitors.append(cls(problem))
+
+
+def update_special_structure_settings(galini):
+    _expr_to_mono[core.LinearExpression].max_expr_children = \
+        galini.special_structure_linear_max_children
+    _expr_to_cvx[core.LinearExpression].max_expr_children = \
+        galini.special_structure_linear_max_children
+
+    _expr_to_mono[core.QuadraticExpression].max_expr_children = \
+        galini.special_structure_quadratic_max_terms
+    _expr_to_cvx[core.QuadraticExpression].max_expr_children = \
+        galini.special_structure_quadratic_max_terms
+
+    _expr_to_mono[core.SumExpression].max_expr_children = \
+        galini.special_structure_linear_max_children
+    _expr_to_cvx[core.SumExpression].max_expr_children = \
+        galini.special_structure_linear_max_children

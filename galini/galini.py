@@ -17,6 +17,7 @@ from galini.config import ConfigurationManager
 from galini.math import mc
 from galini.solvers import SolversRegistry
 from galini.fbbt import update_fbbt_settings
+from galini.special_structure import update_special_structure_settings
 from galini.telemetry import Telemetry
 from galini.logging import (
     get_logger,
@@ -46,6 +47,7 @@ class Galini:
         galini_group = self.get_configuration_group('galini')
         _update_math_context(galini_group)
         update_fbbt_settings(galini_group)
+        update_special_structure_settings(galini_group)
         self.paranoid_mode = galini_group['paranoid_mode']
 
     def get_solver(self, name):

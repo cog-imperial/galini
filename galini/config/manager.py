@@ -94,6 +94,9 @@ def _galini_group():
         IntegerOption('fbbt_quadratic_max_terms', min_value=1, default=30),
         IntegerOption('fbbt_sum_max_children', min_value=1, default=30),
         IntegerOption('fbbt_linear_max_children', min_value=1, default=30),
+        IntegerOption('special_structure_quadratic_max_terms', min_value=1, default=500),
+        IntegerOption('special_structure_sum_max_children', min_value=1, default=500),
+        IntegerOption('special_structure_linear_max_children', min_value=1, default=500),
         BoolOption('paranoid_mode', default=False),
     ])
 
