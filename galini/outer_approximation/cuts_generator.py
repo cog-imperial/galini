@@ -33,13 +33,14 @@ logger = get_logger(__name__)
 class OuterApproximationCutsGenerator(CutsGenerator):
     """Implement Outer-Approximation cuts for Convex Expressions."""
 
-    name = 'quadratic_outer_approximation'
+    name = 'outer_approximation'
 
     def __init__(self, galini, config):
         super().__init__(galini, config)
         self.galini = galini
 
         self._relaxation_is_linear = False
+        self._prefix = 'outer_approximation'
         self._counter = 0
 
         self.convergence_relative_tol = config['convergence_relative_tol']
@@ -132,7 +133,8 @@ class OuterApproximationCutsGenerator(CutsGenerator):
             )
             if above_threshold:
                 return generate_cut(
-                    self._counter, i, constraint, variables, w, x_k, fg, g_x
+                    self._prefix, self._counter, i, constraint, variables,
+                    w, x_k, fg, g_x
                 )
         elif cons_ub is None:
             # c <= g(x)
@@ -143,7 +145,8 @@ class OuterApproximationCutsGenerator(CutsGenerator):
             )
             if below_threshold:
                 return generate_cut(
-                    self._counter, i, constraint, variables, w, x_k, fg, g_x
+                    self._prefix, self._counter, i, constraint, variables,
+                    w, x_k, fg, g_x
                 )
         else:
             return None

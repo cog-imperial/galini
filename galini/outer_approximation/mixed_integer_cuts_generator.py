@@ -67,12 +67,13 @@ class MixedIntegerOuterApproximationCutsGenerator(CutsGenerator):
         https://doi.org/10.1007/BF02592064
     """
 
-    name = 'outer_approximation'
+    name = 'mixed_integer_outer_approximation'
 
     def __init__(self, galini, config):
         super().__init__(galini, config)
         self.galini = galini
 
+        self._prefix = 'mi_outer_approximation'
         self._counter = 0
 
         self._round = 0
@@ -254,8 +255,8 @@ class MixedIntegerOuterApproximationCutsGenerator(CutsGenerator):
             )
             if above_threshold:
                 return generate_cut(
-                    self._counter, i, constraint, variables, w, x_k,
-                    nonlinear_expr_eval, nonlinear_expr_x_k_value
+                    self._prefix, self._counter, i, constraint, variables,
+                    w, x_k, nonlinear_expr_eval, nonlinear_expr_x_k_value
                 )
         elif cons_ub is None:
             # -g(x) >= c, g(x) convex
@@ -268,8 +269,8 @@ class MixedIntegerOuterApproximationCutsGenerator(CutsGenerator):
             )
             if below_threshold:
                 return generate_cut(
-                    self._counter, i, constraint, variables, w, x_k,
-                    nonlinear_expr_eval, nonlinear_expr_x_k_value
+                    self._prefix, self._counter, i, constraint, variables,
+                    w, x_k, nonlinear_expr_eval, nonlinear_expr_x_k_value
                 )
         else:
             # c <= g(x) <= c, g(x) convex
@@ -280,8 +281,8 @@ class MixedIntegerOuterApproximationCutsGenerator(CutsGenerator):
             )
             if above_threshold:
                 return generate_cut(
-                    self._counter, i, constraint, variables, w, x_k,
-                    nonlinear_expr_eval, nonlinear_expr_x_k_value
+                    self._prefix, self._counter, i, constraint, variables,
+                    w, x_k, nonlinear_expr_eval, nonlinear_expr_x_k_value
                 )
 
         return None

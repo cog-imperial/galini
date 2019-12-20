@@ -38,12 +38,12 @@ def mip_variable_value(problem, sol):
     )
 
 
-def generate_cut(counter, i, constraint, x, w, x_k, fg, g_x):
+def generate_cut(prefix, counter, i, constraint, x, w, x_k, fg, g_x):
     w[i] = 1.0
     d_fg = fg.reverse(1, w)
     w[i] = 0.0
 
-    cut_name = _cut_name(counter, i, constraint.name)
+    cut_name = _cut_name(prefix, counter, i, constraint.name)
     cut_expr = LinearExpression(x, d_fg, -np.dot(d_fg, x_k) + g_x[i])
 
     return Cut(
@@ -56,7 +56,7 @@ def generate_cut(counter, i, constraint, x, w, x_k, fg, g_x):
     )
 
 
-def _cut_name(counter, i, name):
-    return '_outer_approximation_{}_{}_r_{}'.format(
-        i, name, counter
+def _cut_name(prefix, counter, i, name):
+    return '_{}_{}_{}_r_{}'.format(
+        prefix, i, name, counter
     )
