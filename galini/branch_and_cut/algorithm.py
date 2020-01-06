@@ -191,6 +191,14 @@ class BranchAndCutAlgorithm:
 
         logger.info(0, 'Performing OBBT on {} variables', len(relaxed_vars))
 
+        # Avoid Coramin raising an exception if the problem has no objective
+        # value but we set an upper bound.
+        objectives = model.component_data_objects(
+            pe.Objective, active=True, sort=True, descend_into=True
+        )
+        if len(list(objectives)) == 0:
+            upper_bound = None
+
         time_left = obbt_timelimit - seconds_elapsed_since(obbt_start_time)
         with timeout(time_left, 'Timeout in OBBT'):
             result = coramin_obbt.perform_obbt(
