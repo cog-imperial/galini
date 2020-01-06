@@ -185,6 +185,7 @@ class BranchAndBoundSolver(Solver):
 
             solution = self._algo.solve_problem_at_node(
                 run_id, current_node.storage.problem, tree, current_node)
+
             tree.update_node(current_node, solution)
 
             current_node_converged = is_close(
@@ -201,8 +202,8 @@ class BranchAndBoundSolver(Solver):
                 # We won't explore this part of the tree anymore.
                 # Add to fathomed nodes.
                 logger.info(
-                    run_id, 'Fathom node {}, converged?',
-                    current_node.coordinate, current_node_converged
+                    run_id, 'Fathom node {}, converged? {}, upper_bound_solution {}',
+                    current_node.coordinate, current_node_converged, solution.upper_bound_solution
                 )
                 logger.log_prune_bab_node(run_id, current_node.coordinate)
                 tree.fathom_node(current_node, update_nodes_visited=False)

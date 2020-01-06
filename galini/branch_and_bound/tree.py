@@ -238,8 +238,15 @@ class BabTree:
         )
 
     def _fathomed_nodes_lower_bound(self, upper_bound=None):
+        def _has_solution(node):
+            if node.has_solution:
+                return False
+            solution = node.state.lower_bound_solution
+            return solution and solution.status.is_success()
+
+        # Filter only nodes with a solution and remove infeasible nodes
         return self._nodes_minimum_lower_bound(
-            self.fathomed_nodes,
+            [n for n in self.fathomed_nodes if _has_solution(n)],
             upper_bound,
         )
 
