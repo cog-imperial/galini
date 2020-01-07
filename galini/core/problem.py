@@ -228,23 +228,27 @@ def _make_relaxed(parent, name, relaxation=None):
     domain = parent.domain
 
     # copy variables
+    aux_variables = []
     for var in parent.variables:
-        if isinstance(var, core.Variable):
-            new_var = core.Variable(
-                var.name,
-                lb(var),
-                ub(var),
-                domain(var),
-            )
-        else:
-            new_var = core.Variable(
-                var.name,
-                lb(var),
-                ub(var),
-                domain(var),
-            )
-            new_var.reference = var.reference
+        new_var = core.Variable(
+            var.name,
+            lb(var),
+            ub(var),
+            domain(var),
+        )
+        if var.reference and isinstance(var.reference, BilinearTermReference):
+            aux_variables.append(var)
         relaxed.add_variable(new_var)
+
+    # Connect aux variables after all variables have been inserted to avoid
+    # issues with detected auxiliary variables
+    for var in aux_variables:
+        ref = var.reference
+        new_var = relaxed.variable(var)
+        new_var.reference = BilinearTermReference(
+            var1=relaxed.variable(ref.var1.idx),
+            var2=relaxed.variable(ref.var2.idx),
+        )
 
     return relaxed
 
