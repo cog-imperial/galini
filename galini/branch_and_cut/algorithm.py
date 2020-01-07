@@ -417,6 +417,56 @@ class BranchAndCutAlgorithm:
                     value=mip_solution.objective_value()
                 )
 
+        xx_s = dict()
+        xx_max = dict()
+        xx_min = dict()
+
+        print(linear_problem.relaxed)
+        for var in linear_problem.relaxed.variables[problem.num_variables:]:
+            print('o ', var.name, mip_solution.variables[var.idx], var.reference)
+            if not mip_solution.status.is_success():
+                continue
+            if var.reference:
+                if not hasattr(var.reference, 'var1'):
+                    continue
+                v1 = var.reference.var1
+                v2 = var.reference.var2
+                print(var.name, var.reference.var1, var.reference.var2)
+                w_xk = mip_solution.variables[var.idx].value
+                v1_xk = mip_solution.variables[v1.idx].value
+                v2_xk = mip_solution.variables[v2.idx].value
+
+                err = np.abs(w_xk - v1_xk*v2_xk)
+
+                if v1.idx not in xx_s:
+                    xx_s[v1.idx] = 0.0
+                    xx_max[v1.idx] = -np.inf
+                    xx_min[v1.idx] = np.inf
+                if v2.idx not in xx_s:
+                    xx_s[v2.idx] = 0.0
+                    xx_max[v2.idx] = -np.inf
+                    xx_min[v2.idx] = np.inf
+                xx_s[v1.idx] += err
+                xx_s[v2.idx] += err
+                xx_max[v1.idx] = max(xx_max[v1.idx], err)
+                xx_max[v2.idx] = max(xx_max[v2.idx], err)
+                xx_min[v1.idx] = min(xx_min[v1.idx], err)
+                xx_min[v2.idx] = min(xx_min[v2.idx], err)
+                print()
+
+        m_v = None
+        for v in xx_s.keys():
+            if m_v is None:
+                m_v = v
+            else:
+                if xx_s[v] > xx_s[m_v]:
+                    m_v = v
+            #print(problem.variable(v).name, xx_s[v], xx_max[v], xx_min[v])
+        if m_v is not None:
+            node.storage._branching_var = problem.variable_view(m_v)
+            #print('Branching on ', node.coordinate, node.storage._branching_var.name)
+        #input('Continue... ')
+
         if self._use_milp_cut_phase:
             feasible, cuts_state, mip_solution = self._perform_cut_loop(
                 run_id, tree, node, problem, relaxed_problem, linear_problem,

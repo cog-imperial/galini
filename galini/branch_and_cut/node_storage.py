@@ -20,6 +20,7 @@ from galini.cuts.pool import CutNodeStorage, CutPool
 class _NodeStorageBase:
     def __init__(self, problem):
         self.problem = problem
+        self._branching_var = None
 
     def branching_data(self):
         return self.problem

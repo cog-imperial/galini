@@ -74,7 +74,8 @@ class KSectionBranchingStrategy(BranchingStrategy):
     def branch(self, node, tree):
         root_problem = tree.root.storage.branching_data()
         node_problem = node.storage.branching_data()
-        var = least_reduced_variable(node_problem, root_problem)
+        # var = least_reduced_variable(node_problem, root_problem)
+        var = node.storage._branching_var
         if var is None:
             return None
         if is_close(var.upper_bound(), var.lower_bound(), atol=mc.epsilon):
