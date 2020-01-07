@@ -436,7 +436,7 @@ class BranchAndCutAlgorithm:
                 v1_xk = mip_solution.variables[v1.idx].value
                 v2_xk = mip_solution.variables[v2.idx].value
 
-                err = np.abs(w_xk - v1_xk*v2_xk)
+                err = np.abs(w_xk - v1_xk*v2_xk) / (1 + np.sqrt(v1_xk**2.0 + v2_xk**2.0))
 
                 if v1.idx not in xx_s:
                     xx_s[v1.idx] = 0.0
