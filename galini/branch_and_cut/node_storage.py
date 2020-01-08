@@ -21,6 +21,7 @@ class _NodeStorageBase:
     def __init__(self, problem):
         self.problem = problem
         self._branching_var = None
+        self._branching_point = None
 
     def branching_data(self):
         return self.problem
