@@ -424,7 +424,7 @@ class BranchAndCutAlgorithm:
         unbounded_vars = []
         for var in problem.variables:
             if is_inf(problem.lower_bound(var)) and is_inf(problem.upper_bound(var)):
-                unbounded_vars.append(var)
+                unbounded_vars.append(var.idx)
 
         for var in linear_problem.relaxed.variables:
             #print('o ', var.name, mip_solution.variables[var.idx], var.reference)
@@ -464,7 +464,7 @@ class BranchAndCutAlgorithm:
         m_v = None
         for v in xx_s.keys():
             if m_v is None:
-                m_v = v.idx
+                m_v = v
             else:
                 if xx_s[v] > xx_s[m_v]:
                     m_v = v
