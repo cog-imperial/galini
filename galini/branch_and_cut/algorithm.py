@@ -472,7 +472,9 @@ class BranchAndCutAlgorithm:
 
         if len(unbounded_vars) > 0:
             m_v = unbounded_vars[0]
-        if m_v is not None:
+            node.storage._branching_var = problem.variable_view(m_v)
+            node.storage._branching_point = 0.0
+        elif m_v is not None:
             node.storage._branching_var = problem.variable_view(m_v)
             vv = problem.variable_view(m_v)
             point = 0.25 * (vv.lower_bound() + 0.5 * (vv.upper_bound() - vv.lower_bound())) + 0.75 * mip_solution.variables[m_v].value
