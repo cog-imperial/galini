@@ -464,7 +464,7 @@ class BranchAndCutAlgorithm:
         m_v = None
         for v in xx_s.keys():
             if m_v is None:
-                m_v = v
+                m_v = v.idx
             else:
                 if xx_s[v] > xx_s[m_v]:
                     m_v = v
