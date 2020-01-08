@@ -421,9 +421,13 @@ class BranchAndCutAlgorithm:
         xx_max = dict()
         xx_min = dict()
 
-        print(linear_problem.relaxed)
-        for var in linear_problem.relaxed.variables[problem.num_variables:]:
-            print('o ', var.name, mip_solution.variables[var.idx], var.reference)
+        unbounded_vars = []
+        for var in problem.variables:
+            if is_inf(problem.lower_bound(var)) and is_inf(problem.upper_bound(var)):
+                unbounded_vars.append(var)
+
+        for var in linear_problem.relaxed.variables:
+            #print('o ', var.name, mip_solution.variables[var.idx], var.reference)
             if not mip_solution.status.is_success():
                 continue
             if var.reference:
@@ -431,10 +435,13 @@ class BranchAndCutAlgorithm:
                     continue
                 v1 = var.reference.var1
                 v2 = var.reference.var2
-                print(var.name, var.reference.var1, var.reference.var2)
+                #print(var.name, var.reference.var1.name, var.reference.var2.name)
                 w_xk = mip_solution.variables[var.idx].value
                 v1_xk = mip_solution.variables[v1.idx].value
                 v2_xk = mip_solution.variables[v2.idx].value
+
+                if v1_xk is None or v2_xk is None:
+                    continue
 
                 err = np.abs(w_xk - v1_xk*v2_xk) / (1 + np.sqrt(v1_xk**2.0 + v2_xk**2.0))
 
@@ -452,7 +459,7 @@ class BranchAndCutAlgorithm:
                 xx_max[v2.idx] = max(xx_max[v2.idx], err)
                 xx_min[v1.idx] = min(xx_min[v1.idx], err)
                 xx_min[v2.idx] = min(xx_min[v2.idx], err)
-                print()
+                #print()
 
         m_v = None
         for v in xx_s.keys():
@@ -461,11 +468,18 @@ class BranchAndCutAlgorithm:
             else:
                 if xx_s[v] > xx_s[m_v]:
                     m_v = v
-            #print(problem.variable(v).name, xx_s[v], xx_max[v], xx_min[v])
+            print(problem.variable(v).name, xx_s[v], xx_max[v], xx_min[v])
+
+        if len(unbounded_vars) > 0:
+            m_v = unbounded_vars[0]
         if m_v is not None:
             node.storage._branching_var = problem.variable_view(m_v)
-            #print('Branching on ', node.coordinate, node.storage._branching_var.name)
-        #input('Continue... ')
+            vv = problem.variable_view(m_v)
+            point = 0.25 * (vv.lower_bound() + 0.5 * (vv.upper_bound() - vv.lower_bound())) + 0.75 * mip_solution.variables[m_v].value
+            #point = mip_solution.variables[m_v].value
+            node.storage._branching_point = point
+            print('Branching on ', node.coordinate, node.storage._branching_var.name, point)
+        #input('BBB Continue... ')
 
         if self._use_milp_cut_phase:
             feasible, cuts_state, mip_solution = self._perform_cut_loop(

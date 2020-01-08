@@ -87,6 +87,11 @@ class OuterApproximationCutsGenerator(CutsGenerator):
             if constraint.root_expr.polynomial_degree() > 1
         ]
 
+        linearized_nonlinear_constraints = [
+            linear_problem.constraint(constraint.name)
+            for constraint in nonlinear_constraints
+        ]
+
         if not nonlinear_constraints:
             return []
 
@@ -94,17 +99,34 @@ class OuterApproximationCutsGenerator(CutsGenerator):
             con.root_expr.idx for con in nonlinear_constraints
         ]
 
+        linearized_nonlinear_constraints_idx = [
+            con.root_expr.idx for con in linearized_nonlinear_constraints
+        ]
+
         mip_values_relaxed_vars = [
             mip_variable_value(linear_problem, v)
             for v in mip_solution.variables[:relaxed_problem.num_variables]
+        ]
+
+        mip_values_vars = [
+            mip_variable_value(linear_problem, v)
+            for v in mip_solution.variables
         ]
 
         nonlinear_expr_eval = \
             relaxed_problem.expression_tree_data()\
                 .eval(mip_values_relaxed_vars, nonlinear_constraints_idx)
 
+        linearized_nonlinear_expr_eval = \
+            linear_problem.expression_tree_data()\
+                .eval(mip_values_vars, linearized_nonlinear_constraints_idx)
+
         nonlinear_constraints_value = \
             np.array(nonlinear_expr_eval.forward(0, mip_values_relaxed_vars))
+
+        linearized_nonlinear_constraints_value = \
+            np.array(linearized_nonlinear_expr_eval.forward(0, mip_values_vars))
+
 
         w = np.zeros_like(nonlinear_constraints_value)
         x_k = mip_values_relaxed_vars
@@ -114,8 +136,47 @@ class OuterApproximationCutsGenerator(CutsGenerator):
             self._generate_cut_if_violated(i, constraint, relaxed_problem.variables, w, x_k, nonlinear_expr_eval, nonlinear_constraints_value)
             for i, constraint in enumerate(nonlinear_constraints)
         ]
-
         return [c for c in cuts if c is not None]
+        cuts = []
+        #print(nonlinear_constraints_value, linearized_nonlinear_constraints_value)
+        #for i, constraint in enumerate(nonlinear_constraints):
+        #    diff = nonlinear_constraints_value[i] - linearized_nonlinear_constraints_value[i]
+        #    if diff < 0:
+        #        self._counter += 1
+        #        cuts.append(generate_cut(self._prefix, self._counter, i, constraint, relaxed_problem.variables, w, x_k, nonlinear_expr_eval, nonlinear_constraints_value))
+
+        for var in linear_problem.variables:
+            if var.reference is not None:
+                if not hasattr(var.reference, 'var1'):
+                    continue
+                v1 = var.reference.var1
+                v2 = var.reference.var2
+                diff = mip_values_vars[var.idx] - mip_values_vars[v1.idx] * mip_values_vars[v2.idx]
+                print(var.name, v1.name, v2.name, diff)
+                if diff < 0 and v1.idx == v2.idx:
+                    self._counter += 1
+                    expr = LinearExpression([var, v1], [1.0, -2.0 * mip_values_vars[v1.idx]], mip_values_vars[v1.idx]**2.0)
+
+                    cut_name = '_xxxx_{}'.format(self._counter)
+                    cuts.append(Cut(
+                        CutType.LOCAL,
+                        cut_name,
+                        expr,
+                        0.0,
+                        None,
+                        is_objective=False,
+                    ))
+                elif v1.idx != v2.idx:
+                    2/0
+        #from galini.util import expr_to_str
+        #for cut in cuts:
+        #    print()
+        #    print(cut.name, expr_to_str(cut.expr))
+        #print()
+        #input('Continue...')
+        #2/0
+
+        return cuts #[c for c in cuts if c is not None]
 
     def _generate_cut_if_violated(self, i, constraint, variables, w, x_k, fg, g_x):
         cons_lb = constraint.lower_bound

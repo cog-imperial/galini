@@ -137,6 +137,8 @@ class DisaggregateBilinearUnderestimator(Underestimator):
             else:
                 lower_bound = upper_bound = 0.0
 
+            lower_bound = upper_bound = 0.0
+
             constraint = Constraint(
                 '_disaggregate_aux_{}'.format(self._call_count),
                 SumExpression([
