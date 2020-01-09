@@ -192,16 +192,12 @@ class McCormickUnderestimator(Underestimator):
 
                 # x_m = x_l + 0.5 * (x_u - x_l)
                 x_m = x_l + (x_u - x_l) / 2.0
-                print('Add cut midpoint ', x_l, x_u, x_m)
                 lower_bound_2 = Constraint(
                     self._format_constraint_name(w, 'lb_2'),
                     LinearExpression([x_expr, w], [2.0*x_m, -1], -x_m*x_m),
                     None,
                     0.0,
                 )
-                from galini.util import expr_to_str
-                print(expr_to_str(lower_bound_2.root_expr))
-                print()
                 constraints.append(lower_bound_2)
 
         else:

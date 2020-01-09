@@ -477,8 +477,15 @@ class BranchAndCutAlgorithm:
         elif m_v is not None:
             node.storage._branching_var = problem.variable_view(m_v)
             vv = problem.variable_view(m_v)
-            point = 0.25 * (vv.lower_bound() + 0.5 * (vv.upper_bound() - vv.lower_bound())) + 0.75 * mip_solution.variables[m_v].value
+            #point = 0.25 * (vv.lower_bound() + 0.5 * (vv.upper_bound() - vv.lower_bound())) + 0.75 * mip_solution.variables[m_v].value
             #point = mip_solution.variables[m_v].value
+            lb = vv.lower_bound()
+            ub = vv.upper_bound()
+            if is_inf(lb):
+                lb = -mc.user_upper_bound
+            if is_inf(ub):
+                ub = mc.user_upper_bound
+            point = (lb + 0.5 * (ub - lb))
             node.storage._branching_point = point
             print('Branching on ', node.coordinate, node.storage._branching_var.name, point)
         #input('BBB Continue... ')
