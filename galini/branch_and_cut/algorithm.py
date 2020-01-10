@@ -485,7 +485,8 @@ class BranchAndCutAlgorithm:
                 lb = -mc.user_upper_bound
             if is_inf(ub):
                 ub = mc.user_upper_bound
-            point = (lb + 0.5 * (ub - lb))
+            lambda_ = 0.25
+            point = lambda_ * (lb + 0.5 * (ub - lb)) + (1 - lambda_) * mip_solution.variables[m_v].value
             node.storage._branching_point = point
             print('Branching on ', node.coordinate, node.storage._branching_var.name, point)
         #input('BBB Continue... ')
