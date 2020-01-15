@@ -14,15 +14,19 @@
 
 import os
 
+import pyomo.environ as pyo
+
 from galini.pyomo.qplib_reader import read_qplib
 
 
 def test_qplib_reader_on_example():
     example_file = os.path.join(
         os.path.dirname(__file__),
-        './example.qplib'
+        './fixtures/example.qplib'
     )
     model = read_qplib(example_file)
     assert model.name == 'MIPBAND'
-    model.pprint()
-    assert False
+    assert model.x1.domain == pyo.Reals
+    assert model.x2.domain == pyo.Reals
+    assert model.x3.domain == pyo.Binary
+    assert len(list(model.component_data_objects(pyo.Constraint))) == 2
