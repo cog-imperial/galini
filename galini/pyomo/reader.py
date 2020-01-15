@@ -16,6 +16,7 @@ import os
 import importlib
 import importlib.util
 from suspect.pyomo.osil_reader import read_osil
+from galini.pyomo.qplib_reader import read_qplib
 from galini.error import (
     InvalidFileExtensionError,
     InvalidPythonInputError,
@@ -46,9 +47,9 @@ def read_python(filename, **_kwargs):
 READER_BY_EXT = {
     '.osil': read_osil,
     '.xml': read_osil,
+    '.qplib': read_qplib,
     '.py': read_python,
 }
-
 
 
 def read_pyomo_model(filename, **kwargs):
