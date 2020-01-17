@@ -25,6 +25,7 @@ from galini.outer_approximation.shared import (
     problem_is_linear, mip_variable_value, generate_cut
 )
 from galini.relaxations.relaxed_problem import RelaxedProblem
+from galini.underestimators.underestimator import UnderestimatorSide
 from galini.util import solution_numerical_value
 
 logger = get_logger(__name__)
@@ -145,6 +146,7 @@ class OuterApproximationCutsGenerator(CutsGenerator):
 
         self._counter += 1
 
+        original_side = constraint.metadata.get('original_side', None)
         if cons_lb is None:
             # g(x) <= c
             above_threshold = not almost_le(
@@ -170,13 +172,22 @@ class OuterApproximationCutsGenerator(CutsGenerator):
                     w, x_k, fg, g_x
                 )
         else:
-            above_threshold = not almost_le(
-                constraint_x,
-                cons_ub,
-                atol=self.threshold,
-            )
-            if above_threshold:
+            above_threshold = below_threshold = False
+            if original_side == UnderestimatorSide.UNDER:
+                above_threshold = not almost_le(
+                    constraint_x,
+                    cons_ub,
+                    atol=self.threshold,
+                )
+            elif original_side == UnderestimatorSide.OVER:
+                below_threshold = not almost_ge(
+                    constraint_x,
+                    cons_lb,
+                    atol=self.threshold,
+                )
+
+            if above_threshold or below_threshold:
                 return generate_cut(
                     self._prefix, self._counter, i, constraint, variables,
-                    w, x_k, fg, g_x, upper_bound_only=True
+                    w, x_k, fg, g_x, original_side=original_side,
                 )

@@ -159,6 +159,7 @@ class Relaxation(metaclass=ABCMeta):
                 new_cons.upper_bound,
             ),
         )
+        added_cons.metadata = new_cons.metadata
 
         self._insert_constraints(result.constraints, problem, relaxed_problem)
         return added_cons
@@ -206,7 +207,7 @@ class Relaxation(metaclass=ABCMeta):
     def _insert_constraints(self, new_constraints, problem, relaxed_problem):
         for constraint in new_constraints:
             new_expr = self._insert_expression(constraint.root_expr, problem, relaxed_problem)
-            x = relaxed_problem.add_constraint(
+            added_constraint = relaxed_problem.add_constraint(
                 Constraint(
                     constraint.name,
                     new_expr,
@@ -214,6 +215,7 @@ class Relaxation(metaclass=ABCMeta):
                     constraint.upper_bound,
                 ),
             )
+            added_constraint.metadata = constraint.metadata
 
 
 _EXPR_TYPE_TO_CLS = {

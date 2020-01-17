@@ -29,4 +29,5 @@ class RelaxedProblem:
             self.relaxed,
             constraint,
         )
+        relaxed_constraint.metadata = constraint.metadata
         return relaxed_constraint

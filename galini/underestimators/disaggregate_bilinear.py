@@ -148,6 +148,7 @@ class DisaggregateBilinearUnderestimator(Underestimator):
                 lower_bound,
                 upper_bound,
             )
+            constraint.metadata['original_side'] = side
             constraints.append(constraint)
             self._call_count += 1
 

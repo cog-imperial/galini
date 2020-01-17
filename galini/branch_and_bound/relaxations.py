@@ -92,6 +92,7 @@ class _RelaxationBase(Relaxation):
             constraint.lower_bound,
             constraint.upper_bound
         )
+        new_constraint.metadata = constraint.metadata
         return RelaxationResult(new_constraint, result.constraints)
 
     def relax_expression(self, problem, expr, side=None):
