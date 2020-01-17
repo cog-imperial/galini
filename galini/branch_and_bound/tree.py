@@ -141,8 +141,11 @@ class BabTree:
         lower_bound_solution = solution.lower_bound_solution
         upper_bound_solution = solution.upper_bound_solution
 
-        if (upper_bound_solution is not None and
-                upper_bound_solution.status.is_success()):
+        has_upper_bound_solution = (
+            upper_bound_solution is not None and
+            upper_bound_solution.status.is_success()
+        )
+        if has_upper_bound_solution:
             self.solution_pool.add(upper_bound_solution)
             upper_bound_solution = upper_bound_solution
             new_upper_bound = min(
@@ -154,28 +157,21 @@ class BabTree:
             upper_bound_solution = None
             new_upper_bound = None
 
-        if lower_bound_solution is None:
-            return self._set_new_state(
-                None, new_upper_bound, update_nodes_visited)
-
-        if not lower_bound_solution.status.is_success():
-            return self._set_new_state(
-                None, new_upper_bound, update_nodes_visited)
+        has_lower_bound_solution = (
+            lower_bound_solution is not None and
+            lower_bound_solution.status.is_success()
+        )
+        if has_lower_bound_solution:
+            new_lower_bound_candidate = lower_bound_solution.objective_value()
+        else:
+            new_lower_bound_candidate = None
 
         if is_root_node:
-            new_lower_bound = lower_bound_solution.objective_value()
-
-            if upper_bound_solution is None:
-                return self._set_new_state(
-                    new_lower_bound, None, update_nodes_visited)
-
-            if not upper_bound_solution.status.is_success():
-                return self._set_new_state(
-                    new_lower_bound, None, update_nodes_visited)
-
+            # We know there is no existing lower bound and no upper bound since
+            # it's the root node.
             return self._set_new_state(
-                new_lower_bound,
-                upper_bound_solution.objective_value(),
+                new_lower_bound_candidate,
+                new_upper_bound,
                 update_nodes_visited
             )
 
@@ -183,15 +179,6 @@ class BabTree:
         # of their lower bounds.
         # If there are no open nodes, then the lower bound is the lowest
         # of the fathomed nodes lower bounds.
-        if (upper_bound_solution is None or
-                not upper_bound_solution.status.is_success()):
-            new_upper_bound = None
-        else:
-            new_upper_bound = min(
-                upper_bound_solution.objective_value(),
-                self.state.upper_bound,
-            )
-
         if self.open_nodes:
             new_lower_bound = self._open_nodes_lower_bound(new_upper_bound)
             return self._set_new_state(
@@ -244,6 +231,7 @@ class BabTree:
             solution = node.state.lower_bound_solution
             return solution and solution.status.is_success()
 
+        print([n.coordinate for n in self.fathomed_nodes if _has_solution(n)])
         # Filter only nodes with a solution and remove infeasible nodes
         return self._nodes_minimum_lower_bound(
             [n for n in self.fathomed_nodes if _has_solution(n)],
