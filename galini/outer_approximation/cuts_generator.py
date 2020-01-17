@@ -137,46 +137,6 @@ class OuterApproximationCutsGenerator(CutsGenerator):
             for i, constraint in enumerate(nonlinear_constraints)
         ]
         return [c for c in cuts if c is not None]
-        cuts = []
-        #print(nonlinear_constraints_value, linearized_nonlinear_constraints_value)
-        #for i, constraint in enumerate(nonlinear_constraints):
-        #    diff = nonlinear_constraints_value[i] - linearized_nonlinear_constraints_value[i]
-        #    if diff < 0:
-        #        self._counter += 1
-        #        cuts.append(generate_cut(self._prefix, self._counter, i, constraint, relaxed_problem.variables, w, x_k, nonlinear_expr_eval, nonlinear_constraints_value))
-
-        for var in linear_problem.variables:
-            if var.reference is not None:
-                if not hasattr(var.reference, 'var1'):
-                    continue
-                v1 = var.reference.var1
-                v2 = var.reference.var2
-                diff = mip_values_vars[var.idx] - mip_values_vars[v1.idx] * mip_values_vars[v2.idx]
-                print(var.name, v1.name, v2.name, diff)
-                if diff < 0 and v1.idx == v2.idx:
-                    self._counter += 1
-                    expr = LinearExpression([var, v1], [1.0, -2.0 * mip_values_vars[v1.idx]], mip_values_vars[v1.idx]**2.0)
-
-                    cut_name = '_xxxx_{}'.format(self._counter)
-                    cuts.append(Cut(
-                        CutType.LOCAL,
-                        cut_name,
-                        expr,
-                        0.0,
-                        None,
-                        is_objective=False,
-                    ))
-                elif v1.idx != v2.idx:
-                    2/0
-        #from galini.util import expr_to_str
-        #for cut in cuts:
-        #    print()
-        #    print(cut.name, expr_to_str(cut.expr))
-        #print()
-        #input('Continue...')
-        #2/0
-
-        return cuts #[c for c in cuts if c is not None]
 
     def _generate_cut_if_violated(self, i, constraint, variables, w, x_k, fg, g_x):
         cons_lb = constraint.lower_bound
@@ -210,4 +170,13 @@ class OuterApproximationCutsGenerator(CutsGenerator):
                     w, x_k, fg, g_x
                 )
         else:
-            return None
+            above_threshold = not almost_le(
+                constraint_x,
+                cons_ub,
+                atol=self.threshold,
+            )
+            if above_threshold:
+                return generate_cut(
+                    self._prefix, self._counter, i, constraint, variables,
+                    w, x_k, fg, g_x, upper_bound_only=True
+                )

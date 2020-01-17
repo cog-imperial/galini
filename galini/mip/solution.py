@@ -53,7 +53,9 @@ class MIPSolution(Solution):
         self.solution_pool = pool
 
     def __str__(self):
-        return 'MIPSolution(objective_value={})'.format(self.objective_value())
+        return 'MIPSolution(status={}, objective_value={})'.format(
+            self.status, self.objective_value()
+        )
 
     def __repr__(self):
         return '<{} at {}>'.format(str(self), hex(id(self)))

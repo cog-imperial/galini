@@ -38,7 +38,8 @@ def mip_variable_value(problem, sol):
     )
 
 
-def generate_cut(prefix, counter, i, constraint, x, w, x_k, fg, g_x):
+def generate_cut(prefix, counter, i, constraint, x, w, x_k, fg, g_x,
+                 upper_bound_only=False):
     w[i] = 1.0
     d_fg = fg.reverse(1, w)
     w[i] = 0.0
@@ -46,11 +47,16 @@ def generate_cut(prefix, counter, i, constraint, x, w, x_k, fg, g_x):
     cut_name = _cut_name(prefix, counter, i, constraint.name)
     cut_expr = LinearExpression(x, d_fg, -np.dot(d_fg, x_k) + g_x[i])
 
+    if upper_bound_only:
+        lower_bound = None
+    else:
+        lower_bound = constraint.lower_bound
+
     return Cut(
         CutType.LOCAL,
         cut_name,
         cut_expr,
-        constraint.lower_bound,
+        lower_bound,
         constraint.upper_bound,
         is_objective=False,
     )

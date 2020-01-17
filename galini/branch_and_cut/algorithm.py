@@ -386,6 +386,7 @@ class BranchAndCutAlgorithm:
         cuts_state = None
         lower_bound_search_start_time = current_time()
         if self._use_lp_cut_phase:
+            logger.info(run_id, 'Start LP cut phase')
             originally_integer = []
             if not self._use_milp_cut_phase:
                 for var in linear_problem.relaxed.variables:
@@ -402,6 +403,7 @@ class BranchAndCutAlgorithm:
                 linear_problem.relaxed.set_domain(var, core.Domain.INTEGER)
 
             if not feasible:
+                logger.info(run_id, 'LP solution is not feasible')
                 self._bac_telemetry.increment_lower_bound_time(
                     seconds_elapsed_since(lower_bound_search_start_time)
                 )
@@ -409,6 +411,12 @@ class BranchAndCutAlgorithm:
 
             # Solve MILP to obtain MILP solution
             mip_solution = self._mip_solver.solve(linear_problem.relaxed)
+            logger.info(
+                run_id,
+                'MILP solution after LP cut phase: {} {}',
+                mip_solution.status,
+                mip_solution,
+            )
             if mip_solution.status.is_success():
                 logger.update_variable(
                     run_id,
@@ -492,11 +500,13 @@ class BranchAndCutAlgorithm:
         #input('BBB Continue... ')
 
         if self._use_milp_cut_phase:
+            logger.info(run_id, 'Using MILP cut phase')
             feasible, cuts_state, mip_solution = self._perform_cut_loop(
                 run_id, tree, node, problem, relaxed_problem, linear_problem,
             )
 
             if not feasible:
+                logger.info(run_id, 'MILP cut phase solution is not feasible')
                 self._bac_telemetry.increment_lower_bound_time(
                     seconds_elapsed_since(lower_bound_search_start_time)
                 )
