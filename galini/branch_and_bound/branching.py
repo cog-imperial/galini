@@ -40,7 +40,10 @@ def branch_at_point(problem, branching_point):
     var = problem.variable_view(branching_var.idx)
     for point in branching_point.points:
         if point < var.lower_bound() or point > var.upper_bound():
-            raise RuntimeError('Branching outside variable bounds')
+            raise RuntimeError(
+                'Branching outside variable bounds: {} in [{}, {}], branching at {}'.format(
+                    var.name, var.lower_bound(), var.upper_bound(), point
+            ))
 
     children = []
     new_upper_bound = var.lower_bound()

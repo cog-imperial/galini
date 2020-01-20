@@ -471,12 +471,16 @@ class BranchAndCutAlgorithm:
 
         m_v = None
         for v in xx_s.keys():
+            vv = problem.variable_view(v)
             if m_v is None:
+                if is_close(vv.lower_bound(), vv.upper_bound(), atol=1e-5):
+                    continue
                 m_v = v
             else:
                 if xx_s[v] > xx_s[m_v]:
+                    if is_close(vv.lower_bound(), vv.upper_bound(), atol=1e-5):
+                        continue
                     m_v = v
-            print(problem.variable(v).name, xx_s[v], xx_max[v], xx_min[v])
 
         if len(unbounded_vars) > 0:
             m_v = unbounded_vars[0]
@@ -497,6 +501,9 @@ class BranchAndCutAlgorithm:
             point = lambda_ * (lb + 0.5 * (ub - lb)) + (1 - lambda_) * mip_solution.variables[m_v].value
             node.storage._branching_point = point
             print('Branching on ', node.coordinate, node.storage._branching_var.name, point)
+        else:
+            node.storage._branching_variable = None
+            node.storage._branching_point = None
         #input('BBB Continue... ')
 
         if self._use_milp_cut_phase:
