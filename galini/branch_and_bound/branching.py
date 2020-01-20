@@ -44,16 +44,25 @@ def branch_at_point(problem, branching_point):
 
     children = []
     new_upper_bound = var.lower_bound()
+    is_integer = var.domain.is_integer() or var.domain.is_binary()
     for point in branching_point.points:
         new_lower_bound = new_upper_bound
         new_upper_bound = point
+        var_lower_bound = \
+            np.ceil(new_lower_bound) if is_integer else new_lower_bound
+        var_upper_bound = \
+            np.floor(new_upper_bound) if is_integer else new_upper_bound
         child = _create_child_problem(
-            problem, branching_var, new_lower_bound, new_upper_bound
+            problem, branching_var, var_lower_bound, var_upper_bound
         )
         children.append(child)
 
+    var_lower_bound = \
+        np.ceil(new_upper_bound) if is_integer else new_upper_bound
+    var_upper_bound = \
+        np.floor(var.upper_bound()) if is_integer else var.upper_bound()
     child = _create_child_problem(
-        problem, branching_var, new_upper_bound, var.upper_bound()
+        problem, branching_var, var_lower_bound, var_upper_bound
     )
     children.append(child)
 
