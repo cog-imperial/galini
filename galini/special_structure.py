@@ -20,6 +20,8 @@ from suspect.convexity import ConvexityPropagationVisitor
 from suspect.interval import Interval, EmptyIntervalError
 from suspect.monotonicity import MonotonicityPropagationVisitor
 from suspect.propagation import SpecialStructurePropagationVisitor
+from galini.timelimit import seconds_elapsed_since, current_time
+
 
 import galini.core as core
 from galini.fbbt import (
@@ -74,7 +76,8 @@ def _manage_infinity_bounds(problem, _bounds, get_bound, set_bound):
         set_bound(variable, Interval(new_lower_bound, new_upper_bound))
 
 
-def perform_fbbt(problem, maxiter, timelimit, objective_upper_bound=None):
+def perform_fbbt(problem, maxiter, timelimit, objective_upper_bound=None,
+                 branching_variable=None):
     """Perform FBBT on `problem` with the given `maxiter` and `timelimit`."""
     bounds = ExpressionDict(problem)
     bounds_tightener = BoundsTightener(
@@ -111,7 +114,12 @@ def perform_fbbt(problem, maxiter, timelimit, objective_upper_bound=None):
     try:
         with timeout(timelimit, 'Timeout in FBBT'):
             try:
-                bounds_tightener.tighten(problem, bounds)
+                bounds_tightener.tighten(
+                    problem,
+                    bounds,
+                    branching_variable=branching_variable,
+                    objective_changed=objective_upper_bound is not None,
+                )
             except EmptyIntervalError:
                 pass
     except TimeoutError:

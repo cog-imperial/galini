@@ -23,25 +23,37 @@ class _NodeStorageBase:
         self._branching_var = None
         self._branching_point = None
 
+    @property
+    def is_root(self):
+        pass
+
     def branching_data(self):
         return self.problem
 
     def branch_at_point(self, branching_point):
         problem_children = branch_at_point(self.problem, branching_point)
 
-        return [NodeStorage(problem, self) for problem in problem_children]
+        return [NodeStorage(problem, self, branching_point.variable) for problem in problem_children]
 
 
 class NodeStorage(_NodeStorageBase):
-    def __init__(self, problem, parent):
+    def __init__(self, problem, parent, branching_variable):
         super().__init__(problem)
         self.cut_pool = parent.cut_pool
         self.cut_node_storage = \
             CutNodeStorage(parent.cut_node_storage, parent.cut_pool)
+        self.branching_variable = branching_variable
 
+    @property
+    def is_root(self):
+        return False
 
 class RootNodeStorage(_NodeStorageBase):
     def __init__(self, problem):
         super().__init__(problem)
         self.cut_pool = CutPool(problem)
         self.cut_node_storage = CutNodeStorage(None, self.cut_pool)
+
+    @property
+    def is_root(self):
+        return True

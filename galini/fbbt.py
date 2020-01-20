@@ -104,7 +104,8 @@ class BoundsTightener:
         self._backward_iterator = ProblemBackwardIterator()
         self._stop_criterion = stop_criterion
 
-    def tighten(self, problem, bounds):
+    def tighten(self, problem, bounds, branching_variable=None,
+                objective_changed=False):
         """Tighten bounds of ``problem`` storing them in ``bounds``."""
         self._forward_iterator.iterate(
             problem, BoundsInitializationVisitor(), bounds
@@ -119,6 +120,8 @@ class BoundsTightener:
             _GaliniBoundsTighteningVisitor()
         )
         changes_tigh = None
+        if branching_variable is not None:
+            changes_tigh = [problem.variable(branching_variable.variable)]
         while not self._stop_criterion.should_stop():
             changes_prop = self._forward_iterator.iterate(
                 problem, prop_visitor, bounds, starting_vertices=changes_tigh
@@ -128,14 +131,22 @@ class BoundsTightener:
             if self._stop_criterion.should_stop():
                 return
 
-            if changes_tigh is None:
+            if changes_tigh is None or objective_changed:
+                if objective_changed:
+                    tightening_starting_vertices = [problem.objective.root_expr]
+                else:
+                    tightening_starting_vertices = None
                 changes_tigh = self._backward_iterator.iterate(
-                    problem, tigh_visitor, bounds, starting_vertices=None
+                    problem, tigh_visitor, bounds,
+                    starting_vertices=tightening_starting_vertices
                 )
-            else:
+                objective_changed = False
+            elif len(changes_prop) > 0:
                 changes_tigh = self._backward_iterator.iterate(
                     problem, tigh_visitor, bounds, starting_vertices=changes_prop
                 )
+            else:
+                changes_tigh = []
 
             if len(changes_prop) == 0 and len(changes_tigh) == 0:
                 return

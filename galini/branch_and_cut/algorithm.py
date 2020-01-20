@@ -873,11 +873,15 @@ class BranchAndCutAlgorithm:
         fbbt_maxiter = self.fbbt_maxiter
         if maxiter is not None:
             fbbt_maxiter = maxiter
+        branching_variable = None
+        if not node.storage.is_root:
+            branching_variable = node.storage.branching_variable
         bounds = perform_fbbt(
             problem,
             maxiter=fbbt_maxiter,
             timelimit=self.fbbt_timelimit,
             objective_upper_bound=objective_upper_bound,
+            branching_variable=branching_variable,
         )
 
         self._bounds, self._monotonicity, self._convexity = \
