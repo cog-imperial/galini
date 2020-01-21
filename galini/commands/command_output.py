@@ -54,19 +54,35 @@ class TextFormatter(object):
 
 
 def add_output_format_parser_arguments(parser):
-    parser.add_argument('--format', dest='output_format', default='text', choices=['text', 'json'])
+    parser.add_argument(
+        '--output',
+        dest='output',
+        default=None
+    )
+    parser.add_argument(
+        '--format',
+        dest='output_format',
+        default='text',
+        choices=['text', 'json']
+    )
 
 
 def print_output_table(table, args):
+    if args.output is None:
+        out_file = sys.stdout
+    else:
+        out_file = open(args.output, 'w')
     if args.output_format == 'text':
-        _print_output_table_as_text(table)
+        _print_output_table_as_text(table, out_file)
     elif args.output_format == 'json':
-        _print_output_table_as_json(table)
+        _print_output_table_as_json(table, out_file)
     else:
         raise RuntimeError('Invalid output_format {}'.format(args.output_format))
+    if args.output is not None:
+        out_file.close()
 
 
-def _print_output_table_as_text(table):
+def _print_output_table_as_text(table, out_file):
     out = StringIO()
     if isinstance(table, list):
         for t in table:
@@ -74,10 +90,10 @@ def _print_output_table_as_text(table):
             out.write('\n')
     else:
         _write_output_table(out, table)
-    sys.stdout.write(out.getvalue())
+    out_file.write(out.getvalue())
 
 
-def _print_output_table_as_json(table):
+def _print_output_table_as_json(table, out_file):
     if not isinstance(table, list):
         tables = [table]
     else:
@@ -87,7 +103,7 @@ def _print_output_table_as_json(table):
 
     for table in tables:
         output[table.name] = _output_table_as_json(table)
-    print(json.dumps(output))
+    out_file.write(json.dumps(output))
 
 
 def _write_output_table(writer, table, write_table_name=False):
