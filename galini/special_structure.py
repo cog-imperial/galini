@@ -89,6 +89,11 @@ def perform_fbbt(problem, maxiter, timelimit, objective_upper_bound=None,
         ub = problem.upper_bound(variable)
         bounds[variable] = Interval(lb, ub)
 
+    # For all intents and purposes here an infinite upper bound is the same
+    # as no upper bound.
+    if objective_upper_bound is not None and is_inf(objective_upper_bound):
+        objective_upper_bound = None
+
     if objective_upper_bound is not None:
         root_expr = problem.objective.root_expr
         expr_bounds = Interval(None, objective_upper_bound)
