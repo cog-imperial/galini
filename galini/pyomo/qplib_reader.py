@@ -315,8 +315,9 @@ class _QPLibParser:
             return True
 
     def _process_l_default(self, line):
-        if self._type[2] in ['B']:
-            self._state = 'x0_default'
+        if self._type[1] in ['B']:
+            self._state = 'u_default'
+            self._l_default = 0
             return False
         else:
             self._l_default = _split_line(line, 1, float)
@@ -340,9 +341,14 @@ class _QPLibParser:
             return True
 
     def _process_u_default(self, line):
-        self._u_default = _split_line(line, 1, float)
-        self._state = 'u_nnz_count'
-        return True
+        if self._type[1] in ['B']:
+            self._state = 'v_default'
+            self._u_default = 1
+            return False
+        else:
+            self._u_default = _split_line(line, 1, float)
+            self._state = 'u_nnz_count'
+            return True
 
     def _process_u_nnz_count(self, line):
         self._u_nnz_count = _split_line(line, 1, int)
