@@ -431,6 +431,62 @@ class _ConvertExpressionVisitor(ExpressionValueVisitor):
             variables = [self.get(var) for var in node.linear_vars]
             return True, core.LinearExpression(variables, node.linear_coefs, node.constant)
 
+        polynomial_degree = node.polynomial_degree()
+        if polynomial_degree == 1:
+            linear_coefs = [0.0] * node.nargs()
+            variables = [None] * node.nargs()
+            for i, arg in enumerate(node.args):
+                if arg.is_variable_type():
+                    linear_coefs[i] = 1.0
+                    variables[i] = self.get(arg)
+                else:
+                    coef, var = arg.args
+                    linear_coefs[i] = coef
+                    variables[i] = self.get(var)
+            return True, core.LinearExpression(variables, linear_coefs, 0.0)
+
+        if polynomial_degree == 2:
+            linear = []
+            quadratic = []
+            constant = None
+            for arg in node.args:
+                if arg.__class__ in nonpyomo_leaf_types:
+                    constant = arg
+                    continue
+                arg_polynomial_degree = arg.polynomial_degree()
+                if arg_polynomial_degree == 1:
+                    coef, var = arg.args
+                    linear.append(
+                        core.LinearExpression([self.get(var)], [coef], 0.0)
+                    )
+                elif arg_polynomial_degree == 2:
+                    a, b = arg.args
+                    xy_coef = 1.0
+                    if a.is_variable_type():
+                        x = self.get(a)
+                    else:
+                        coef, a = a.args
+                        x = self.get(a)
+                        xy_coef = coef
+                    if b.is_variable_type():
+                        y = self.get(b)
+                    else:
+                        coef, b = b.args
+                        y = self.get(b)
+                        xy_coef = coef
+                    quadratic.append(
+                        core.QuadraticExpression([x], [y], [xy_coef])
+                    )
+                else:
+                    raise RuntimeError('Unexpected children {}'.format(arg))
+            assert len(quadratic) > 0
+            expr = core.QuadraticExpression(quadratic)
+            if len(linear) > 0:
+                children = [expr, core.LinearExpression(linear)]
+                if constant is not None:
+                    children.append(core.Constant(constant))
+                expr = core.SumExpression(children)
+            return True, expr
         return False, None
 
     def visit(self, node, values):
