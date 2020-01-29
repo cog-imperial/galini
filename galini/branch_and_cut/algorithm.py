@@ -593,10 +593,28 @@ class BranchAndCutAlgorithm:
             self._cut_loop_inner_iteration += 1
 
             # Add cuts as constraints
+            new_cuts_constraints = []
             for cut in new_cuts:
                 node.storage.cut_pool.add_cut(cut)
                 node.storage.cut_node_storage.add_cut(cut)
-                _add_cut_to_problem(linear_problem, cut)
+                new_cons = _add_cut_to_problem(linear_problem, cut)
+                new_cuts_constraints.append(new_cons)
+
+            if self.galini.paranoid_mode:
+                # Check added constraints are violated
+                linear_problem_tree_data = \
+                    linear_problem.relaxed.expression_tree_data()
+                mip_x = [x.value for x in mip_solution.variables]
+                linear_problem_eval = linear_problem_tree_data.eval(
+                    mip_x,
+                    [new_cons.root_expr.idx for new_cons in new_cuts_constraints]
+                )
+                linear_problem_x = linear_problem_eval.forward(0, mip_x)
+                for i, cons in enumerate(new_cuts_constraints):
+                    if cons.lower_bound is not None:
+                        assert cons.lower_bound >= linear_problem_x[i]
+                    if cons.upper_bound is not None:
+                        assert cons.upper_bound <= linear_problem_x[i]
 
             logger.debug(
                 run_id, 'Updating CutState: State={}, Solution={}',
