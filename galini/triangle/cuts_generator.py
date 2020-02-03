@@ -33,7 +33,7 @@ class TriangleCutsGenerator(CutsGenerator):
     from 'Globally solving nonconvex quadratic programming problems with box
     constraints via integer programming methods',
     Bonami, Pierre and Gunluk, Oktay and Linderoth, Jeff,
-    Mathematical Programming Computation, 1-50, 2018, Springer).
+    Mathematical Programming Computation, 1-50, 2018, Sprinvger).
     """
     name = 'triangle'
 
@@ -100,6 +100,10 @@ class TriangleCutsGenerator(CutsGenerator):
 
     def has_converged(self, state):
         """Termination criteria for cut generation loop."""
+        _, triple_cliques = self.__problem_info_triangle
+        if not triple_cliques:
+            return True
+
         if (state.first_solution is None or
             state.previous_solution is None or
             state.latest_solution is None):
@@ -121,7 +125,9 @@ class TriangleCutsGenerator(CutsGenerator):
         triple_cliques = self.__problem_info_triangle[1]
         rank_list_tri = self._get_triangle_violations(linear_problem, solution)
         # Remove non-violated constraints and sort by density first and then violation second as in manuscript
-        rank_list_tri_viol = [el for el in rank_list_tri if el[2] >= self._thres_tri_viol]
+        rank_list_tri_viol = [
+            el for el in rank_list_tri if el[2] >= self._thres_tri_viol
+        ]
         rank_list_tri_viol.sort(key=lambda tup: tup[2], reverse=True)
 
         # Determine number of triangle cuts to add (proportion/absolute with upper & lower thresholds)
@@ -225,7 +231,9 @@ class TriangleCutsGenerator(CutsGenerator):
             elif len(clique) == 3:
                 triple_cliques.append(clique)
             else:
+                # Cliques are sorted by length. Can safely exit.
                 break
+
         rank_list_tri = [0] * 4 * len(triple_cliques)
         for idx_clique, clique in enumerate(triple_cliques):
             for tri_cut_type in range(4):
