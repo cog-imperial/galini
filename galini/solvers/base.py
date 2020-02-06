@@ -60,9 +60,9 @@ class Solver(metaclass=abc.ABCMeta):
         Solution
         """
         run_id = _create_run_id(self.name)
-        self.galini.logger.log_solve_start(run_id)
+        self.galini.logger.log_solve_start(run_id, self.name)
         solution = self.actual_solve(problem, run_id=run_id, **kwargs)
-        self.galini.logger.log_solve_end(run_id)
+        self.galini.logger.log_solve_end(run_id, self.name)
         return solution
 
     @abc.abstractmethod

@@ -187,7 +187,12 @@ class BranchAndBoundSolver(Solver):
                 run_id, current_node.storage.problem, tree, current_node)
 
             tree.update_node(current_node, solution)
-
+            logger.log_add_bab_node(
+                run_id,
+                coordinate=current_node.coordinate,
+                lower_bound=solution.lower_bound,
+                upper_bound=solution.upper_bound,
+            )
             current_node_converged = is_close(
                 solution.lower_bound,
                 solution.upper_bound,
