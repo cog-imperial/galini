@@ -13,15 +13,19 @@
 #  limitations under the License.
 
 """Branch & Cut node storage. Contains original and convex problem."""
+from collections import namedtuple
 
 from galini.branch_and_bound.branching import branch_at_point
 from galini.cuts.pool import CutNodeStorage, CutPool
 
+
+BranchingDecision = namedtuple('BranchingDecision', ['variable', 'point'])
+
+
 class _NodeStorageBase:
     def __init__(self, problem):
         self.problem = problem
-        self._branching_var = None
-        self._branching_point = None
+        self.branching_decision = None
 
     @property
     def is_root(self):
@@ -33,7 +37,10 @@ class _NodeStorageBase:
     def branch_at_point(self, branching_point):
         problem_children = branch_at_point(self.problem, branching_point)
 
-        return [NodeStorage(problem, self, branching_point.variable) for problem in problem_children]
+        return [
+            NodeStorage(problem, self, branching_point.variable)
+            for problem in problem_children
+        ]
 
 
 class NodeStorage(_NodeStorageBase):
@@ -47,6 +54,7 @@ class NodeStorage(_NodeStorageBase):
     @property
     def is_root(self):
         return False
+
 
 class RootNodeStorage(_NodeStorageBase):
     def __init__(self, problem):

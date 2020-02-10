@@ -191,6 +191,9 @@ class Logger(object):
             level = INFO
         self.level = level
 
+    def is_debug(self):
+        return self.level <= DEBUG
+
     def log_message(self, message):
         """Log message to disk."""
         self.manager._log_message(message)

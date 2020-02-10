@@ -15,39 +15,35 @@
 
 """Branch & Cut algorithm."""
 
-import datetime
-
 import numpy as np
-import pyomo.environ as pe
-import coramin.domain_reduction.obbt as coramin_obbt
-from coramin.relaxations.auto_relax import relax
-from pyomo.core.expr.current import identify_variables
-from pyomo.core.kernel.component_set import ComponentSet
 from suspect.expression import ExpressionType
 from suspect.interval import Interval
 
+import galini.core as core
 from galini.branch_and_bound.node import NodeSolution
 from galini.branch_and_bound.relaxations import (
     ConvexRelaxation, LinearRelaxation
 )
 from galini.branch_and_bound.selection import BestLowerBoundSelectionStrategy
 from galini.branch_and_bound.strategy import KSectionBranchingStrategy
+from galini.branch_and_cut.bound_reduction import (
+    perform_obbt_on_model, best_upper_bound, best_lower_bound
+)
 from galini.branch_and_cut.primal import (
     solve_primal, solve_primal_with_starting_point
 )
+from galini.branch_and_cut.state import CutsState
 from galini.config import (
     OptionsGroup,
     IntegerOption,
     BoolOption,
     NumericOption,
 )
-import galini.core as core
+from galini.cuts.generator import Cut
 from galini.logging import get_logger, DEBUG
-from galini.branch_and_cut.state import CutsState
 from galini.math import mc, is_close, almost_ge, almost_le, is_inf
 from galini.quantities import relative_gap, absolute_gap
 from galini.relaxations.relaxed_problem import RelaxedProblem
-from galini.cuts.generator import Cut, CutType
 from galini.special_structure import (
     propagate_special_structure,
     perform_fbbt,
@@ -56,14 +52,10 @@ from galini.timelimit import (
     seconds_left,
     current_time,
     seconds_elapsed_since,
-    timeout,
 )
 from galini.util import expr_to_str
 
 logger = get_logger(__name__)
-
-coramin_logger = coramin_obbt.logger # pylint: disable=invalid-name
-coramin_logger.disabled = True
 
 
 # pylint: disable=too-many-instance-attributes
@@ -146,93 +138,6 @@ class BranchAndCutAlgorithm:
             ),
         ])
 
-    def _perform_obbt(self, model, problem, upper_bound):
-        obbt_timelimit = self.solver.config['obbt_timelimit']
-        obbt_start_time = current_time()
-
-        for var in model.component_data_objects(ctype=pe.Var):
-            var.domain = pe.Reals
-
-            if not (var.lb is None or np.isfinite(var.lb)):
-                var.setlb(None)
-
-            if not (var.ub is None or np.isfinite(var.ub)):
-                var.setub(None)
-
-        relaxed_model = relax(model)
-
-        solver = pe.SolverFactory('cplex_persistent')
-        solver.set_instance(relaxed_model)
-        obbt_simplex_maxiter = self.solver.config['obbt_simplex_maxiter']
-        # TODO(fra): make this non-cplex specific
-        simplex_limits = solver._solver_model.parameters.simplex.limits # pylint: disable=protected-access
-        simplex_limits.iterations.set(obbt_simplex_maxiter)
-        # collect variables in nonlinear constraints
-        nonlinear_variables = ComponentSet()
-        for constraint in model.component_data_objects(ctype=pe.Constraint):
-            # skip linear constraint
-            if constraint.body.polynomial_degree() == 1:
-                continue
-
-            for var in identify_variables(constraint.body,
-                                          include_fixed=False):
-                # Coramin will complain about variables that are fixed
-                # Note: Coramin uses an hard-coded 1e-6 tolerance
-                if not var.has_lb() or not var.has_ub():
-                    nonlinear_variables.add(var)
-                else:
-                    if not np.abs(var.ub - var.lb) < 1e-6:
-                        nonlinear_variables.add(var)
-
-        relaxed_vars = [
-            getattr(relaxed_model, v.name)
-            for v in nonlinear_variables
-        ]
-
-        logger.info(0, 'Performing OBBT on {} variables', len(relaxed_vars))
-
-        # Avoid Coramin raising an exception if the problem has no objective
-        # value but we set an upper bound.
-        objectives = model.component_data_objects(
-            pe.Objective, active=True, sort=True, descend_into=True
-        )
-        if len(list(objectives)) == 0:
-            upper_bound = None
-
-        time_left = obbt_timelimit - seconds_elapsed_since(obbt_start_time)
-        with timeout(time_left, 'Timeout in OBBT'):
-            result = coramin_obbt.perform_obbt(
-                relaxed_model, solver,
-                varlist=relaxed_vars,
-                objective_bound=upper_bound
-            )
-
-        if result is None:
-            return
-
-        logger.debug(0, 'New Bounds')
-        for v, new_lb, new_ub in zip(relaxed_vars, *result):
-            vv = problem.variable_view(v.name)
-            if new_lb is None or new_ub is None:
-                logger.warning(0, 'Could not tighten variable {}', v.name)
-            old_lb = vv.lower_bound()
-            old_ub = vv.upper_bound()
-            new_lb = _safe_lb(vv.domain, new_lb, old_lb)
-            new_ub = _safe_ub(vv.domain, new_ub, old_ub)
-            if not new_lb is None and not new_ub is None:
-                if is_close(new_lb, new_ub, atol=mc.epsilon):
-                    if old_lb is not None and \
-                            is_close(new_lb, old_lb, atol=mc.epsilon):
-                        new_ub = new_lb
-                    else:
-                        new_lb = new_ub
-            vv.set_lower_bound(new_lb)
-            vv.set_upper_bound(new_ub)
-            logger.debug(
-                0, '  {}: [{}, {}]',
-                v.name, vv.lower_bound(), vv.upper_bound()
-            )
-
     def _before_root_node(self, problem, upper_bound):
         if self._user_model is None:
             raise RuntimeError("No user model. Did you call 'before_solve'?")
@@ -243,7 +148,11 @@ class BranchAndCutAlgorithm:
         model = self._user_model
         obbt_start_time = current_time()
         try:
-            self._perform_obbt(model, problem, obbt_upper_bound)
+            perform_obbt_on_model(
+                model, problem, obbt_upper_bound,
+                timelimit=self.solver.config['obbt_timelimit'],
+                simplex_maxiter=self.solver.config['obbt_simplex_maxiter'],
+            )
             self._bac_telemetry.increment_obbt_time(
                 seconds_elapsed_since(obbt_start_time)
             )
@@ -261,7 +170,6 @@ class BranchAndCutAlgorithm:
             )
             raise
 
-    # pylint: disable=too-many-branches
     def before_solve(self, model, problem):
         """Callback called before solve."""
         self._user_model = model
@@ -920,13 +828,13 @@ class BranchAndCutAlgorithm:
             if new_bound is None:
                 new_bound = Interval(None, None)
 
-            new_lb = _safe_lb(
+            new_lb = best_lower_bound(
                 v.domain,
                 new_bound.lower_bound,
                 vv.lower_bound()
             )
 
-            new_ub = _safe_ub(
+            new_ub = best_upper_bound(
                 v.domain,
                 new_bound.upper_bound,
                 vv.upper_bound()
@@ -948,13 +856,13 @@ class BranchAndCutAlgorithm:
                 if new_bound is None:
                     new_bound = Interval(None, None)
 
-                new_lb = _safe_lb(
+                new_lb = best_lower_bound(
                     v.domain,
                     new_bound.lower_bound,
                     vv.lower_bound()
                 )
 
-                new_ub = _safe_ub(
+                new_ub = best_upper_bound(
                     v.domain,
                     new_bound.upper_bound,
                     vv.upper_bound()
@@ -1012,41 +920,6 @@ def _convert_linear_expr(linear_problem, expr, objvar=None):
         coeffs.append(1.0)
 
     return core.LinearExpression(children, coeffs, const)
-
-
-
-
-
-def _safe_lb(domain, a, b):
-    if b is None:
-        lb = a
-    elif a is not None:
-        lb = max(a, b)
-    else:
-        return None
-
-    if domain.is_integer() and lb is not None:
-        if is_close(np.floor(lb), lb, atol=mc.epsilon, rtol=0.0):
-            return np.floor(lb)
-        return np.ceil(lb)
-
-    return lb
-
-
-def _safe_ub(domain, a, b):
-    if b is None:
-        ub = a
-    elif a is not None:
-        ub = min(a, b)
-    else:
-        return None
-
-    if domain.is_integer() and ub is not None:
-        if is_close(np.ceil(ub), ub, atol=mc.epsilon, rtol=0.0):
-            return np.ceil(ub)
-        return np.floor(ub)
-
-    return ub
 
 
 def _is_convex(problem, cvx_map):
