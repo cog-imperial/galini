@@ -29,29 +29,29 @@ from galini.core import (
     ExpressionReference,
     BilinearTermReference,
 )
-from galini.underestimators.bilinear import (
-    McCormickUnderestimator,
+from galini.expression_relaxation.bilinear import (
+    McCormickExpressionRelaxation,
 )
-from galini.underestimators.underestimator import Underestimator, \
-    UnderestimatorResult, UnderestimatorSide
+from galini.expression_relaxation.expression_relaxation import ExpressionRelaxation, \
+    ExpressionRelaxationResult, RelaxationSide
 
 
 DISAGGREGATE_VAR_AUX_META = 'disaggregate_var_aux_meta'
 
 
-class DisaggregateBilinearUnderestimator(Underestimator):
+class DisaggregateBilinearExpressionRelaxation(ExpressionRelaxation):
     def __init__(self):
         super().__init__()
         self._call_count = 0
         self._quadratic_rule = QuadraticRule()
         self._quadratic_bound_propagation_rule = \
             QuadraticBoundPropagationRule()
-        self._bilinear_underestimator = McCormickUnderestimator(linear=True)
+        self._bilinear_underestimator = McCormickExpressionRelaxation(linear=True)
 
-    def can_underestimate(self, problem, expr, ctx):
+    def can_relax(self, problem, expr, ctx):
         return expr.expression_type == ExpressionType.Quadratic
 
-    def underestimate(self, problem, expr, ctx, **kwargs):
+    def relax(self, problem, expr, ctx, **kwargs):
         assert expr.expression_type == ExpressionType.Quadratic
 
         side = kwargs.pop('side')
@@ -82,11 +82,11 @@ class DisaggregateBilinearUnderestimator(Underestimator):
             cvx = self._quadratic_rule.apply(
                 quadratic_expr, ctx.convexity, ctx.monotonicity, ctx.bounds
             )
-            if cvx.is_convex() and side == UnderestimatorSide.UNDER:
+            if cvx.is_convex() and side == RelaxationSide.UNDER:
                 convex_exprs.append(quadratic_expr)
-            elif cvx.is_convex() and side == UnderestimatorSide.BOTH:
+            elif cvx.is_convex() and side == RelaxationSide.BOTH:
                 convex_exprs.append(quadratic_expr)
-            elif cvx.is_concave() and side == UnderestimatorSide.OVER:
+            elif cvx.is_concave() and side == RelaxationSide.OVER:
                 convex_exprs.append(quadratic_expr)
             else:
                 nonconvex_exprs.append(quadratic_expr)
@@ -128,10 +128,10 @@ class DisaggregateBilinearUnderestimator(Underestimator):
             aux_vars.append(aux_w)
             aux_coefs.append(1.0)
 
-            if side == UnderestimatorSide.UNDER:
+            if side == RelaxationSide.UNDER:
                 lower_bound = None
                 upper_bound = 0.0
-            elif side == UnderestimatorSide.OVER:
+            elif side == RelaxationSide.OVER:
                 lower_bound = 0.0
                 upper_bound = None
             else:
@@ -154,7 +154,7 @@ class DisaggregateBilinearUnderestimator(Underestimator):
 
         nonconvex_quadratic_expr = QuadraticExpression(nonconvex_exprs)
         nonconvex_quadratic_under = \
-            self._bilinear_underestimator.underestimate(
+            self._bilinear_underestimator.relax(
                 problem, nonconvex_quadratic_expr, ctx, **kwargs
             )
         assert nonconvex_quadratic_under is not None
@@ -171,4 +171,4 @@ class DisaggregateBilinearUnderestimator(Underestimator):
 
         constraints.extend(nonconvex_quadratic_under.constraints)
 
-        return UnderestimatorResult(new_expr, constraints)
+        return ExpressionRelaxationResult(new_expr, constraints)

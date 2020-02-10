@@ -6,7 +6,7 @@ from suspect.convexity import Convexity
 from suspect.expression import ExpressionType
 from galini.pyomo import dag_from_pyomo_model
 from galini.suspect import ProblemContext
-from galini.underestimators.convex import ConvexUnderestimator
+from galini.expression_relaxation.convex import ConvexExpressionRelaxation
 
 
 @pytest.fixture
@@ -26,13 +26,13 @@ def problem():
 class TestConvexUnderestimator:
     def test_sum_of_convex_expressions(self, problem):
         ctx = ProblemContext(problem)
-        r = ConvexUnderestimator()
+        r = ConvexExpressionRelaxation()
 
         constraint_expr = problem.objective.root_expr
         ctx.set_convexity(constraint_expr, Convexity.Convex)
-        assert r.can_underestimate(problem, constraint_expr, ctx)
+        assert r.can_relax(problem, constraint_expr, ctx)
 
-        result = r.underestimate(problem, constraint_expr, ctx)
+        result = r.relax(problem, constraint_expr, ctx)
         assert len(result.expression.children) == 2
         assert result.expression.expression_type == ExpressionType.Sum
         a, b = result.expression.children
@@ -44,13 +44,13 @@ class TestConvexUnderestimator:
 
     def test_quadratic_expression(self, problem):
         ctx = ProblemContext(problem)
-        r = ConvexUnderestimator()
+        r = ConvexExpressionRelaxation()
 
         constraint_expr = problem.constraint('c0').root_expr
         ctx.set_convexity(constraint_expr, Convexity.Unknown)
-        assert r.can_underestimate(problem, constraint_expr, ctx)
+        assert r.can_relax(problem, constraint_expr, ctx)
 
-        result = r.underestimate(problem, constraint_expr, ctx)
+        result = r.relax(problem, constraint_expr, ctx)
         expr = result.expression
         assert expr.expression_type == ExpressionType.Quadratic
         assert len(expr.terms) == 2

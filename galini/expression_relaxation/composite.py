@@ -15,44 +15,44 @@
 """Underestimator for sum of other expressions."""
 from suspect.expression import ExpressionType
 from galini.core import SumExpression
-from galini.underestimators.underestimator import Underestimator, UnderestimatorResult
+from galini.expression_relaxation.expression_relaxation import ExpressionRelaxation, ExpressionRelaxationResult
 
 
 
-class SumOfUnderestimators(Underestimator):
+class SumOfUnderestimators(ExpressionRelaxation):
     def __init__(self, underestimators):
         for underestimator in underestimators:
-            if not isinstance(underestimator, Underestimator):
-                raise ValueError('All underestimators must be instances of Underestimator')
+            if not isinstance(underestimator, ExpressionRelaxation):
+                raise ValueError('All expression_relaxation must be instances of Underestimator')
         self._underestimators = underestimators
 
-    def can_underestimate(self, problem, expr, ctx):
+    def can_relax(self, problem, expr, ctx):
         return (
             self._can_be_underestimated_as_sum_of_expressions(problem, expr, ctx) or
             self._can_be_underestimated_by_child_underestimator(problem, expr, ctx)
         )
 
-    def underestimate(self, problem, expr, ctx, **kwargs):
+    def relax(self, problem, expr, ctx, **kwargs):
         if self._can_be_underestimated_as_sum_of_expressions(problem, expr, ctx):
             return self._underestimate_as_sum(problem, expr, ctx, **kwargs)
 
         for underestimator in self._underestimators:
-            if underestimator.can_underestimate(problem, expr, ctx):
-                return underestimator.underestimate(problem, expr, ctx, **kwargs)
+            if underestimator.can_relax(problem, expr, ctx):
+                return underestimator.relax(problem, expr, ctx, **kwargs)
 
         return None
 
     def _can_be_underestimated_as_sum_of_expressions(self, problem, expr, ctx):
         if expr.expression_type == ExpressionType.Sum:
             for child in expr.children:
-                if not self.can_underestimate(problem, child, ctx):
+                if not self.can_relax(problem, child, ctx):
                     return False
             return True
         return False
 
     def _can_be_underestimated_by_child_underestimator(self, problem, expr, ctx):
         for underestimator in self._underestimators:
-            if underestimator.can_underestimate(problem, expr, ctx):
+            if underestimator.can_relax(problem, expr, ctx):
                 return True
         return False
 
@@ -60,9 +60,9 @@ class SumOfUnderestimators(Underestimator):
         new_children = []
         new_constraints = []
         for child in expr.children:
-            result = self.underestimate(problem, child, ctx, **kwargs)
+            result = self.relax(problem, child, ctx, **kwargs)
             if result is not None:
                 new_children.append(result.expression)
                 new_constraints.extend(result.constraints)
         new_expression = SumExpression(new_children)
-        return UnderestimatorResult(new_expression, new_constraints)
+        return ExpressionRelaxationResult(new_expression, new_constraints)

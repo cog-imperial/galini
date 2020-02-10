@@ -6,7 +6,7 @@ from suspect.convexity import Convexity
 from suspect.expression import ExpressionType
 from galini.pyomo import dag_from_pyomo_model
 from galini.suspect import ProblemContext
-from galini.underestimators.concave import UnivariateConcaveUnderestimator
+from galini.expression_relaxation.concave import UnivariateConcaveExpressionRelaxation
 
 
 @pytest.fixture
@@ -38,15 +38,15 @@ class TestUnivariateConcaveUnderestimator:
                              ['univariate_concave', 'univariate_concave_2', 'univariate_concave_3'])
     def test_univariate_concave(self, problem, constraint_name):
         ctx = ProblemContext(problem)
-        r = UnivariateConcaveUnderestimator()
+        r = UnivariateConcaveExpressionRelaxation()
 
         constraint_expr = problem.constraint(constraint_name).root_expr
 
         ctx.set_convexity(constraint_expr, Convexity.Concave)
 
-        assert r.can_underestimate(problem, constraint_expr, ctx)
+        assert r.can_relax(problem, constraint_expr, ctx)
 
-        result = r.underestimate(problem, constraint_expr, ctx)
+        result = r.relax(problem, constraint_expr, ctx)
 
         assert result.constraints == []
 
@@ -54,13 +54,13 @@ class TestUnivariateConcaveUnderestimator:
                              ['univariate_nonconcave', 'univariate_nonconcave_2',
                               'univariate_nonconcave_3'])
     def test_is_univariate(self, problem, name):
-        r = UnivariateConcaveUnderestimator()
+        r = UnivariateConcaveExpressionRelaxation()
         constraint_expr = problem.constraint(name).root_expr
         assert r.is_univariate(constraint_expr)
 
     @pytest.mark.parametrize('name',
                              ['nonunivariate', 'nonunivariate_2', 'nonunivariate_3'])
     def test_is_not_univariate(self, problem, name):
-        r = UnivariateConcaveUnderestimator()
+        r = UnivariateConcaveExpressionRelaxation()
         constraint_expr = problem.constraint(name).root_expr
         assert not r.is_univariate(constraint_expr)

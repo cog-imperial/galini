@@ -23,14 +23,14 @@ from galini.core import (
 )
 from galini.relaxations import Relaxation, RelaxationResult
 from galini.suspect import ProblemContext
-from galini.underestimators import (
-    McCormickUnderestimator,
-    LinearUnderestimator,
-    DisaggregateBilinearUnderestimator,
+from galini.expression_relaxation import (
+    McCormickExpressionRelaxation,
+    LinearExpressionRelaxation,
+    DisaggregateBilinearExpressionRelaxation,
     SumOfUnderestimators,
-    UnderestimatorSide,
+    RelaxationSide,
 )
-from galini.underestimators.bilinear import (
+from galini.expression_relaxation.bilinear import (
     BILINEAR_AUX_VAR_META,
 )
 
@@ -68,7 +68,7 @@ class _RelaxationBase(Relaxation):
 
     def relax_objective(self, problem, objective):
         result = self.relax_expression(
-            problem, objective.root_expr, side=UnderestimatorSide.UNDER
+            problem, objective.root_expr, side=RelaxationSide.UNDER
         )
         new_objective = Objective(
             objective.name, result.expression, objective.original_sense
@@ -77,11 +77,11 @@ class _RelaxationBase(Relaxation):
 
     def relax_constraint(self, problem, constraint):
         if constraint.lower_bound is None:
-            side = UnderestimatorSide.UNDER
+            side = RelaxationSide.UNDER
         elif constraint.upper_bound is None:
-            side = UnderestimatorSide.OVER
+            side = RelaxationSide.OVER
         else:
-            side = UnderestimatorSide.BOTH
+            side = RelaxationSide.BOTH
 
         result = self.relax_expression(
             problem, constraint.root_expr, side=side
@@ -100,8 +100,8 @@ class _RelaxationBase(Relaxation):
         return self._relax_expression(problem, expr, side=side)
 
     def _relax_expression(self, problem, expr, side=None):
-        assert self._underestimator.can_underestimate(problem, expr, self._ctx)
-        result = self._underestimator.underestimate(
+        assert self._underestimator.can_relax(problem, expr, self._ctx)
+        result = self._underestimator.relax(
             problem, expr, self._ctx, side=side
         )
         return result
@@ -111,8 +111,8 @@ class ConvexRelaxation(_RelaxationBase):
     """Create a Convex relaxation of a (quadratic) nonconvex problem."""
     def _root_underestimator(self):
         return SumOfUnderestimators([
-            LinearUnderestimator(),
-            DisaggregateBilinearUnderestimator(),
+            LinearExpressionRelaxation(),
+            DisaggregateBilinearExpressionRelaxation(),
         ])
 
     def relaxed_problem_name(self, problem):
@@ -133,8 +133,8 @@ class LinearRelaxation(_RelaxationBase):
 
     def _root_underestimator(self):
         return SumOfUnderestimators([
-            LinearUnderestimator(),
-            McCormickUnderestimator(linear=True),
+            LinearExpressionRelaxation(),
+            McCormickExpressionRelaxation(linear=True),
         ])
 
     def relaxed_problem_name(self, problem):

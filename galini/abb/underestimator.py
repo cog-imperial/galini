@@ -13,19 +13,19 @@
 # limitations under the License.
 from suspect.interval import Interval
 from galini.core import SumExpression, LinearExpression, QuadraticExpression
-from galini.underestimators import Underestimator, UnderestimatorResult
+from galini.expression_relaxation import ExpressionRelaxation, ExpressionRelaxationResult
 
 
-class AlphaBBUnderestimator(Underestimator):
-    def can_underestimate(self, problem, expr, ctx):
+class AlphaBBExpressionRelaxation(ExpressionRelaxation):
+    def can_relax(self, problem, expr, ctx):
         return True
 
-    def underestimate(self, problem, expr, ctx):
+    def relax(self, problem, expr, ctx):
         alpha = self.compute_alpha(problem, expr, ctx)
         quadratic_exprs = self._quadratic_sum(problem, expr, ctx, alpha)
         children = quadratic_exprs + [expr]
         under_expr = SumExpression(children)
-        return UnderestimatorResult(under_expr)
+        return ExpressionRelaxationResult(under_expr)
 
     def compute_alpha(self, problem, expr, ctx):
         xs = self._collect_expr_variables(expr)

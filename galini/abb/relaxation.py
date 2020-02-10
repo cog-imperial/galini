@@ -13,12 +13,12 @@
 # limitations under the License.
 from galini.core import Objective, Constraint, Variable
 from galini.relaxations import Relaxation, RelaxationResult
-from galini.abb.underestimator import AlphaBBUnderestimator
+from galini.abb.underestimator import AlphaBBExpressionRelaxation
 from galini.special_structure import detect_special_structure
-from galini.underestimators import (
-    McCormickUnderestimator,
-    LinearUnderestimator,
-    UnivariateConcaveUnderestimator,
+from galini.expression_relaxation import (
+    McCormickExpressionRelaxation,
+    LinearExpressionRelaxation,
+    UnivariateConcaveExpressionRelaxation,
     SumOfUnderestimators,
 )
 
@@ -27,10 +27,10 @@ class AlphaBBRelaxation(Relaxation):
         super().__init__()
         self._ctx = None
         self._underestimator = SumOfUnderestimators([
-            LinearUnderestimator(),
-            McCormickUnderestimator(),
-            UnivariateConcaveUnderestimator(),
-            AlphaBBUnderestimator(),
+            LinearExpressionRelaxation(),
+            McCormickExpressionRelaxation(),
+            UnivariateConcaveExpressionRelaxation(),
+            AlphaBBExpressionRelaxation(),
         ])
 
     def relaxed_problem_name(self, problem):
@@ -57,6 +57,6 @@ class AlphaBBRelaxation(Relaxation):
         return RelaxationResult(new_constraint, result.constraints)
 
     def relax_expression(self, problem, expr):
-        assert self._underestimator.can_underestimate(problem, expr, self._ctx)
-        result = self._underestimator.underestimate(problem, expr, self._ctx)
+        assert self._underestimator.can_relax(problem, expr, self._ctx)
+        result = self._underestimator.relax(problem, expr, self._ctx)
         return result

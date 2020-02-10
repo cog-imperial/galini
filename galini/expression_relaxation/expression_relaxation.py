@@ -12,26 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Underestimator interface."""
+"""ExpressionRelaxation interface."""
 from abc import ABCMeta, abstractmethod
-from enum import Enum
+from enum import IntEnum
 
 from galini.core import Expression, Constraint
 
 
-class UnderestimatorSide(Enum):
-    """Represent the underestimator side."""
+class RelaxationSide(IntEnum):
+    """Represent the relaxation side."""
     UNDER = 0
     OVER = 1
     BOTH = 2
 
 
-class Underestimator(metaclass=ABCMeta):
-    """Base class for underestimators."""
+class ExpressionRelaxation(metaclass=ABCMeta):
+    """Base class for expression_relaxation."""
 
     @abstractmethod
-    def can_underestimate(self, problem, expr, ctx): # pragma: no cover
-        """Check if the current underestimator can underestimate the expression.
+    def can_relax(self, problem, expr, ctx): # pragma: no cover
+        """Check if the current relaxation can relax the expression.
 
         Parameters
         ----------
@@ -48,8 +48,8 @@ class Underestimator(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def underestimate(self, problem, expr, ctx, **kwargs): # pragma: no cover
-        """Return expression underestimating expr.
+    def relax(self, problem, expr, ctx, **kwargs): # pragma: no cover
+        """Return a relaxation for `expr`.
 
         Parameters
         ----------
@@ -62,14 +62,14 @@ class Underestimator(metaclass=ABCMeta):
 
         Returns
         -------
-        UnderestimatorResult
+        ExpressionRelaxationResult
         """
 
 
-class UnderestimatorResult:
-    """Represent the result of an underestimator.
+class ExpressionRelaxationResult:
+    """Represent the result of an expression relaxation.
 
-    The result contains a expression that underestimates the original expression
+    The result contains a expression that relaxes the original expression
     and a set of additional constraints to be added to the problem.
     """
     def __init__(self, expression, constraints=None):

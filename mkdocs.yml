@@ -17,7 +17,7 @@ nav:
 - Branch & Bound:
   - Branching: bab/branching.md
 - Relaxations: relaxations.md
-- Underestimators: underestimators.md
+- Underestimators: expression_relaxation.md
 markdown_extensions:
 - pymdownx.arithmatex
 extra_javascript:

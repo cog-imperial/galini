@@ -17,21 +17,21 @@ import math
 import numpy as np
 from suspect.expression import ExpressionType
 from galini.core import QuadraticExpression
-from galini.underestimators.underestimator import Underestimator, UnderestimatorResult
+from galini.expression_relaxation.expression_relaxation import ExpressionRelaxation, ExpressionRelaxationResult
 
 
-class ConvexUnderestimator(Underestimator):
+class ConvexExpressionRelaxation(ExpressionRelaxation):
     """Underestimator of convex functions."""
-    def can_underestimate(self, problem, expr, ctx):
+    def can_relax(self, problem, expr, ctx):
         cvx = ctx.convexity(expr)
         # special case for quadratic, where square terms
         # are convex
         return cvx.is_convex() or expr.expression_type == ExpressionType.Quadratic
 
-    def underestimate(self, problem, expr, ctx, **kwargs):
+    def relax(self, problem, expr, ctx, **kwargs):
         cvx = ctx.convexity(expr)
         if cvx.is_convex():
-            return UnderestimatorResult(expr)
+            return ExpressionRelaxationResult(expr)
 
         assert expr.expression_type == ExpressionType.Quadratic
         # build quadratic of only the squares
@@ -42,4 +42,4 @@ class ConvexUnderestimator(Underestimator):
                 variables.append(term.var1)
                 coefficients.append(term.coefficient)
         new_expr = QuadraticExpression(variables, variables, coefficients)
-        return UnderestimatorResult(new_expr)
+        return ExpressionRelaxationResult(new_expr)

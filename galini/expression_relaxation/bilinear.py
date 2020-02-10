@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Bilinear underestimator using McCormick."""
+"""Bilinear relaxation using McCormick."""
 import numpy as np
 from suspect.interval import Interval
 from suspect.expression import ExpressionType
@@ -26,24 +26,24 @@ from galini.core import (
     BilinearTermReference,
 )
 from galini.pyomo.postprocess import PROBLEM_BILINEAR_AUX_VAR_META
-from galini.underestimators.underestimator import (
-    Underestimator,
-    UnderestimatorResult,
+from galini.expression_relaxation.expression_relaxation import (
+    ExpressionRelaxation,
+    ExpressionRelaxationResult,
 )
 
 # Dictionary of (var1, var2) -> aux
 BILINEAR_AUX_VAR_META = 'bilinear_aux_variables'
 
 
-class McCormickUnderestimator(Underestimator):
+class McCormickExpressionRelaxation(ExpressionRelaxation):
     """Underestimate Quadratic expressions using McCormick envelope."""
     def __init__(self, linear=True):
         self.linear = linear
 
-    def can_underestimate(self, problem, expr, ctx):
+    def can_relax(self, problem, expr, ctx):
         return expr.expression_type == ExpressionType.Quadratic
 
-    def underestimate(self, problem, expr, ctx, **kwargs):
+    def relax(self, problem, expr, ctx, **kwargs):
         assert expr.expression_type == ExpressionType.Quadratic
 
         if ctx.metadata.get(BILINEAR_AUX_VAR_META, None) is None:
@@ -65,7 +65,7 @@ class McCormickUnderestimator(Underestimator):
 
         if not squares:
             new_linear_expr = LinearExpression(variables)
-            return UnderestimatorResult(new_linear_expr, constraints)
+            return ExpressionRelaxationResult(new_linear_expr, constraints)
 
         # Squares + (optional) linear expression
         square_coefficients = [c for c, _ in squares]
@@ -76,10 +76,10 @@ class McCormickUnderestimator(Underestimator):
             square_coefficients,
         )
         if not variables:
-            return UnderestimatorResult(quadratic_expr, constraints)
+            return ExpressionRelaxationResult(quadratic_expr, constraints)
 
         new_linear_expr = LinearExpression(variables)
-        return UnderestimatorResult(
+        return ExpressionRelaxationResult(
             SumExpression([quadratic_expr, new_linear_expr]),
             constraints,
         )

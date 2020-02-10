@@ -5,7 +5,7 @@ import pyomo.environ as aml
 from suspect.expression import ExpressionType
 from galini.pyomo import dag_from_pyomo_model
 from galini.abb.relaxation import AlphaBBRelaxation
-from galini.abb.underestimator import AlphaBBUnderestimator
+from galini.abb.underestimator import AlphaBBExpressionRelaxation
 
 
 @pytest.fixture
@@ -19,10 +19,10 @@ def problem():
 
 @pytest.mark.skip('Skip nonlinear.')
 def test_underestimator(problem):
-    abb = AlphaBBUnderestimator()
+    abb = AlphaBBExpressionRelaxation()
     expr = problem.objective('obj').root_expr
-    assert abb.can_underestimate(problem, expr, None)
-    r = abb.underestimate(problem, expr, None)
+    assert abb.can_relax(problem, expr, None)
+    r = abb.relax(problem, expr, None)
     assert r.constraints == []
     new_expr = r.expression
     assert new_expr.expression_type == ExpressionType.Sum

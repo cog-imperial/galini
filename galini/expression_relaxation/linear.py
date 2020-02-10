@@ -14,17 +14,17 @@
 
 """Underestimator for Linear expressions."""
 from suspect.expression import ExpressionType
-from galini.underestimators.underestimator import Underestimator, UnderestimatorResult
+from galini.expression_relaxation.expression_relaxation import ExpressionRelaxation, ExpressionRelaxationResult
 
 
-class LinearUnderestimator(Underestimator):
+class LinearExpressionRelaxation(ExpressionRelaxation):
     """Underestimator for linear expressions."""
-    def can_underestimate(self, problem, expr, ctx):
+    def can_relax(self, problem, expr, ctx):
         return (
             expr.expression_type == ExpressionType.Linear or
             expr.expression_type == ExpressionType.Variable or
             expr.expression_type == ExpressionType.Constant
         )
 
-    def underestimate(self, problem, expr, ctx, **kwargs):
-        return UnderestimatorResult(expr)
+    def relax(self, problem, expr, ctx, **kwargs):
+        return ExpressionRelaxationResult(expr)

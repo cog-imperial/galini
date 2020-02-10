@@ -3,7 +3,7 @@ import pytest
 import pyomo.environ as aml
 from galini.pyomo import dag_from_pyomo_model
 from galini.suspect import ProblemContext
-from galini.underestimators.linear import LinearUnderestimator
+from galini.expression_relaxation.linear import LinearExpressionRelaxation
 
 
 @pytest.fixture
@@ -25,20 +25,20 @@ def problem():
 class TestLinearUnderestimator:
     def test_linear_terms(self, problem):
         ctx = ProblemContext(problem)
-        r = LinearUnderestimator()
+        r = LinearExpressionRelaxation()
 
         linear = problem.constraint('linear').root_expr
 
-        assert r.can_underestimate(problem, linear, ctx)
-        result = r.underestimate(problem, linear, ctx)
+        assert r.can_relax(problem, linear, ctx)
+        result = r.relax(problem, linear, ctx)
 
         assert result.constraints == []
         assert result.expression == linear
 
     def test_nonlinear_terms(self, problem):
         ctx = ProblemContext(problem)
-        r = LinearUnderestimator()
+        r = LinearExpressionRelaxation()
 
         nonlinear = problem.constraint('not_linear').root_expr
 
-        assert not r.can_underestimate(problem, nonlinear, ctx)
+        assert not r.can_relax(problem, nonlinear, ctx)

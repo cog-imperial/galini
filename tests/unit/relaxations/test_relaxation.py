@@ -12,9 +12,9 @@ from galini.core import (
     SumExpression,
 )
 from galini.special_structure import detect_special_structure
-from galini.underestimators import (
-    McCormickUnderestimator,
-    LinearUnderestimator,
+from galini.expression_relaxation import (
+    McCormickExpressionRelaxation,
+    LinearExpressionRelaxation,
     SumOfUnderestimators,
 )
 
@@ -139,8 +139,8 @@ def test_relaxation_on_free_constraint(bilinear_problem):
             super().__init__()
             self._ctx = None
             self._under = SumOfUnderestimators([
-                LinearUnderestimator(),
-                McCormickUnderestimator(),
+                LinearExpressionRelaxation(),
+                McCormickExpressionRelaxation(),
             ])
 
         def before_relax(self, problem):
@@ -167,8 +167,8 @@ def test_relaxation_on_free_constraint(bilinear_problem):
             return RelaxationResult(new_constraint, result.constraints)
 
         def relax_expression(self, problem, expr):
-            assert self._under.can_underestimate(problem, expr, self._ctx)
-            result = self._under.underestimate(problem, expr, self._ctx)
+            assert self._under.can_relax(problem, expr, self._ctx)
+            result = self._under.relax(problem, expr, self._ctx)
             return result
 
     problem = bilinear_problem

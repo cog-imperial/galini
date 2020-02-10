@@ -6,7 +6,7 @@ from suspect.polynomial import PolynomialDegree
 from suspect.expression import ExpressionType
 from galini.pyomo import dag_from_pyomo_model
 from galini.suspect import ProblemContext
-from galini.underestimators.bilinear import McCormickUnderestimator
+from galini.expression_relaxation.bilinear import McCormickExpressionRelaxation
 from galini.suspect import ProblemContext
 
 
@@ -32,13 +32,13 @@ def problem():
 
 class TestMcCormickUnderestimator:
     def test_bilinear_terms(self, problem):
-        r = McCormickUnderestimator()
+        r = McCormickExpressionRelaxation()
         ctx = ProblemContext(problem)
         bilinear = problem.constraint('bilinear').root_expr
 
-        assert r.can_underestimate(problem, bilinear, ctx)
+        assert r.can_relax(problem, bilinear, ctx)
 
-        result = r.underestimate(problem, bilinear, ctx)
+        result = r.relax(problem, bilinear, ctx)
         self._check_constraints(result)
         assert result.expression.expression_type == ExpressionType.Linear
         assert len(result.expression.children) == 1
@@ -47,14 +47,14 @@ class TestMcCormickUnderestimator:
 
     def test_bilinear_with_coef(self, problem):
         ctx = ProblemContext(problem)
-        r = McCormickUnderestimator()
+        r = McCormickExpressionRelaxation()
 
         bilinear = problem.constraint('bilinear_coef').root_expr
         ctx.set_polynomiality(bilinear, PolynomialDegree(2))
 
-        assert r.can_underestimate(problem, bilinear, ctx)
+        assert r.can_relax(problem, bilinear, ctx)
 
-        result = r.underestimate(problem, bilinear, ctx)
+        result = r.relax(problem, bilinear, ctx)
         self._check_constraints(result)
         expr = result.expression
         assert expr.expression_type == ExpressionType.Linear
@@ -62,14 +62,14 @@ class TestMcCormickUnderestimator:
 
     def test_bilinear_sum(self, problem):
         ctx = ProblemContext(problem)
-        r = McCormickUnderestimator()
+        r = McCormickExpressionRelaxation()
 
         bilinear = problem.constraint('bilinear_sum').root_expr
         ctx.set_polynomiality(bilinear, PolynomialDegree(2))
 
-        assert r.can_underestimate(problem, bilinear, ctx)
+        assert r.can_relax(problem, bilinear, ctx)
 
-        result = r.underestimate(problem, bilinear, ctx)
+        result = r.relax(problem, bilinear, ctx)
         assert len(result.constraints) == 12
         expr = result.expression
         assert expr.expression_type == ExpressionType.Linear
@@ -79,14 +79,14 @@ class TestMcCormickUnderestimator:
     @pytest.mark.skip('Requires better conversion to Quadratic')
     def test_bilinear_with_coef_2(self, problem):
         ctx = ProblemContext(problem)
-        r = McCormickUnderestimator()
+        r = McCormickExpressionRelaxation()
 
         bilinear = problem.constraint('bilinear_coef_2').root_expr
         ctx.set_polynomiality(bilinear, PolynomialDegree(2))
 
-        assert r.can_underestimate(problem, bilinear, ctx)
+        assert r.can_relax(problem, bilinear, ctx)
 
-        result = r.underestimate(problem, bilinear, ctx)
+        result = r.relax(problem, bilinear, ctx)
         self._check_constraints(result)
         expr = result.expression
         assert expr.expression_type == ExpressionType.Linear
@@ -109,21 +109,21 @@ class TestMcCormickUnderestimator:
 
     def test_trilinear_terms(self, problem):
         ctx = ProblemContext(problem)
-        r = McCormickUnderestimator()
+        r = McCormickExpressionRelaxation()
 
         trilinear = problem.constraint('trilinear').root_expr
         ctx.set_polynomiality(trilinear, PolynomialDegree(3))
 
-        assert not r.can_underestimate(problem, trilinear, ctx)
+        assert not r.can_relax(problem, trilinear, ctx)
 
     def test_power(self, problem):
         ctx = ProblemContext(problem)
-        r = McCormickUnderestimator()
+        r = McCormickExpressionRelaxation()
 
         power = problem.constraint('power').root_expr
         ctx.set_polynomiality(power, PolynomialDegree(2))
 
-        assert r.can_underestimate(problem, power, ctx)
+        assert r.can_relax(problem, power, ctx)
 
     def _check_underestimator_expr(self, expr):
         assert len(expr.children) == 3

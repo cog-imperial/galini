@@ -16,7 +16,7 @@ import numpy as np
 from galini.util import solution_numerical_value
 from galini.core import LinearExpression, Domain
 from galini.cuts import CutType, Cut, CutsGenerator
-from galini.underestimators.underestimator import UnderestimatorSide
+from galini.expression_relaxation.expression_relaxation import RelaxationSide
 
 
 def problem_is_linear(relaxed_problem):
@@ -51,10 +51,10 @@ def generate_cut(prefix, counter, i, constraint, x, w, x_k, fg, g_x,
     if original_side is not None:
         lower_bound = None
         upper_bound = None
-        if original_side == UnderestimatorSide.UNDER:
+        if original_side == RelaxationSide.UNDER:
             # if 'aux_0' in constraint.name:
             upper_bound = constraint.upper_bound
-        if original_side == UnderestimatorSide.OVER:
+        if original_side == RelaxationSide.OVER:
             lower_bound = constraint.lower_bound
     else:
         lower_bound = constraint.lower_bound
