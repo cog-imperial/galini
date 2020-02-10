@@ -13,16 +13,19 @@
 # limitations under the License.
 
 # pylint: skip-file
+
+import glob
 import os
 import sys
+import subprocess
+from distutils.cmd import Command
+from distutils.spawn import find_executable
 from pathlib import Path
-import glob
-from setuptools import setup, find_packages
-from setuptools.extension import Extension
-from setuptools.command.test import test as TestCommand
-from setuptools.command.build_ext import build_ext
 
-import numpy as np
+from setuptools import setup, find_packages
+from setuptools.command.build_ext import build_ext
+from setuptools.command.test import test as TestCommand
+from setuptools.extension import Extension
 
 project_root = Path(__file__).resolve().parent
 
@@ -75,6 +78,45 @@ class PyTestCommand(TestCommand):
 
         errno = pytest.main(self.pytest_args)
         return sys.exit(errno)
+
+
+
+if 'PROTOC' in os.environ and os.path.exists(os.environ['PROTOC']):
+    protoc = os.environ['PROTOC']
+else:
+    protoc = find_executable('protoc')
+
+
+def generate_proto(source):
+    output = source.replace('.proto', '_pb2.py')
+
+    print('Generating {}...'.format(output))
+
+    if not os.path.exists(source):
+        print('Protobuf file {} does not exist.'.format(source), file=sys.stderr)
+        sys.exit(-1)
+
+    if protoc is None:
+        print('protoc executable not found. Please install it.', file=sys.stderr)
+        sys.exit(-1)
+
+    command = [protoc, '-Iproto', '--python_out=galini/io', source]
+    if subprocess.call(command) != 0:
+        sys.exit(-1)
+
+
+class GenerateProto(Command):
+    description = 'Generate _pb2.py files from .proto definition.'
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        generate_proto('proto/message.proto')
 
 
 class get_pybind11_include(object):
@@ -192,12 +234,12 @@ setup(
     cmdclass={
         'test': PyTestCommand,
         'build_ext': BuildExt,
+        'generate_proto': GenerateProto,
     },
     include_package_data=True,
     install_requires=[
         'pyomo>=5.6.7',
         'cog-suspect>=1.6.5',
-        'galini-io>=0.4.0',
         'pulp>=1.6',
         'numpy',
         'toml',

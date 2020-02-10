@@ -1,4 +1,4 @@
-# Copyright 2017 Francesco Ceccon
+# Copyright 2018 Francesco Ceccon
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,27 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""GALINI Logging module."""
-
-from galini.io.logging import (
-    Logger,
-    LogManager,
-
-    NOTSET,
-    DEBUG,
-    INFO,
-    WARNING,
-    ERROR,
-    CRITICAL,
-)
+"""Write messages to binary file."""
+from google.protobuf.internal.encoder import _VarintBytes
 
 
-_manager = LogManager()
+class MessageWriter(object):
+    def __init__(self, writer):
+        self._writer = writer
 
-
-def get_logger(name):
-    return _manager.get_logger(name)
-
-def apply_config(config):
-    _manager.apply_config(config)
+    def write(self, message):
+        serialized = message.SerializeToString()
+        size = len(serialized)
+        self._writer.write(_VarintBytes(size))
+        self._writer.write(serialized)
+        self._writer.flush()

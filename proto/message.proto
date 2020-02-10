@@ -1,0 +1,74 @@
+// Copyright 2018 Francesco Ceccon
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+message Message {
+  string name = 1;
+  string run_id = 2;
+  uint64 timestamp = 3;
+
+  oneof content {
+    TextMessage text = 4;
+    TensorMessage tensor = 5;
+    SolveStart solve_start = 6;
+    SolveEnd solve_end = 7;
+    UpdateVariable update_variable = 8;
+    AddBabNode add_bab_node = 9;
+    PruneBabNode prune_bab_node = 10;
+  }
+}
+
+message TextMessage {
+  uint32 level = 1;
+  string content = 2;
+}
+
+message TensorMessage {
+  string filename = 1;
+  string group_ = 2;
+  string dataset = 3;
+  repeated int32 sizes = 4;
+}
+
+message SolveStart {
+  string solver = 1;
+}
+
+message SolveEnd {
+  string solver = 1;
+}
+
+message UpdateVariable {
+  string name = 1;
+  repeated uint32 iteration = 2 [packed=true];
+  double value = 3;
+}
+
+message AddBabNode {
+  message VariableInformation {
+    string variable_name = 1;
+    double lower_bound = 2;
+    double upper_bound = 3;
+  }
+
+  repeated uint32 coordinate = 1 [packed=true];
+  double lower_bound = 2;
+  double upper_bound = 3;
+  repeated VariableInformation variables_information = 4;
+}
+
+message PruneBabNode {
+  repeated uint32 coordinate = 1 [packed=true];
+}
