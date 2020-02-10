@@ -53,7 +53,7 @@ from galini.timelimit import (
     current_time,
     seconds_elapsed_since,
 )
-from galini.util import expr_to_str
+from galini.util import expr_to_str, log_problem
 
 logger = get_logger(__name__)
 
@@ -238,7 +238,8 @@ class BranchAndCutAlgorithm:
         logger.info(
             run_id,
             'Starting Cut generation iterations. Maximum iterations={}',
-            self.cuts_maxiter)
+            self.cuts_maxiter,
+        )
         generators_name = [
             g.name for g in self._cuts_generators_manager.generators
         ]
@@ -247,12 +248,6 @@ class BranchAndCutAlgorithm:
             'Using cuts generators: {}',
             ', '.join(generators_name)
         )
-
-        logger.debug(run_id, 'Variables bounds of problem')
-        for v in problem.variables:
-            vv = problem.variable_view(v)
-            logger.debug(run_id, '\t{}\t({}, {})', v.name,
-                         vv.lower_bound(), vv.upper_bound())
 
         solution = self._try_solve_convex_problem(problem)
         if solution is not None:
@@ -263,33 +258,17 @@ class BranchAndCutAlgorithm:
         else:
             feasible_solution = None
 
-        if logger.level <= DEBUG:
-            logger.debug(run_id, 'Relaxed Problem')
-            logger.debug(run_id, 'Variables:')
-            relaxed = relaxed_problem
-
-            for v in relaxed.variables:
-                vv = relaxed.variable_view(v)
-                logger.debug(
-                    run_id, '\t{}: [{}, {}] c {}',
-                    v.name, vv.lower_bound(), vv.upper_bound(), vv.domain
-                )
-            logger.debug(
-                run_id, 'Objective: {}',
-                expr_to_str(relaxed.objective.root_expr)
-            )
-            logger.debug(run_id, 'Constraints:')
-            for constraint in relaxed.constraints:
-                logger.debug(
-                    run_id,
-                    '{}: {} <= {} <= {}',
-                    constraint.name,
-                    constraint.lower_bound,
-                    expr_to_str(constraint.root_expr),
-                    constraint.upper_bound,
-                )
+        log_problem(
+            logger, run_id, DEBUG, relaxed_problem,
+            title='Convex Relaxation',
+        )
 
         linear_problem = self._build_linear_relaxation(relaxed_problem)
+
+        log_problem(
+            logger, run_id, DEBUG, linear_problem.relaxed,
+            title='Linearized Relaxation',
+        )
 
         cuts_state = None
         lower_bound_search_start_time = current_time()

@@ -36,6 +36,46 @@ def print_problem(problem, out=None):
     out.write('\n')
 
 
+def log_problem(logger, run_id, level, problem, title=None):
+    """Write problem to `logger` with the given level."""
+    if logger.level > level:
+        return
+
+    if title:
+        logger.log(run_id, level, 'Problem: {}'.format(title))
+
+    logger.log(run_id, level, 'Variables:')
+    for v in problem.variables:
+        vv = problem.variable_view(v)
+        logger.log(
+            run_id, level,
+            '\t{}\t[{}, {}]\t{}',
+            v.name,
+            vv.lower_bound(),
+            vv.upper_bound(),
+            vv.domain,
+        )
+
+    logger.log(run_id, level, 'Objective:')
+    logger.log(
+        run_id, level,
+        'O {}\n\t{}',
+        problem.objective.name,
+        expr_to_str(problem.objective.root_expr)
+    )
+
+    logger.log(run_id, level, 'Constraints:')
+    for constraint in problem.constraints:
+        logger.log(
+            run_id, level,
+            'C {}\n\t{} <= {} <= {}',
+            constraint.name,
+            constraint.lower_bound,
+            expr_to_str(constraint.root_expr),
+            constraint.upper_bound,
+        )
+
+
 _FUNC_TYPE_TO_CLS = {
     UnaryFunctionType.Abs: 'abs',
     UnaryFunctionType.Sqrt: 'sqrt',
