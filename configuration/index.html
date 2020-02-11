@@ -62,6 +62,8 @@
     
     <link rel="stylesheet" href="../assets/fonts/material-icons.css">
     
+      <link rel="stylesheet" href="../custom.css">
+    
     
   </head>
   
@@ -252,15 +254,27 @@
       
 
 
+  <li class="md-nav__item">
+    <a href="../installation/" title="Installation" class="md-nav__link">
+      Installation
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
   <li class="md-nav__item md-nav__item--nested">
     
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-2" type="checkbox" id="nav-2">
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-3" type="checkbox" id="nav-3">
     
-    <label class="md-nav__link" for="nav-2">
+    <label class="md-nav__link" for="nav-3">
       Commands
     </label>
     <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
-      <label class="md-nav__title" for="nav-2">
+      <label class="md-nav__title" for="nav-3">
         Commands
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
@@ -290,6 +304,18 @@
   </li>
 
         
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../commands/plugins/" title="plugins" class="md-nav__link">
+      plugins
+    </a>
+  </li>
+
+        
       </ul>
     </nav>
   </li>
@@ -309,10 +335,99 @@
       
     
     
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Configuration
+      </label>
+    
     <a href="./" title="Configuration" class="md-nav__link md-nav__link--active">
       Configuration
     </a>
     
+      
+<nav class="md-nav md-nav--secondary">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#example-configuration" title="Example configuration" class="md-nav__link">
+    Example configuration
+  </a>
+  
+</li>
+      
+      
+      
+      
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-5" type="checkbox" id="nav-5">
+    
+    <label class="md-nav__link" for="nav-5">
+      Branch & Cut
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-5">
+        Branch & Cut
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../branch_and_cut/algorithm/" title="Algorithm" class="md-nav__link">
+      Algorithm
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../branch_and_cut/cuts/" title="Cut Generation" class="md-nav__link">
+      Cut Generation
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../branch_and_cut/api/" title="API Reference" class="md-nav__link">
+      API Reference
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
   </li>
 
     
@@ -335,17 +450,29 @@
 
   <li class="md-nav__item md-nav__item--nested">
     
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-5" type="checkbox" id="nav-5">
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-7" type="checkbox" id="nav-7">
     
-    <label class="md-nav__link" for="nav-5">
+    <label class="md-nav__link" for="nav-7">
       Branch & Bound
     </label>
     <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
-      <label class="md-nav__title" for="nav-5">
+      <label class="md-nav__title" for="nav-7">
         Branch & Bound
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
         
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../bab/tree/" title="Tree & Nodes" class="md-nav__link">
+      Tree & Nodes
+    </a>
+  </li>
+
         
           
           
@@ -382,8 +509,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../underestimators/" title="Underestimators" class="md-nav__link">
-      Underestimators
+    <a href="../expression_relaxations/" title="Expression Relaxations" class="md-nav__link">
+      Expression Relaxations
     </a>
   </li>
 
@@ -405,6 +532,22 @@
     
   
   
+    <label class="md-nav__title" for="__toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#example-configuration" title="Example configuration" class="md-nav__link">
+    Example configuration
+  </a>
+  
+</li>
+      
+      
+      
+      
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -418,7 +561,73 @@
                   <a href="https://github.com/cog-imperial/galini/edit/master/docs/configuration.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
                 
                 
-                <h1 id="configuration">Configuration</h1>
+                <h1 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h1>
+<p>GALINI options can be customized by specifying a configuration file to use:</p>
+<div class="codehilite"><pre><span></span>galini solve --config /path/to/config.toml problem.py
+</pre></div>
+
+
+<h2 id="example-configuration">Example configuration<a class="headerlink" href="#example-configuration" title="Permanent link">&para;</a></h2>
+<p>This is an example configuration that you can use as reference for the most
+common options:    </p>
+<div class="codehilite"><pre><span></span>[galini]
+paranoid_mode = true  # activate paranoid mode
+timelimit=300  # solve time limit, in seconds
+integer_infinity = 100  # use this number as &quot;infinity&quot; for integer variables
+infinity = 1e8  # use this number as &quot;infinity&quot; for real variables
+user_upper_bound = 2e6  # user specified variables upper bound
+user_integer_upper_bound = 100  # user specified integer variables upper bound
+constraint_violation_tol=1e-5  # constraint violation tolerance
+fbbt_quadratic_max_terms = 100  # skip FBBT on quadratic expressions if they have more than this terms
+fbbt_linear_max_children = 100  # skip FBBT on linear expressions if they have more than this children
+fbbt_sum_max_children = 10  # skip FBBT on linear expressions if they have more than this children
+
+[branch_and_cut.cuts]
+maxiter = 100  # number of maximum iterations for cut phase loop
+use_lp_cut_phase = true  # solve LP in cut phase
+use_milp_cut_phase = false  # solve MILP in cut phase
+
+[branch_and_cut]
+tolerance=1e-6  # termination absolute tolerance
+relative_tolerance=1e-6  # termination relative tolerance
+fbbt_maxiter = 10  # maximum number of FBBT iterations at each node
+obbt_simplex_maxiter = 100  # maximum number of OBBT iterations
+catch_keyboard_interrupt = true  # catch Ctrl-C and print solution. Disable to have raw stack traces
+root_node_feasible_solution_search_timelimit = 30  # time limit in seconds for search of feasible solution
+root_node_feasible_solution_seed = 42  # seed for feasible solution search
+obbt_timelimit = 60  # time limit in seconds for OBBT
+fbbt_timelimit = 20  # time limit in seconds for FBBT
+
+[mip.cplex]
+# pass &quot;raw&quot; options to CPLEX.
+&#39;preprocessing.reduce&#39; = 0
+&#39;simplex.perturbation.constant&#39; = 0.9999
+
+[ipopt.ipopt]
+# pass &quot;raw&quot; options to Ipopt.
+tol = 1e-16
+max_iter = 500
+print_user_options = &#39;yes&#39;
+
+
+[ipopt.logging]
+# pass &quot;raw&quot; options to Ipopt logging configuration.
+level = &#39;J_MOREDETAILED&#39;
+
+
+[logging]
+stdout = false  # print to standard out
+level = &#39;DEBUG&#39;  # log level: DEBUG, INFO, WARNING, ERROR
+directory = &#39;runout/test&#39;  # directory containing rich logging. If not set, disable it
+
+[cuts_generator]
+# specify which cut generators to use
+generators = [&#39;triangle&#39;, &#39;outer_approximation&#39;, &#39;sdp&#39;]
+
+[cuts_generator.triangle]
+# cuts generator specific options
+domain_eps = 1e-2
+</pre></div>
                 
                   
                 
@@ -439,7 +648,7 @@
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
         
-          <a href="../commands/special_structure/" title="special_structure" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../commands/plugins/" title="plugins" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-flex__cell md-flex__cell--shrink">
               <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
             </div>
@@ -448,19 +657,19 @@
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                special_structure
+                plugins
               </span>
             </div>
           </a>
         
         
-          <a href="../logging/" title="Logging" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../branch_and_cut/algorithm/" title="Algorithm" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
               <span class="md-flex__ellipsis">
                 <span class="md-footer-nav__direction">
                   Next
                 </span>
-                Logging
+                Algorithm
               </span>
             </div>
             <div class="md-flex__cell md-flex__cell--shrink">

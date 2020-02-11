@@ -62,6 +62,8 @@
     
     <link rel="stylesheet" href="../../assets/fonts/material-icons.css">
     
+      <link rel="stylesheet" href="../../custom.css">
+    
     
   </head>
   
@@ -252,15 +254,27 @@
       
 
 
+  <li class="md-nav__item">
+    <a href="../../installation/" title="Installation" class="md-nav__link">
+      Installation
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
   <li class="md-nav__item md-nav__item--nested">
     
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-2" type="checkbox" id="nav-2">
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-3" type="checkbox" id="nav-3">
     
-    <label class="md-nav__link" for="nav-2">
+    <label class="md-nav__link" for="nav-3">
       Commands
     </label>
     <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
-      <label class="md-nav__title" for="nav-2">
+      <label class="md-nav__title" for="nav-3">
         Commands
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
@@ -290,6 +304,18 @@
   </li>
 
         
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/plugins/" title="plugins" class="md-nav__link">
+      plugins
+    </a>
+  </li>
+
+        
       </ul>
     </nav>
   </li>
@@ -304,6 +330,66 @@
     <a href="../../configuration/" title="Configuration" class="md-nav__link">
       Configuration
     </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-5" type="checkbox" id="nav-5">
+    
+    <label class="md-nav__link" for="nav-5">
+      Branch & Cut
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-5">
+        Branch & Cut
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../branch_and_cut/algorithm/" title="Algorithm" class="md-nav__link">
+      Algorithm
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../branch_and_cut/cuts/" title="Cut Generation" class="md-nav__link">
+      Cut Generation
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../branch_and_cut/api/" title="API Reference" class="md-nav__link">
+      API Reference
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
   </li>
 
     
@@ -328,17 +414,29 @@
 
   <li class="md-nav__item md-nav__item--active md-nav__item--nested">
     
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-5" type="checkbox" id="nav-5" checked>
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-7" type="checkbox" id="nav-7" checked>
     
-    <label class="md-nav__link" for="nav-5">
+    <label class="md-nav__link" for="nav-7">
       Branch & Bound
     </label>
     <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
-      <label class="md-nav__title" for="nav-5">
+      <label class="md-nav__title" for="nav-7">
         Branch & Bound
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
         
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../tree/" title="Tree & Nodes" class="md-nav__link">
+      Tree & Nodes
+    </a>
+  </li>
+
         
           
           
@@ -441,8 +539,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../underestimators/" title="Underestimators" class="md-nav__link">
-      Underestimators
+    <a href="../../expression_relaxations/" title="Expression Relaxations" class="md-nav__link">
+      Expression Relaxations
     </a>
   </li>
 
@@ -521,7 +619,7 @@
                   <a href="https://github.com/cog-imperial/galini/edit/master/docs/bab/branching.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
                 
                 
-                <h1 id="branching-strategies">Branching Strategies</h1>
+                <h1 id="branching-strategies">Branching Strategies<a class="headerlink" href="#branching-strategies" title="Permanent link">&para;</a></h1>
 <p>You can pass a branching strategy to a B&amp;B node to decide on which variable to
 branch.</p>
 <p>Four alternatives implemented [1]:</p>
@@ -531,7 +629,7 @@ branch.</p>
 <li>Separation distance at optimum</li>
 <li>Influence of each variable on the quality of the lower bounding problem</li>
 </ol>
-<h2 id="k-section">K-section</h2>
+<h2 id="k-section">K-section<a class="headerlink" href="#k-section" title="Permanent link">&para;</a></h2>
 <p>Pick the <em>least reduced axis</em>, that is the axis with the largest <span><span class="MathJax_Preview">r_i</span><script type="math/tex">r_i</script></span> defined
 as:</p>
 <div>
@@ -544,7 +642,7 @@ as:</p>
 </div>
 <p>where <span><span class="MathJax_Preview">x_i^U</span><script type="math/tex">x_i^U</script></span> and <span><span class="MathJax_Preview">x_i^L</span><script type="math/tex">x_i^L</script></span> are <span><span class="MathJax_Preview">x_i</span><script type="math/tex">x_i</script></span> bounds at the current node, and <span><span class="MathJax_Preview">x_{i,0}^U</span><script type="math/tex">x_{i,0}^U</script></span>
 and <span><span class="MathJax_Preview">x_{i,0}^L</span><script type="math/tex">x_{i,0}^L</script></span> are the bounds at the root node.</p>
-<h2 id="maximum-separation-distance-1">Maximum separation distance 1</h2>
+<h2 id="maximum-separation-distance-1">Maximum separation distance 1<a class="headerlink" href="#maximum-separation-distance-1" title="Permanent link">&para;</a></h2>
 <p>We define a new measure <span><span class="MathJax_Preview">\mu</span><script type="math/tex">\mu</script></span> to asses the quality of the underestimator.</p>
 <p>For a bilinear term <span><span class="MathJax_Preview">xy</span><script type="math/tex">xy</script></span>, the maximum separation distance was derived by [2] so
 that <span><span class="MathJax_Preview">\mu_b</span><script type="math/tex">\mu_b</script></span> is:</p>
@@ -559,16 +657,16 @@ that <span><span class="MathJax_Preview">\mu_b</span><script type="math/tex">\mu
 <p>The term with the worst underestimator is used as the basis for the branching
 variable. Out of the variables that participate in the term, the one with
 the least reduced axis <span><span class="MathJax_Preview">r_i</span><script type="math/tex">r_i</script></span> is picked.</p>
-<h2 id="maximum-separation-distance-1_1">Maximum separation distance 1</h2>
+<h2 id="maximum-separation-distance-1_1">Maximum separation distance 1<a class="headerlink" href="#maximum-separation-distance-1_1" title="Permanent link">&para;</a></h2>
 <p>This strategy is a variation of the previous one. We compute the maximum separation
 distance at the optimum.</p>
-<h2 id="influence-of-each-variable-on-the-quality-of-the-lower-bounding-problem">Influence of each variable on the quality of the lower bounding problem</h2>
+<h2 id="influence-of-each-variable-on-the-quality-of-the-lower-bounding-problem">Influence of each variable on the quality of the lower bounding problem<a class="headerlink" href="#influence-of-each-variable-on-the-quality-of-the-lower-bounding-problem" title="Permanent link">&para;</a></h2>
 <p>This branching strategy considers the influence of each variable on the convex
 problem.
 After the quantities <span><span class="MathJax_Preview">\mu</span><script type="math/tex">\mu</script></span> have been computed for each term, a measure <span><span class="MathJax_Preview">\mu_v</span><script type="math/tex">\mu_v</script></span>
 of each variable contribution is defined as the sum of quantities <span><span class="MathJax_Preview">\mu</span><script type="math/tex">\mu</script></span> in
 which the variable participates.</p>
-<h2 id="reference">Reference</h2>
+<h2 id="reference">Reference<a class="headerlink" href="#reference" title="Permanent link">&para;</a></h2>
 <p>[1] Adjiman, C. S., Androulakis, I. P., &amp; Floudas, C. A. (1998).
     A global optimization method, αBB, for general twice-differentiable constrained
     NLPs—II. Implementation and computational results.
@@ -598,7 +696,7 @@ which the variable participates.</p>
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
         
-          <a href="../../logging/" title="Logging" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../tree/" title="Tree & Nodes" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-flex__cell md-flex__cell--shrink">
               <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
             </div>
@@ -607,7 +705,7 @@ which the variable participates.</p>
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Logging
+                Tree & Nodes
               </span>
             </div>
           </a>

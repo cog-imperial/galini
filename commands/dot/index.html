@@ -62,6 +62,8 @@
     
     <link rel="stylesheet" href="../../assets/fonts/material-icons.css">
     
+      <link rel="stylesheet" href="../../custom.css">
+    
     
   </head>
   
@@ -251,18 +253,30 @@
       
       
 
+
+  <li class="md-nav__item">
+    <a href="../../installation/" title="Installation" class="md-nav__link">
+      Installation
+    </a>
+  </li>
+
+    
+      
+      
+      
+
   
 
 
   <li class="md-nav__item md-nav__item--active md-nav__item--nested">
     
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-2" type="checkbox" id="nav-2" checked>
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-3" type="checkbox" id="nav-3" checked>
     
-    <label class="md-nav__link" for="nav-2">
+    <label class="md-nav__link" for="nav-3">
       Commands
     </label>
     <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
-      <label class="md-nav__title" for="nav-2">
+      <label class="md-nav__title" for="nav-3">
         Commands
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
@@ -337,6 +351,18 @@
   </li>
 
         
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../plugins/" title="plugins" class="md-nav__link">
+      plugins
+    </a>
+  </li>
+
+        
       </ul>
     </nav>
   </li>
@@ -359,6 +385,66 @@
       
 
 
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-5" type="checkbox" id="nav-5">
+    
+    <label class="md-nav__link" for="nav-5">
+      Branch & Cut
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-5">
+        Branch & Cut
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../branch_and_cut/algorithm/" title="Algorithm" class="md-nav__link">
+      Algorithm
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../branch_and_cut/cuts/" title="Cut Generation" class="md-nav__link">
+      Cut Generation
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../branch_and_cut/api/" title="API Reference" class="md-nav__link">
+      API Reference
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
   <li class="md-nav__item">
     <a href="../../logging/" title="Logging" class="md-nav__link">
       Logging
@@ -373,17 +459,29 @@
 
   <li class="md-nav__item md-nav__item--nested">
     
-      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-5" type="checkbox" id="nav-5">
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-7" type="checkbox" id="nav-7">
     
-    <label class="md-nav__link" for="nav-5">
+    <label class="md-nav__link" for="nav-7">
       Branch & Bound
     </label>
     <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
-      <label class="md-nav__title" for="nav-5">
+      <label class="md-nav__title" for="nav-7">
         Branch & Bound
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
         
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../bab/tree/" title="Tree & Nodes" class="md-nav__link">
+      Tree & Nodes
+    </a>
+  </li>
+
         
           
           
@@ -420,8 +518,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../underestimators/" title="Underestimators" class="md-nav__link">
-      Underestimators
+    <a href="../../expression_relaxations/" title="Expression Relaxations" class="md-nav__link">
+      Expression Relaxations
     </a>
   </li>
 
@@ -479,41 +577,41 @@
                   <a href="https://github.com/cog-imperial/galini/edit/master/docs/commands/dot.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
                 
                 
-                <h1 id="dot-command"><code>dot</code> command</h1>
+                <h1 id="dot-command"><code>dot</code> command<a class="headerlink" href="#dot-command" title="Permanent link">&para;</a></h1>
 <p>GALINI provides a command to output a problem DAG to <a href="https://www.graphviz.org/">Graphviz</a> DOT files.
 This is useful when debugging code that needs to traverse the DAG.</p>
-<h2 id="usage">Usage</h2>
-<pre><code>galini dot [-h] problem [out]
-</code></pre>
+<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span>galini dot [-h] problem [out]
+</pre></div>
 
-<h2 id="example">Example</h2>
+<h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
 <p>Given the following input file <code>problem.py</code></p>
-<pre><code class="python">import pyomo.environ as aml
+<div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">pyomo.environ</span> <span class="kn">as</span> <span class="nn">aml</span>
 
-def get_pyomo_model():
-    m = aml.ConcreteModel()
-    m.x = aml.Var(range(2), bounds=(0, 4.0))
-    m.y = aml.Var(range(2), bounds=(0, 1), domain=aml.Integers)
+<span class="k">def</span> <span class="nf">get_pyomo_model</span><span class="p">():</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">aml</span><span class="o">.</span><span class="n">ConcreteModel</span><span class="p">()</span>
+    <span class="n">m</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">aml</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">))</span>
+    <span class="n">m</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">aml</span><span class="o">.</span><span class="n">Var</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">domain</span><span class="o">=</span><span class="n">aml</span><span class="o">.</span><span class="n">Integers</span><span class="p">)</span>
 
-    m.obj = aml.Objective(expr=m.y[0] + m.y[1] + m.x[0]**2 + m.x[1]**2)
-    m.c0 = aml.Constraint(expr=(m.x[0] - 2)**2 - m.x[1] &lt;= 0)
-    m.c1 = aml.Constraint(expr=m.x[0] - 2*m.y[0] &gt;= 0)
-    m.c2 = aml.Constraint(expr=m.x[0] - m.x[1] - 3*(1 - m.y[0]) &lt;= 0)
-    m.c3 = aml.Constraint(expr=m.x[0] - (1 - m.y[0]) &gt;= 0)
-    m.c4 = aml.Constraint(expr=m.x[1] - m.y[1] &gt;= 0)
-    m.c5 = aml.Constraint(expr=m.x[0] + m.x[1] &gt;= 3*m.y[0])
-    m.c6 = aml.Constraint(expr=m.y[0] + m.y[1] &gt;= 1)
-</code></pre>
+    <span class="n">m</span><span class="o">.</span><span class="n">obj</span> <span class="o">=</span> <span class="n">aml</span><span class="o">.</span><span class="n">Objective</span><span class="p">(</span><span class="n">expr</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">m</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">m</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">m</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">m</span><span class="o">.</span><span class="n">c0</span> <span class="o">=</span> <span class="n">aml</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">expr</span><span class="o">=</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">m</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">m</span><span class="o">.</span><span class="n">c1</span> <span class="o">=</span> <span class="n">aml</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">expr</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">2</span><span class="o">*</span><span class="n">m</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">m</span><span class="o">.</span><span class="n">c2</span> <span class="o">=</span> <span class="n">aml</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">expr</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">m</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">3</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">m</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">m</span><span class="o">.</span><span class="n">c3</span> <span class="o">=</span> <span class="n">aml</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">expr</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">m</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">m</span><span class="o">.</span><span class="n">c4</span> <span class="o">=</span> <span class="n">aml</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">expr</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">m</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">m</span><span class="o">.</span><span class="n">c5</span> <span class="o">=</span> <span class="n">aml</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">expr</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">m</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="o">*</span><span class="n">m</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">m</span><span class="o">.</span><span class="n">c6</span> <span class="o">=</span> <span class="n">aml</span><span class="o">.</span><span class="n">Constraint</span><span class="p">(</span><span class="n">expr</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">m</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">)</span>
+</pre></div>
 
 <p>we run <code>galini dot</code> to obtain a <code>.dot</code> file</p>
-<pre><code>galini dot problem.py problem.dot
-</code></pre>
+<div class="codehilite"><pre><span></span>galini dot problem.py problem.dot
+</pre></div>
 
 <p>and we compile it to visualize the DAG</p>
-<pre><code>dot -T png -o problem.png problem.dot
-</code></pre>
+<div class="codehilite"><pre><span></span>dot -T png -o problem.png problem.dot
+</pre></div>
 
-<p><img alt="The Problem DAG" src="../../images/problem_dag.png" /></p>
+<p><img alt="The Problem DAG" src="../images/problem_dag.png" /></p>
                 
                   
                 
@@ -534,7 +632,7 @@ def get_pyomo_model():
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
         
-          <a href="../.." title="Home" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../../installation/" title="Installation" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-flex__cell md-flex__cell--shrink">
               <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
             </div>
@@ -543,7 +641,7 @@ def get_pyomo_model():
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Home
+                Installation
               </span>
             </div>
           </a>
