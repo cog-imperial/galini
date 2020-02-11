@@ -23,6 +23,7 @@ from pyomo.core.expr.numeric_expr import (
     UnaryFunctionExpression,
     ProductExpression,
     ReciprocalExpression,
+    DivisionExpression,
     PowExpression,
     SumExpression,
     LinearExpression,
@@ -302,6 +303,11 @@ def _convert_reciprocal(_node, values):
     return core.DivisionExpression([core.Constant(1.0), values[0]])
 
 
+def _convert_division(_node, values):
+    assert len(values) == 2
+    return core.DivisionExpression([values[0], values[1]])
+
+
 def _decompose_sum(children):
     quadratic = []
     linear = []
@@ -393,6 +399,7 @@ _convert_expr_map = dict()
 _convert_expr_map[UnaryFunctionExpression] = _convert_unary_function
 _convert_expr_map[ProductExpression] = _convert_product
 _convert_expr_map[ReciprocalExpression] = _convert_reciprocal
+_convert_expr_map[DivisionExpression] = _convert_division
 _convert_expr_map[PowExpression] = _convert_pow
 _convert_expr_map[SumExpression] = _convert_sum
 _convert_expr_map[MonomialTermExpression] = _convert_monomial
