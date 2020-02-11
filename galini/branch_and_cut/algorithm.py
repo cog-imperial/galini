@@ -12,7 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-
 """Branch & Cut algorithm."""
 
 import numpy as np
@@ -25,10 +24,11 @@ from galini.branch_and_bound.relaxations import (
     ConvexRelaxation, LinearRelaxation
 )
 from galini.branch_and_bound.selection import BestLowerBoundSelectionStrategy
-from galini.branch_and_bound.strategy import KSectionBranchingStrategy
 from galini.branch_and_cut.bound_reduction import (
     perform_obbt_on_model, best_upper_bound, best_lower_bound
 )
+from galini.branch_and_cut.branching import compute_branching_decision, \
+    BranchAndCutBranchingStrategy
 from galini.branch_and_cut.primal import (
     solve_primal, solve_primal_with_starting_point
 )
@@ -53,7 +53,7 @@ from galini.timelimit import (
     current_time,
     seconds_elapsed_since,
 )
-from galini.util import expr_to_str, log_problem
+from galini.util import log_problem
 
 logger = get_logger(__name__)
 
@@ -91,10 +91,15 @@ class BranchAndCutAlgorithm:
         self._use_lp_cut_phase = bac_config['use_lp_cut_phase']
         self._use_milp_cut_phase = bac_config['use_milp_cut_phase']
 
+        self._branching_weight_sum = bac_config['branching_weight_sum']
+        self._branching_weight_max = bac_config['branching_weight_max']
+        self._branching_weight_min = bac_config['branching_weight_min']
+        self._branching_weight_lambda = bac_config['branching_weight_lambda']
+
         if not self._use_lp_cut_phase and not self._use_milp_cut_phase:
             raise RuntimeError('One of LP or MILP cut phase must be active')
 
-        self.branching_strategy = KSectionBranchingStrategy(2)
+        self.branching_strategy = BranchAndCutBranchingStrategy()
         self.node_selection_strategy = BestLowerBoundSelectionStrategy()
 
         self._user_model = None
@@ -135,6 +140,26 @@ class BranchAndCutAlgorithm:
                 'use_milp_cut_phase',
                 default=False,
                 description='Add additional cut loop solving MILP'
+            ),
+            NumericOption(
+                'branching_weight_sum',
+                default=1.0,
+                description='Weight of the sum of nonlinear infeasibility'
+            ),
+            NumericOption(
+                'branching_weight_max',
+                default=0.0,
+                description='Weight of the max of nonlinear infeasibility'
+            ),
+            NumericOption(
+                'branching_weight_min',
+                default=0.0,
+                description='Weight of the min of nonlinear infeasibility'
+            ),
+            NumericOption(
+                'branching_weight_lambda',
+                default=0.25,
+                description='Weight of the midpoint when computing convex combination with solution for branching'
             ),
         ])
 
@@ -312,86 +337,9 @@ class BranchAndCutAlgorithm:
                     value=mip_solution.objective_value()
                 )
 
-        xx_s = dict()
-        xx_max = dict()
-        xx_min = dict()
-
-        unbounded_vars = []
-        for var in problem.variables:
-            if is_inf(problem.lower_bound(var)) and is_inf(problem.upper_bound(var)):
-                unbounded_vars.append(var.idx)
-
-        for var in linear_problem.relaxed.variables:
-            #print('o ', var.name, mip_solution.variables[var.idx], var.reference)
-            if not mip_solution.status.is_success():
-                continue
-            if var.reference:
-                if not hasattr(var.reference, 'var1'):
-                    continue
-                v1 = var.reference.var1
-                v2 = var.reference.var2
-                #print(var.name, var.reference.var1.name, var.reference.var2.name)
-                w_xk = mip_solution.variables[var.idx].value
-                v1_xk = mip_solution.variables[v1.idx].value
-                v2_xk = mip_solution.variables[v2.idx].value
-
-                if v1_xk is None or v2_xk is None:
-                    continue
-
-                err = np.abs(w_xk - v1_xk*v2_xk) / (1 + np.sqrt(v1_xk**2.0 + v2_xk**2.0))
-
-                if v1.idx not in xx_s:
-                    xx_s[v1.idx] = 0.0
-                    xx_max[v1.idx] = -np.inf
-                    xx_min[v1.idx] = np.inf
-                if v2.idx not in xx_s:
-                    xx_s[v2.idx] = 0.0
-                    xx_max[v2.idx] = -np.inf
-                    xx_min[v2.idx] = np.inf
-                xx_s[v1.idx] += err
-                xx_s[v2.idx] += err
-                xx_max[v1.idx] = max(xx_max[v1.idx], err)
-                xx_max[v2.idx] = max(xx_max[v2.idx], err)
-                xx_min[v1.idx] = min(xx_min[v1.idx], err)
-                xx_min[v2.idx] = min(xx_min[v2.idx], err)
-                #print()
-
-        m_v = None
-        for v in xx_s.keys():
-            vv = problem.variable_view(v)
-            if m_v is None:
-                if is_close(vv.lower_bound(), vv.upper_bound(), atol=1e-5):
-                    continue
-                m_v = v
-            else:
-                if xx_s[v] > xx_s[m_v]:
-                    if is_close(vv.lower_bound(), vv.upper_bound(), atol=1e-5):
-                        continue
-                    m_v = v
-
-        if len(unbounded_vars) > 0:
-            m_v = unbounded_vars[0]
-            node.storage._branching_var = problem.variable_view(m_v)
-            node.storage._branching_point = 0.0
-        elif m_v is not None:
-            node.storage._branching_var = problem.variable_view(m_v)
-            vv = problem.variable_view(m_v)
-            #point = 0.25 * (vv.lower_bound() + 0.5 * (vv.upper_bound() - vv.lower_bound())) + 0.75 * mip_solution.variables[m_v].value
-            #point = mip_solution.variables[m_v].value
-            lb = vv.lower_bound()
-            ub = vv.upper_bound()
-            if is_inf(lb):
-                lb = -mc.user_upper_bound
-            if is_inf(ub):
-                ub = mc.user_upper_bound
-            lambda_ = 0.25
-            point = lambda_ * (lb + 0.5 * (ub - lb)) + (1 - lambda_) * mip_solution.variables[m_v].value
-            node.storage._branching_point = point
-            print('Branching on ', node.coordinate, node.storage._branching_var.name, point)
-        else:
-            node.storage._branching_variable = None
-            node.storage._branching_point = None
-        #input('BBB Continue... ')
+        self._update_node_branching_decision(
+            linear_problem, mip_solution, node, problem
+        )
 
         if self._use_milp_cut_phase:
             logger.info(run_id, 'Using MILP cut phase')
@@ -443,6 +391,19 @@ class BranchAndCutAlgorithm:
             return NodeSolution(mip_solution, feasible_solution)
 
         return NodeSolution(mip_solution, primal_solution)
+
+    def _update_node_branching_decision(self, linear_problem, mip_solution,
+                                        node, problem):
+        weights = {
+            'sum': self._branching_weight_sum,
+            'max': self._branching_weight_max,
+            'min': self._branching_weight_min,
+        }
+        lambda_ = self._branching_weight_lambda
+        branching_decision = compute_branching_decision(
+            problem, linear_problem.relaxed, mip_solution, weights, lambda_
+        )
+        node.storage.branching_decision = branching_decision
 
     def _perform_cut_loop(self, run_id, tree, node, problem, relaxed_problem,
                           linear_problem):
