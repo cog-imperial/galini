@@ -42,7 +42,7 @@ def _mono_to_str(mono):
 
 class SpecialStructureCommand(CliCommandWithProblem):
     def execute_with_problem(self, _model, problem, args):
-        ctx = detect_special_structure(problem)
+        ctx = detect_special_structure(problem, timelimit=300, maxiter=100)
 
         tables = []
         tables.append(self._output_variables(problem, ctx))
