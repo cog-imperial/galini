@@ -27,6 +27,8 @@ class BranchAndCutBranchingStrategy(BranchingStrategy):
         branching_decision = node.storage.branching_decision
         if branching_decision is None:
             return None
+        assert branching_decision.variable is not None
+        assert branching_decision.variable is not None
         return BranchingPoint(
             branching_decision.variable, branching_decision.point
         )
@@ -115,6 +117,8 @@ def compute_branching_variable(problem, linear_problem, mip_solution, weights):
                 branching_var = var_idx
                 branching_var_score = var_score
 
+    if branching_var is None:
+        return None
     return problem.variable_view(branching_var)
 
 
