@@ -17,18 +17,15 @@ import pydot
 import galini.core as core
 
 
-
 def dag_to_pydot_graph(dag, ctx=None):
     """Create pydot graph representing `dag`.
 
-    Arguments
-    ---------
-    dag: galini.core.Problem
-        input problem
+    Args:
+        dag: input problem
+        ctx: additional data associated with vertex
 
-    Returns
-    -------
-        pydot.Dot
+    Returns:
+        the pydot graph
     """
     dot = pydot.Dot(rankdir='BT')
     nodes = {}
@@ -55,7 +52,7 @@ def dag_to_pydot_graph(dag, ctx=None):
             label += '\n' + str(ctx[vertex.idx])
         node = pydot.Node(vertex.idx, label=label)
         nodes[vertex] = node
-        vertex_depth = dag.vertex_depth(vertex.idx)
+        vertex_depth = vertex.depth
         assert vertex_depth >= old_depth
         if vertex_depth > old_depth:
             dot.add_subgraph(subrank)
@@ -74,15 +71,15 @@ def dag_to_pydot_graph(dag, ctx=None):
     # ... finally constraints and objectives
     subrank = pydot.Subgraph(rank='same')
     for expr in dag.constraints:
-        node = pydot.Node(expr.uid, label=expr.name, shape='box')
+        node = pydot.Node(expr.name, label=expr.name, shape='box')
         subrank.add_node(node)
-        edge = pydot.Edge(expr.root_expr.idx, expr.uid)
+        edge = pydot.Edge(expr.root_expr.idx, expr.name)
         dot.add_edge(edge)
 
     for expr in dag.objectives:
-        node = pydot.Node(expr.uid, label=expr.name, shape='box')
+        node = pydot.Node(expr.name, label=expr.name, shape='box')
         subrank.add_node(node)
-        edge = pydot.Edge(expr.root_expr.idx, expr.uid)
+        edge = pydot.Edge(expr.root_expr.idx, expr.name)
         dot.add_edge(edge)
 
     dot.add_subgraph(subrank)
