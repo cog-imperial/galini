@@ -63,6 +63,7 @@ def test_ipopt_solver(model_name):
     set_timelimit(30)
     start_timelimit()
     solver = BranchAndBoundSolver(galini)
+    solver.before_solve(pyomo_model, problem)
     solution = solver.solve(problem)
 
     assert solution.status.is_success()
