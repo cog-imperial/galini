@@ -4,7 +4,7 @@ import numpy as np
 import pyomo.environ as aml
 from suspect.convexity import Convexity
 from suspect.expression import ExpressionType
-from galini.pyomo import dag_from_pyomo_model
+from galini.pyomo import problem_from_pyomo_model
 from galini.suspect import ProblemContext
 from galini.expression_relaxation.concave import UnivariateConcaveExpressionRelaxation
 
@@ -30,7 +30,7 @@ def problem():
     m.nonunivariate_2 = aml.Constraint(expr=m.x + m.y + m.z >= 0)
     m.nonunivariate_3 = aml.Constraint(expr=aml.sin(m.x + aml.log(m.y)) >= 0)
 
-    return dag_from_pyomo_model(m)
+    return problem_from_pyomo_model(m)
 
 
 class TestUnivariateConcaveUnderestimator:

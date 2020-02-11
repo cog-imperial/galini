@@ -149,8 +149,8 @@ def test_linear_relaxation_with_quadratic_and_linear():
     relaxed = relaxation.relax(dag)
     print_problem(relaxed)
     assert relaxed.objective
-    # 1 objective, 1 c0, 3 * 10 x^2
-    assert len(relaxed.constraints) == 1 + 1 + 3*10
+    # 1 objective, 1 c0, 4 * 10 x^2 (3 mccormick, 1 midpoint)
+    assert len(relaxed.constraints) == 1 + 1 + 4*10
 
     objective = relaxed.objective
     constraint = relaxed.constraint('c0')

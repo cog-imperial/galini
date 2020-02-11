@@ -1,7 +1,7 @@
 # pylint: skip-file
 import pytest
 import pyomo.environ as aml
-from galini.pyomo import dag_from_pyomo_model
+from galini.pyomo import problem_from_pyomo_model
 from galini.suspect import ProblemContext
 from galini.expression_relaxation.linear import LinearExpressionRelaxation
 
@@ -19,7 +19,7 @@ def problem():
     m.linear = aml.Constraint(expr=sum(m.x[i] for i in m.I) >= 0)
     m.not_linear = aml.Constraint(expr=m.y * sum(m.x[i] for i in m.I) >= 0)
 
-    return dag_from_pyomo_model(m)
+    return problem_from_pyomo_model(m)
 
 
 class TestLinearUnderestimator:

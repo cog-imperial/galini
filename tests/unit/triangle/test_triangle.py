@@ -41,7 +41,10 @@ def _linear_relaxation(problem):
 
     bounds, monotonicity, convexity = \
         propagate_special_structure(problem, bounds)
-    return LinearRelaxation(problem, bounds, monotonicity, convexity)
+    return LinearRelaxation(
+        problem, bounds, monotonicity, convexity,
+        disable_mccormick_midpoint=True
+    )
 
 
 @pytest.fixture()
@@ -212,8 +215,8 @@ def test_at_root_node(galini, problem):
         for cut in new_cuts:
             new_cons = Constraint(cut.name, cut.expr, cut.lower_bound, cut.upper_bound)
             relaxation._relax_constraint(problem, relaxed_problem, new_cons)
-    assert (nbs_cuts == [2, 2, 2, 0, 0])
     assert (np.allclose(mip_sols, [-200.0, -196.85714285714283, -196.5, -196.0, -196.0]))
+    assert (nbs_cuts == [2, 2, 2, 0, 0])
 
     # Test when branched on x0 in [0.5, 1]
     x0 = problem.variable_view(problem.variables[0])

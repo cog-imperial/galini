@@ -3,10 +3,11 @@ import numpy as np
 import pyomo.environ as pe
 import pytest
 
+from galini.branch_and_bound.relaxations import LinearRelaxation, \
+    ConvexRelaxation
 from galini.galini import Galini
-from galini.branch_and_bound.relaxations import LinearRelaxation, ConvexRelaxation
-from galini.outer_approximation.mixed_integer_cuts_generator import (
-    MixedIntegerOuterApproximationCutsGenerator
+from galini.outer_approximation import (
+    OuterApproximationCutsGenerator
 )
 from galini.pyomo import problem_from_pyomo_model
 from galini.relaxations.relaxed_problem import RelaxedProblem
@@ -52,7 +53,7 @@ def test_outer_approximation_cuts(problem):
         }
     })
     config = galini.get_configuration_group('cuts_generator.outer_approximation')
-    generator = MixedIntegerOuterApproximationCutsGenerator(galini, config)
+    generator = OuterApproximationCutsGenerator(galini, config)
 
     bounds, mono, cvx = propagate_special_structure(problem)
 

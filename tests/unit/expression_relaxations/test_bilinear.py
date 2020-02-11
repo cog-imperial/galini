@@ -4,7 +4,7 @@ import numpy as np
 import pyomo.environ as aml
 from suspect.polynomial import PolynomialDegree
 from suspect.expression import ExpressionType
-from galini.pyomo import dag_from_pyomo_model
+from galini.pyomo import problem_from_pyomo_model
 from galini.suspect import ProblemContext
 from galini.expression_relaxation.bilinear import McCormickExpressionRelaxation
 from galini.suspect import ProblemContext
@@ -27,7 +27,7 @@ def problem():
     m.trilinear = aml.Constraint(expr=m.x*m.y*m.z >= 0)
     m.power = aml.Constraint(expr=m.x**2 >= 0)
 
-    return dag_from_pyomo_model(m)
+    return problem_from_pyomo_model(m)
 
 
 class TestMcCormickUnderestimator:

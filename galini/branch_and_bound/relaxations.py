@@ -124,7 +124,9 @@ class ConvexRelaxation(_RelaxationBase):
 
 class LinearRelaxation(_RelaxationBase):
     """Create a linear relaxation of a convex problem."""
-    def __init__(self, problem, bounds, monotonicity, convexity):
+    def __init__(self, problem, bounds, monotonicity, convexity,
+                 disable_mccormick_midpoint=False):
+        self._disable_mccormick_midpoint = disable_mccormick_midpoint
         super().__init__(problem, bounds, monotonicity, convexity)
         self._objective_count = 0
 
@@ -134,7 +136,10 @@ class LinearRelaxation(_RelaxationBase):
     def _root_underestimator(self):
         return SumOfUnderestimators([
             LinearExpressionRelaxation(),
-            McCormickExpressionRelaxation(linear=True),
+            McCormickExpressionRelaxation(
+                linear=True,
+                disable_midpoint=self._disable_mccormick_midpoint,
+            ),
         ])
 
     def relaxed_problem_name(self, problem):

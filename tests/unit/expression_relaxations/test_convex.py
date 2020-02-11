@@ -4,7 +4,7 @@ import numpy as np
 import pyomo.environ as aml
 from suspect.convexity import Convexity
 from suspect.expression import ExpressionType
-from galini.pyomo import dag_from_pyomo_model
+from galini.pyomo import problem_from_pyomo_model
 from galini.suspect import ProblemContext
 from galini.expression_relaxation.convex import ConvexExpressionRelaxation
 
@@ -19,7 +19,7 @@ def problem():
 
     m.obj = aml.Objective(expr=aml.exp(m.x) + aml.exp(m.y))
     m.c0 = aml.Constraint(expr=2.0 * m.x*m.x + 3.0 * m.x*m.y + 4.0 * m.y*m.y >= 0)
-    return dag_from_pyomo_model(m)
+    return problem_from_pyomo_model(m)
 
 
 

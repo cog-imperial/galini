@@ -15,18 +15,13 @@
 import numpy as np
 
 from galini.config import CutsGeneratorOptions, NumericOption
-from galini.core import LinearExpression, Domain
-from galini.cuts import CutType, Cut, CutsGenerator
+from galini.cuts import CutsGenerator
+from galini.expression_relaxation.expression_relaxation import RelaxationSide
 from galini.logging import get_logger
-from galini.math import is_close, is_inf, mc, almost_ge, almost_le
-from galini.outer_approximation.feasibility_problem import \
-    FeasibilityProblemRelaxation
+from galini.math import almost_ge, almost_le
 from galini.outer_approximation.shared import (
     problem_is_linear, mip_variable_value, generate_cut
 )
-from galini.relaxations.relaxed_problem import RelaxedProblem
-from galini.expression_relaxation.expression_relaxation import RelaxationSide
-from galini.util import solution_numerical_value
 
 logger = get_logger(__name__)
 

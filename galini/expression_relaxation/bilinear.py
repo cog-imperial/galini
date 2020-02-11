@@ -37,8 +37,9 @@ BILINEAR_AUX_VAR_META = 'bilinear_aux_variables'
 
 class McCormickExpressionRelaxation(ExpressionRelaxation):
     """Underestimate Quadratic expressions using McCormick envelope."""
-    def __init__(self, linear=True):
+    def __init__(self, linear=True, disable_midpoint=False):
         self.linear = linear
+        self.disable_midpoint = disable_midpoint
 
     def can_relax(self, problem, expr, ctx):
         return expr.expression_type == ExpressionType.Quadratic
@@ -198,7 +199,8 @@ class McCormickExpressionRelaxation(ExpressionRelaxation):
                     None,
                     0.0,
                 )
-                constraints.append(lower_bound_2)
+                if not self.disable_midpoint:
+                    constraints.append(lower_bound_2)
 
         else:
             if not _is_inf(x_l) and not _is_inf(y_l):

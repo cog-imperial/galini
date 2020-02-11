@@ -28,7 +28,10 @@ def _linear_relaxation(problem):
 
     bounds, monotonicity, convexity = \
         propagate_special_structure(problem, bounds)
-    return LinearRelaxation(problem, bounds, monotonicity, convexity)
+    return LinearRelaxation(
+        problem, bounds, monotonicity, convexity,
+        disable_mccormick_midpoint=True
+    )
 
 
 @pytest.fixture()
@@ -114,7 +117,7 @@ def test_cut_selection_strategy(problem, cut_selection_strategy, expected_soluti
         set_timelimit(60)
         mip_solution = algo._mip_solver.solve(relaxed_problem)
         assert mip_solution.status.is_success()
-        mip_sols.append(mip_solution.objectives[0].value)
+        mip_sols.append(mip_solution.objective.value)
         # Generate new cuts
         new_cuts = algo._cuts_generators_manager.generate(run_id, problem, None, relaxed_problem, mip_solution, None, None)
         # Add cuts as constraints
@@ -174,7 +177,7 @@ def test_sdp_cuts_after_branching(problem):
         set_timelimit(60)
         mip_solution = algo._mip_solver.solve(relaxed_problem)
         assert mip_solution.status.is_success()
-        mip_sols.append(mip_solution.objectives[0].value)
+        mip_sols.append(mip_solution.objective.value)
         # Generate new cuts
         new_cuts = algo._cuts_generators_manager.generate(run_id, problem, None, relaxed_problem, mip_solution, None, None)
         # Add cuts as constraints
@@ -184,6 +187,6 @@ def test_sdp_cuts_after_branching(problem):
     assert np.allclose(mip_sols,
            [-187.53571428571428, -178.17645682147835, -175.10310263115286, -175.0895610878696, -175.03389759123812])
     feas_solution = algo._nlp_solver.solve(relaxed_problem)
-    assert(feas_solution.objectives[0].value >= mip_sols[-1])
+    assert(feas_solution.objective.value >= mip_sols[-1])
     sdp_cuts_gen.after_end_at_node(run_id, problem, None, mip_solution)
     sdp_cuts_gen.after_end_at_root(run_id, problem, None, mip_solution)
