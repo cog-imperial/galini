@@ -14,6 +14,7 @@
 """Cuts generator interface."""
 import abc
 from enum import Enum
+from typing import List, Optional
 
 
 class CutType(Enum):
@@ -22,6 +23,7 @@ class CutType(Enum):
 
 
 class Cut:
+    """Represent a cut to be added to the problem."""
     def __init__(self, type_, name, expr, lower_bound, upper_bound,
                  is_objective=False):
         if not isinstance(type_, CutType):
@@ -48,32 +50,101 @@ class Cut:
 
     @property
     def is_global(self):
+        """Return `True` if cut is global."""
         return self.type_ == CutType.GLOBAL
 
     @property
     def is_local(self):
+        """Return `True` if cut is local."""
         return self.type_ == CutType.LOCAL
 
 
 class CutsGenerator(metaclass=abc.ABCMeta):
+    """CutsGenerator interface."""
     def __init__(self, galini, config):
         pass
 
     def before_start_at_root(self, run_id, problem, relaxed_problem):
+        """Called before the cut loop starts at root node.
+
+        Args:
+            run_id: current run id
+            problem: the user problem
+            relaxed_problem: the convex relaxation of problem
+
+        Returns:
+            None
+        """
         pass
 
     def after_end_at_root(self, run_id, problem, relaxed_problem, solution):
+        """Called after the cut loop at root node.
+
+        Args:
+            run_id: current run id
+            problem: the user problem
+            relaxed_problem: the convex relaxation of problem
+            solution: the solution after the cut loop terminated
+
+        Returns:
+            None
+        """
         pass
 
     def before_start_at_node(self, run_id, problem, relaxed_problem):
+        """Called before the cut loop starts at any non-root node.
+
+        Args:
+            run_id: current run id
+            problem: the user problem
+            relaxed_problem: the convex relaxation of problem
+
+        Returns:
+            None
+        """
         pass
 
     def after_end_at_node(self, run_id, problem, relaxed_problem, solution):
+        """Called after the cut loop at any non-root node.
+
+        Args:
+            run_id: current run id
+            problem: the user problem
+            relaxed_problem: the convex relaxation of problem
+            solution: the solution after the cut loop terminated
+
+        Returns:
+            None
+        """
         pass
 
     def has_converged(self, state):
+        """Predicate that returns `True` if the cut generator finished
+        generating cuts.
+
+        Args:
+            state: the cut state
+
+        Returns:
+            `True` if the cut generator finished generating cuts
+        """
         pass
 
     @abc.abstractmethod
-    def generate(self, run_id, problem, relaxed_problem, linear_problem, mip_solution, tree, node):
+    def generate(self, run_id, problem, relaxed_problem, linear_problem,
+                 mip_solution, tree, node):
+        """Generate new cuts.
+
+        Args:
+            run_id: current run id
+            problem: the user problem
+            relaxed_problem: the convex relaxation of problem
+            linear_problem: the linearization of relaxed_problem
+            mip_solution: the previous cut loop iteration solution
+            tree: the branch and bound tree
+            node: the current branch and bound node
+
+        Returns:
+              a list of [cuts][galini.cuts.generator.Cut] or `None`
+        """
         pass

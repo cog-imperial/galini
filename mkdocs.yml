@@ -3,6 +3,7 @@ repo_name: cog-imperial/galini
 repo_url: https://github.com/cog-imperial/galini
 nav:
 - Home: index.md
+- Installation: installation.md
 - Commands:
   - dot: commands/dot.md
   - special_structure: commands/special_structure.md
@@ -11,19 +12,24 @@ nav:
 - Branch & Cut:
   - Algorithm: branch_and_cut/algorithm.md
   - Cut Generation: branch_and_cut/cuts.md
-- Algorithms:
-  - Outer Approximation: algorithms/outer_approximation.md
+  - API Reference: branch_and_cut/api.md
 - Logging: logging.md
 - Branch & Bound:
+  - Tree & Nodes: bab/tree.md
   - Branching: bab/branching.md
 - Relaxations: relaxations.md
-- Underestimators: expression_relaxation.md
+- Expression Relaxations: expression_relaxations.md
 markdown_extensions:
 - pymdownx.arithmatex
 extra_javascript:
 - 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML'
+extra_css:
+- custom.css
 theme:
   name: material
   palette:
     primary: blue
     accent: pink
+plugins:
+  - search
+  - mkdocstrings

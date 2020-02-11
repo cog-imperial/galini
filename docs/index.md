@@ -54,6 +54,3 @@ Most commands in GALINI have a flag to specify in which format to display the ou
 
 ## Troubleshooting
 
-### Ipopt related errors
-
-Please check out [Pypopt README](https://github.com/fracek/pypopt).
