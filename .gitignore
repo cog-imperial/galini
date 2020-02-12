@@ -25,3 +25,4 @@ compile.log
 dist
 site/
 Dockerfile
+/docs/_build/

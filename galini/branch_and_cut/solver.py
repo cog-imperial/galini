@@ -74,7 +74,7 @@ class BranchAndBoundSolver(Solver):
         self._algo.before_solve(model, problem)
 
     def actual_solve(self, problem, run_id, **kwargs):
-        # Run bab loop, catch keyboard interrupt from users
+        # Run branch_and_bound loop, catch keyboard interrupt from users
         if self._catch_keyboard_interrupt:
             try:
                 self._bab_loop(problem, run_id, **kwargs)
