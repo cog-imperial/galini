@@ -69,8 +69,8 @@ html_theme_options = {
             'title': 'Computational Optimisation Group',
             'internal': False,
         }
-    ]
-
+    ],
+    'version_dropdown': False,
 }
 
 
