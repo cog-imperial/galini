@@ -16,6 +16,7 @@
 
 import numpy as np
 
+from galini.branch_and_bound.strategy import least_reduced_variable
 from galini.branch_and_cut.node_storage import BranchingDecision
 from galini.math import mc, is_close, is_inf
 from galini.branch_and_bound.strategy import BranchingStrategy
@@ -66,7 +67,9 @@ def compute_branching_decision(problem, linear_problem, mip_solution, weights,
         problem, linear_problem, mip_solution, weights
     )
     if branching_variable is None:
-        return None
+        branching_variable = least_reduced_variable(problem, problem.root)
+        if branching_variable is None:
+            return None
     point = compute_branching_point(branching_variable, mip_solution, lambda_)
     return BranchingDecision(variable=branching_variable, point=point)
 
@@ -142,61 +145,66 @@ def compute_nonlinear_infeasiblity_components(linear_problem, mip_solution):
     nonlinear_infeasibility_min = dict()
     nonlinear_infeasibility_max = dict()
 
+    if not mip_solution.status.is_success():
+        return {
+            'sum': nonlinear_infeasibility_sum,
+            'max': nonlinear_infeasibility_max,
+            'min': nonlinear_infeasibility_min,
+        }
+
     for var in linear_problem.variables:
-        if not mip_solution.status.is_success():
+        if not var.reference:
+            continue
+        if not hasattr(var.reference, 'var1'):
+            continue
+        v1 = var.reference.var1
+        v2 = var.reference.var2
+
+        w_xk = mip_solution.variables[var.idx].value
+        v1_xk = mip_solution.variables[v1.idx].value
+        v2_xk = mip_solution.variables[v2.idx].value
+
+        if v1_xk is None or v2_xk is None:
             continue
 
-        if var.reference:
-            if not hasattr(var.reference, 'var1'):
-                continue
-            v1 = var.reference.var1
-            v2 = var.reference.var2
 
-            w_xk = mip_solution.variables[var.idx].value
-            v1_xk = mip_solution.variables[v1.idx].value
-            v2_xk = mip_solution.variables[v2.idx].value
+        # U(x_k) = |x_ik - v_i(x_k)| / (1 + ||grad(v_i(x_k))||)
+        bilinear_discrepancy = np.abs(w_xk - v1_xk*v2_xk)
+        scaling = (1 + np.sqrt(v1_xk**2.0 + v2_xk**2.0))
+        err = bilinear_discrepancy / scaling
 
-            if v1_xk is None or v2_xk is None:
-                continue
+        # First time we see v1
+        if v1.idx not in nonlinear_infeasibility_sum:
+            nonlinear_infeasibility_sum[v1.idx] = 0.0
+            nonlinear_infeasibility_max[v1.idx] = -np.inf
+            nonlinear_infeasibility_min[v1.idx] = np.inf
 
+        # First time we see v2
+        if v2.idx not in nonlinear_infeasibility_sum:
+            nonlinear_infeasibility_sum[v2.idx] = 0.0
+            nonlinear_infeasibility_max[v2.idx] = -np.inf
+            nonlinear_infeasibility_min[v2.idx] = np.inf
 
-            # U(x_k) = |x_ik - v_i(x_k)| / (1 + ||grad(v_i(x_k))||)
-            bilinear_discrepancy = np.abs(w_xk - v1_xk*v2_xk)
-            scaling = (1 + np.sqrt(v1_xk**2.0 + v2_xk**2.0))
-            err = bilinear_discrepancy / scaling
+        nonlinear_infeasibility_sum[v1.idx] += err
+        nonlinear_infeasibility_sum[v2.idx] += err
 
-            # First time we see v1
-            if v1.idx not in nonlinear_infeasibility_sum:
-                nonlinear_infeasibility_sum[v1.idx] = 0.0
-                nonlinear_infeasibility_max[v1.idx] = -np.inf
-                nonlinear_infeasibility_min[v1.idx] = np.inf
+        nonlinear_infeasibility_max[v1.idx] = max(
+            nonlinear_infeasibility_max[v1.idx],
+            err,
+        )
+        nonlinear_infeasibility_max[v2.idx] = max(
+            nonlinear_infeasibility_max[v2.idx],
+            err,
+        )
 
-            # First time we see v2
-            if v2.idx not in nonlinear_infeasibility_sum:
-                nonlinear_infeasibility_sum[v2.idx] = 0.0
-                nonlinear_infeasibility_max[v2.idx] = -np.inf
-                nonlinear_infeasibility_min[v2.idx] = np.inf
-
-            nonlinear_infeasibility_sum[v1.idx] += err
-            nonlinear_infeasibility_sum[v2.idx] += err
-
-            nonlinear_infeasibility_max[v1.idx] = max(
-                nonlinear_infeasibility_max[v1.idx],
-                err,
-            )
-            nonlinear_infeasibility_max[v2.idx] = max(
-                nonlinear_infeasibility_max[v2.idx],
-                err,
-            )
-
-            nonlinear_infeasibility_min[v1.idx] = min(
-                nonlinear_infeasibility_min[v1.idx],
-                err,
-            )
-            nonlinear_infeasibility_min[v2.idx] = min(
-                nonlinear_infeasibility_min[v2.idx],
-                err,
-            )
+        nonlinear_infeasibility_min[v1.idx] = min(
+            nonlinear_infeasibility_min[v1.idx],
+            err,
+        )
+        nonlinear_infeasibility_min[v2.idx] = min(
+            nonlinear_infeasibility_min[v2.idx],
+            err,
+        )
 
     return {
         'sum': nonlinear_infeasibility_sum,
@@ -237,6 +245,8 @@ def compute_branching_point(variable, mip_solution, lambda_):
         ub = user_upper_bound
 
     midpoint = lb + 0.5 * (ub - lb)
+    if x_bar is None:
+        return midpoint
     return lambda_ * midpoint + (1.0 - lambda_) * x_bar
 
 
