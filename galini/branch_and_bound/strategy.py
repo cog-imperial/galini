@@ -14,6 +14,7 @@
 
 """Branch & Bound branching strategies."""
 import numpy as np
+import pyomo.environ as pe
 from galini.core import Problem
 from galini.math import mc, is_inf, is_close
 from galini.branch_and_bound.branching import BranchingPoint
@@ -24,45 +25,38 @@ class BranchingStrategy(object):
         pass
 
 
-def range_ratio(problem, root_problem):
-    assert problem.num_variables == root_problem.num_variables
-    lower_bounds = np.array(problem.lower_bounds)
-    upper_bounds = np.array(problem.upper_bounds)
-    root_lower_bounds = np.array(root_problem.lower_bounds)
-    root_upper_bounds = np.array(root_problem.upper_bounds)
-    denominator = np.abs(root_upper_bounds - root_lower_bounds) + mc.epsilon
-    numerator = upper_bounds - lower_bounds
+def max_range_ratio(model, root_bounds):
+    max_ratio = -np.inf
+    max_var = None
+    for var in model.component_data_objects(pe.Var, active=True):
+        root_var_bounds = root_bounds.get(var, None)
+        if root_var_bounds is None:
+            pass
+        (root_lb, root_ub) = root_var_bounds
+        if root_lb is None or root_ub is None:
+            continue
+        lb = var.lb
+        ub = var.ub
+        if lb is None or ub is None:
+            continue
+        var_ratio = (ub - lb) / (root_ub - root_lb)
+        if var_ratio > max_ratio:
+            max_ratio = var_ratio
+            max_var = var
+    return max_var
 
-    numerator_mask = ~is_inf(numerator)
-    denominator_mask = ~is_inf(denominator)
-    finite_numerator = np.zeros_like(numerator)
-    finite_denominator = np.zeros_like(denominator) + mc.epsilon
-    finite_numerator[numerator_mask] = numerator[numerator_mask]
-    finite_denominator[denominator_mask] = denominator[denominator_mask]
 
-    # All bounded variables are fixed, range ratio is not possible to compute
-    if is_close(np.sum(np.abs(finite_numerator)), 0.0, atol=mc.epsilon):
-        return None
-    return np.nan_to_num(finite_numerator / finite_denominator)
-
-
-def least_reduced_variable(problem, root_problem):
+def least_reduced_variable(model, root_bounds):
     # If any variable is unbounded, branch at 0.0
-    for v in problem.variables:
-        if is_inf(problem.lower_bound(v)) and is_inf(problem.upper_bound(v)):
-            return problem.variable_view(v)
-
-    assert problem.num_variables == root_problem.num_variables
-    r = range_ratio(problem, root_problem)
+    var = max_range_ratio(model, root_bounds)
     # Could not compute range ratio, for example all bounded variables are fixed
     # Return the first variable to be unbounded.
-    if r is None:
-        for v in problem.variables:
-            if is_inf(problem.lower_bound(v)) or is_inf(problem.upper_bound(v)):
-                return problem.variable_view(v)
-        return None
-    var_idx = np.argmax(r)
-    return problem.variable_view(var_idx)
+    if var is not None:
+        return var
+    for var in model.component_data_objects(pe.Var, active=True):
+        if not var.has_lb() or not var.has_ub():
+            return var
+    return None
 
 
 class KSectionBranchingStrategy(BranchingStrategy):

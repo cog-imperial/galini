@@ -35,16 +35,13 @@ coramin_logger = coramin_obbt.logger  # pylint: disable=invalid-name
 coramin_logger.disabled = True
 
 
-def perform_obbt_on_model(model, problem, upper_bound, timelimit,
-                          simplex_maxiter):
+def perform_obbt_on_model(model, upper_bound, timelimit, simplex_maxiter):
     """Perform OBBT on Pyomo model using Coramin.
 
     Parameters
     ----------
     model : ConcreteModel
         the pyomo concrete model
-    problem : Problem
-        the GALINI problem
     upper_bound : float or None
         the objective value upper bound, if known
     timelimit : int
@@ -138,13 +135,13 @@ def perform_obbt_on_model(model, problem, upper_bound, timelimit,
         )
 
 
-def best_lower_bound(domain, a, b):
+def best_lower_bound(var, a, b):
     """Returns the best lower bound between `a` and `b`.
 
     Parameters
     ----------
-    domain : Domain
-        the variable domain
+    var : Var
+        the variable
     a : float or None
     b : float or None
     """
@@ -155,7 +152,7 @@ def best_lower_bound(domain, a, b):
     else:
         return None
 
-    if domain.is_integer() and lb is not None:
+    if (var.is_integer() or var.is_binary()) and lb is not None:
         if is_close(np.floor(lb), lb, atol=mc.epsilon, rtol=0.0):
             return np.floor(lb)
         return np.ceil(lb)
@@ -163,13 +160,13 @@ def best_lower_bound(domain, a, b):
     return lb
 
 
-def best_upper_bound(domain, a, b):
+def best_upper_bound(var, a, b):
     """Returns the best upper bound between `a` and `b`.
 
     Parameters
     ----------
-    domain : Domain
-        the variable domain
+    var : Var
+        the variable
     a : float or None
     b : float or None
     """
@@ -180,7 +177,7 @@ def best_upper_bound(domain, a, b):
     else:
         return None
 
-    if domain.is_integer() and ub is not None:
+    if (var.is_integer() or var.is_binary()) and ub is not None:
         if is_close(np.ceil(ub), ub, atol=mc.epsilon, rtol=0.0):
             return np.ceil(ub)
         return np.floor(ub)

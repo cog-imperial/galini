@@ -42,15 +42,15 @@ class Solver(metaclass=abc.ABCMeta):
     def config(self):
         return self.galini.get_configuration_group(self.name)
 
-    def before_solve(self, model, problem):
+    def before_solve(self, model):
         pass
 
-    def solve(self, problem, **kwargs):
+    def solve(self, model, **kwargs):
         """Solve the optimization problem.
 
         Arguments
         ---------
-        problem: ProblemDag
+        model: ConcreteModel
             the optimization problem
         kwargs: dict
             additional (possibly solver specific) keyword arguments
@@ -61,12 +61,12 @@ class Solver(metaclass=abc.ABCMeta):
         """
         run_id = _create_run_id(self.name)
         self.galini.logger.log_solve_start(run_id, self.name)
-        solution = self.actual_solve(problem, run_id=run_id, **kwargs)
+        solution = self.actual_solve(model, run_id=run_id, **kwargs)
         self.galini.logger.log_solve_end(run_id, self.name)
         return solution
 
     @abc.abstractmethod
-    def actual_solve(self, problem, run_id, **kwargs):
+    def actual_solve(self, model, run_id, **kwargs):
         pass
 
 

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """GALINI root object. Contains global state."""
+from suspect.pyomo.quadratic import enable_standard_repn_for_quadratic_expression
 from galini.cuts import CutsGeneratorsRegistry, CutsGeneratorsManager
 from galini.config import ConfigurationManager
 from galini.math import mc
@@ -37,6 +38,7 @@ class Galini:
         self.logger = get_logger('galini')
         self.cuts_generators_manager = CutsGeneratorsManager(self)
         self.paranoid_mode = False
+        enable_standard_repn_for_quadratic_expression()
 
     def update_configuration(self, user_config):
         """Update galini configuration with `user_config`."""

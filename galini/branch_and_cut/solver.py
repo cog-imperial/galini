@@ -70,25 +70,25 @@ class BranchAndBoundSolver(Solver):
             BranchAndCutAlgorithm.algorithm_options(),
         ])
 
-    def before_solve(self, model, problem):
-        self._algo.before_solve(model, problem)
+    def before_solve(self, model):
+        pass
 
-    def actual_solve(self, problem, run_id, **kwargs):
+    def actual_solve(self, model, run_id, **kwargs):
         # Run branch_and_bound loop, catch keyboard interrupt from users
         if self._catch_keyboard_interrupt:
             try:
-                self._bab_loop(problem, run_id, **kwargs)
+                self._bab_loop(model, run_id, **kwargs)
             except KeyboardInterrupt:
                 pass
         else:
-            self._bab_loop(problem, run_id, **kwargs)
+            self._bab_loop(model, run_id, **kwargs)
         assert self._tree is not None
-        return self._solution_from_tree(problem, self._tree)
+        return self._solution_from_tree(model, self._tree)
 
-    def _bab_loop(self, problem, run_id, **kwargs):
+    def _bab_loop(self, model, run_id, **kwargs):
         known_optimal_objective = kwargs.get('known_optimal_objective', None)
         if known_optimal_objective is not None:
-            if not problem.objective.original_sense.is_minimization():
+            if not model.__objective.is_originally_minimizing:
                 known_optimal_objective = -known_optimal_objective
 
         self._bac_telemetry.start_timing(
@@ -101,7 +101,7 @@ class BranchAndBoundSolver(Solver):
 
         bab_iteration = 0
 
-        root_node_storage = RootNodeStorage(problem)
+        root_node_storage = RootNodeStorage(model)
         tree = BabTree(
             root_node_storage, branching_strategy, node_selection_strategy
         )
@@ -109,8 +109,9 @@ class BranchAndBoundSolver(Solver):
 
         logger.info(run_id, 'Finding initial feasible solution')
         initial_solution = self._algo.find_initial_solution(
-            run_id, problem, tree, tree.root
+            run_id, model, tree, tree.root
         )
+
         if initial_solution is not None:
             tree.add_initial_solution(initial_solution)
             self._bac_telemetry.update_at_end_of_iteration(tree, elapsed_time())
@@ -119,9 +120,7 @@ class BranchAndBoundSolver(Solver):
                 return
 
         logger.info(run_id, 'Solving root problem')
-        root_solution = self._algo.solve_problem_at_root(
-            run_id, problem, tree, tree.root
-        )
+        root_solution = self._algo.solve_problem_at_root(run_id, tree, tree.root)
         tree.update_root(root_solution)
 
         self._bac_telemetry.update_at_end_of_iteration(
@@ -150,10 +149,6 @@ class BranchAndBoundSolver(Solver):
                 node_children, branching_point = tree.branch_at_node(current_node)
                 logger.info(run_id, 'Branched at point {}', branching_point)
                 continue
-            else:
-                current_node_problem = current_node.storage.problem
-                var_view = \
-                    current_node_problem.variable_view(current_node.variable)
 
             logger.info(
                 run_id,
@@ -183,8 +178,11 @@ class BranchAndBoundSolver(Solver):
                 bab_iteration += 1
                 continue
 
-            solution = self._algo.solve_problem_at_node(
-                run_id, current_node.storage.problem, tree, current_node)
+            solution = self._algo.solve_problem_at_node(run_id, tree, current_node)
+            # TODO(fra): what to do here?
+            if solution is None:
+                tree.fathom_node(current_node)
+                continue
 
             tree.update_node(current_node, solution)
             logger.log_add_bab_node(
@@ -213,8 +211,8 @@ class BranchAndBoundSolver(Solver):
                 logger.log_prune_bab_node(run_id, current_node.coordinate)
                 tree.fathom_node(current_node, update_nodes_visited=False)
 
-            self._log_problem_information_at_node(
-                run_id, current_node.storage.problem, solution, current_node)
+            # self._log_problem_information_at_node(run_id, current_node.storage.problem, solution, current_node)
+
             logger.info(run_id, 'New tree state at {}: {}', current_node.coordinate, tree.state)
             logger.update_variable(run_id, 'z_l', tree.nodes_visited, tree.lower_bound)
             logger.update_variable(run_id, 'z_u', tree.nodes_visited, tree.upper_bound)

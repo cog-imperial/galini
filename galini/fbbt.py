@@ -13,7 +13,6 @@
 # limitations under the License.
 
 """Perform FBBT on a Galini problem."""
-from suspect.fbbt.main import FBBTStopCriterion as BaseFBBTStopCriterion
 from suspect.fbbt.initialization import BoundsInitializationVisitor
 from suspect.fbbt.propagation import BoundsPropagationVisitor
 from suspect.interfaces import Rule
@@ -154,7 +153,7 @@ class BoundsTightener:
             self._stop_criterion.iteration_end()
 
 
-class FBBTStopCriterion(BaseFBBTStopCriterion):
+class FBBTStopCriterion(object):
     def __init__(self, max_iter, timelimit):
         super().__init__(max_iter=max_iter)
         self.timelimit = timelimit

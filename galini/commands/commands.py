@@ -14,6 +14,7 @@
 """CLI commands base class."""
 import abc
 from galini.pyomo import read_pyomo_model, problem_from_pyomo_model
+from suspect.pyomo.connected_model import create_connected_model
 
 
 class CliCommand(metaclass=abc.ABCMeta): # pragma: no cover
@@ -42,11 +43,11 @@ class CliCommandWithProblem(CliCommand):
             args.problem,
             objective_prefix=args.objective_prefix,
         )
-        problem = problem_from_pyomo_model(pyomo_model)
-        return self.execute_with_problem(pyomo_model, problem, args)
+        connected_pyomo_model, _ = create_connected_model(pyomo_model)
+        return self.execute_with_problem(connected_pyomo_model, args)
 
     @abc.abstractmethod
-    def execute_with_problem(self, model, problem, args):
+    def execute_with_problem(self, model, args):
         """Run the command."""
         pass
 

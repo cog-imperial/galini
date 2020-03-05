@@ -15,6 +15,7 @@
 """Compute branching decision after visiting a node."""
 
 import numpy as np
+import pyomo.environ as pe
 
 from galini.branch_and_bound.strategy import least_reduced_variable
 from galini.branch_and_cut.node_storage import BranchingDecision
@@ -35,16 +36,17 @@ class BranchAndCutBranchingStrategy(BranchingStrategy):
         )
 
 
-def compute_branching_decision(problem, linear_problem, mip_solution, weights,
-                               lambda_):
+def compute_branching_decision(model, linear_model, root_bounds, mip_solution, weights, lambda_):
     """Returns branching variable and point, or None if no branching exists.
 
     Parameters
     ----------
-    problem : Problem
-        the user problem
-    linear_problem : Problem
-        the linear relaxation of problem
+    model : ConcreteModel
+        the user model
+    linear_model : ConcreteModel
+        the linear relaxation of the user model
+    root_bounds : dict-like
+        variables bounds at the root node
     mip_solution : Solution
         solution to linear_problem
     weights : dict
@@ -59,18 +61,23 @@ def compute_branching_decision(problem, linear_problem, mip_solution, weights,
         performed
     """
     # Variables in [-inf, inf] have priority.
-    unbounded_variable = _unbounded_variable(problem)
+    unbounded_variable = _unbounded_variable(model)
     if unbounded_variable is not None:
         return BranchingDecision(variable=unbounded_variable, point=0.0)
 
-    branching_variable = compute_branching_variable(
-        problem, linear_problem, mip_solution, weights
-    )
+    # TODO(fra): update to use pyomo model
+    if False:
+        branching_variable = compute_branching_variable(
+            model, linear_model, mip_solution, weights
+        )
+    branching_variable = None
     if branching_variable is None:
-        branching_variable = least_reduced_variable(problem, problem.root)
+        branching_variable = least_reduced_variable(model, root_bounds)
         if branching_variable is None:
             return None
-    point = compute_branching_point(branching_variable, mip_solution, lambda_)
+    # TODO(fra): properly convert between different instances variables
+    linear_branching_variable = getattr(linear_model, branching_variable.name)
+    point = compute_branching_point(linear_branching_variable, mip_solution, lambda_)
     return BranchingDecision(variable=branching_variable, point=point)
 
 
@@ -213,7 +220,7 @@ def compute_nonlinear_infeasiblity_components(linear_problem, mip_solution):
     }
 
 
-def compute_branching_point(variable, mip_solution, lambda_):
+def compute_branching_point(var, mip_solution, lambda_):
     """Compute a convex combination of the midpoint and the solution value.
 
     Given a variable $x_i \in [x_i^L, x_i^U]$, with midpoint
@@ -222,20 +229,21 @@ def compute_branching_point(variable, mip_solution, lambda_):
 
     Parameters
     ----------
-    variable : VariableView
+    var : Var
         the branching variable
     mip_solution : Solution
         the MILP solution
     lambda_ : float
         the weight
     """
-    x_bar = mip_solution.variables[variable.variable.idx].value
-    lb = variable.lower_bound()
-    ub = variable.upper_bound()
+    print(var, mip_solution)
+    x_bar = mip_solution.variables[var]
+    lb = var.lb
+    ub = var.ub
 
     # Use special bounds if variable is unbounded
     user_upper_bound = mc.user_upper_bound
-    if variable.domain.is_integer():
+    if not var.is_continuous():
         user_upper_bound = mc.user_integer_upper_bound
 
     if is_inf(lb):
@@ -250,13 +258,9 @@ def compute_branching_point(variable, mip_solution, lambda_):
     return lambda_ * midpoint + (1.0 - lambda_) * x_bar
 
 
-
-def _unbounded_variable(problem):
-    for var in problem.variables:
-        unbounded = (
-           is_inf(problem.lower_bound(var)) and
-           is_inf(problem.upper_bound(var))
-        )
+def _unbounded_variable(model):
+    for var in model.component_data_objects(pe.Var, active=True):
+        unbounded = not var.has_lb() and not var.has_ub()
         if unbounded:
             return var
     return None

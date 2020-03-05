@@ -11,14 +11,38 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """Base class for solutions."""
+
 import abc
 import warnings
 from collections import namedtuple
 
+import pyomo.environ as pe
+from pyomo.opt import TerminationCondition
+
 
 OptimalObjective = namedtuple('OptimalObjective', ['name', 'value'])
 OptimalVariable = namedtuple('OptimalVariable', ['name', 'value'])
+
+
+def load_solution_from_model(results, model):
+    termination_condition = results.solver.termination_condition
+    status = PyomoStatus(termination_condition)
+    if status.is_success():
+        if hasattr(model, '_objective'):
+            objective = model._objective
+        else:
+            objective = next(model.component_data_objects(pe.Objective, active=True))
+
+        obj = pe.value(objective)
+        vars = pe.ComponentMap(
+            (var, pe.value(var))
+            for var in model.component_data_objects(pe.Var, active=True)
+        )
+        return Solution(status, obj, vars)
+    else:
+        return Solution(status)
 
 
 class Status(metaclass=abc.ABCMeta):
@@ -45,6 +69,26 @@ class Status(metaclass=abc.ABCMeta):
         pass
 
 
+class PyomoStatus(Status):
+    def __init__(self, termination_condition):
+        self._termination_condition = termination_condition
+
+    def is_success(self):
+        return self._termination_condition == TerminationCondition.optimal
+
+    def is_infeasible(self):
+        return self._termination_condition == TerminationCondition.infeasible
+
+    def is_unbounded(self):
+        return self._termination_condition == TerminationCondition.unbounded
+
+    def description(self):
+        return str(self._termination_condition)
+
+    def __str__(self):
+        return self.description()
+
+
 class Solution:
     """Base class for all solutions.
 
@@ -55,40 +99,19 @@ class Solution:
         if not isinstance(status, Status):
             raise TypeError('status must be subclass of Status')
 
-        if optimal_vars is None:
-            optimal_vars = []
-
-        if isinstance(optimal_obj, list):
-            if len(optimal_obj) != 1:
-                raise ValueError('optimal_obj must be a list of length 1')
-            warnings.warn('Multiple objectives not supported. Pass single value', DeprecationWarning)
-            optimal_obj = optimal_obj[0]
-
-        if optimal_obj is not None and not isinstance(optimal_obj, OptimalObjective):
-            raise TypeError('optimal_obj must be OptimalObjective')
-
-        for ov in optimal_vars:
-            if not isinstance(ov, OptimalVariable):
-                raise TypeError('optimal_vars must be collection of OptimalVariable')
-
         self.status = status
         self.objective = optimal_obj
         self.variables = optimal_vars
 
-    @property
-    def objectives(self):
-        warnings.warn('Solution.objectives is deprecated. Use Solution.objective', DeprecationWarning)
-        return [self.objective]
-
     def __str__(self):
-        return 'Solution(status={}, objective={})'.format(
+        return 'Solution(status={}, objective_value={})'.format(
             self.status.description(), self.objective
         )
 
     def objective_value(self):
         if self.objective is None:
             return None
-        return self.objective.value
+        return self.objective
 
 
 

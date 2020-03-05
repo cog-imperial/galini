@@ -15,6 +15,8 @@
 
 import sys
 
+import pyomo.environ as pe
+
 from galini.commands import (
     CliCommandWithProblem,
     OutputTable,
@@ -27,13 +29,14 @@ from galini.timelimit import (
     start_timelimit, set_timelimit, seconds_elapsed_since, current_time
 )
 
+
 DEFAULT_SOLVER = 'bac'
 
 
 class SolveCommand(CliCommandWithProblem):
     """Command to solve an optimization problem."""
 
-    def execute_with_problem(self, model, problem, args):
+    def execute_with_problem(self, model, args):
         galini = Galini()
         if args.config:
             galini.update_configuration(args.config)
@@ -59,12 +62,30 @@ class SolveCommand(CliCommandWithProblem):
         start_timelimit()
         start_time = current_time()
 
-        solver.before_solve(model, problem)
+        # Check problem only has one objective, if it's maximisation convert it to minimisation
+        original_objective = None
+        for objective in model.component_data_objects(pe.Objective, active=True):
+            if original_objective is not None:
+                raise ValueError('Solver does not support models with multiple objectives')
+            original_objective = objective
+
+        if not original_objective.is_minimizing():
+            new_objective = pe.Objective(expr=-original_objective.expr, sense=pe.minimize)
+        else:
+            new_objective = pe.Objective(expr=original_objective.expr, sense=pe.minimize)
+        model._objective = new_objective
+        model._objective.is_originally_minimizing = original_objective.is_minimizing()
+        original_objective.deactivate()
+
+        solver.before_solve(model)
 
         solution = solver.solve(
-            problem,
+            model,
             known_optimal_objective=args.known_optimal_objective
         )
+
+        del model._objective
+        original_objective.activate()
 
         elapsed_counter.set_value(seconds_elapsed_since(start_time))
 
@@ -76,13 +97,13 @@ class SolveCommand(CliCommandWithProblem):
             {'id': 'value', 'name': 'Value', 'type': 'f'},
         ])
 
-        value = solution.objective.value
-        if not problem.objective.original_sense.is_minimization():
+        value = solution.objective
+        if not original_objective.is_minimizing():
             if value is not None:
                 value = -value
 
         obj_table.add_row({
-            'name': solution.objective.name,
+            'name': original_objective.name,
             'value': value,
         })
 
