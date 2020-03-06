@@ -14,7 +14,6 @@
 """Cuts generator interface."""
 import abc
 from enum import Enum
-from typing import List, Optional
 
 
 class CutType(Enum):
@@ -24,6 +23,7 @@ class CutType(Enum):
 
 class Cut:
     """Represent a cut to be added to the problem."""
+
     def __init__(self, type_, name, expr, lower_bound, upper_bound,
                  is_objective=False):
         if not isinstance(type_, CutType):
@@ -61,6 +61,7 @@ class Cut:
 
 class CutsGenerator(metaclass=abc.ABCMeta):
     """CutsGenerator interface."""
+
     def __init__(self, galini, config):
         pass
 

@@ -14,18 +14,15 @@
 
 # pylint: skip-file
 
-import glob
 import os
-import sys
 import subprocess
+import sys
 from distutils.cmd import Command
 from distutils.spawn import find_executable
 from pathlib import Path
 
 from setuptools import setup, find_packages
-from setuptools.command.build_ext import build_ext
 from setuptools.command.test import test as TestCommand
-from setuptools.extension import Extension
 
 project_root = Path(__file__).resolve().parent
 
@@ -80,7 +77,6 @@ class PyTestCommand(TestCommand):
         return sys.exit(errno)
 
 
-
 if 'PROTOC' in os.environ and os.path.exists(os.environ['PROTOC']):
     protoc = os.environ['PROTOC']
 else:
@@ -119,83 +115,6 @@ class GenerateProto(Command):
         generate_proto('proto/message.proto')
 
 
-class get_pybind11_include(object):
-    def __init__(self, user=False):
-        self.user = user
-
-    def __str__(self):
-        if os.environ.get('PYBIND11_INCLUDE_DIR'):
-            return os.environ.get('PYBIND11_INCLUDE_DIR')
-
-        import pybind11
-        return pybind11.get_include(self.user)
-
-
-def get_ipopt_include():
-    if os.environ.get('IPOPT_INCLUDE_DIR'):
-        return os.environ.get('IPOPT_INCLUDE_DIR')
-
-
-def get_ipopt_library_dir():
-    if os.environ.get('IPOPT_LIBRARY_DIR'):
-        return os.environ.get('IPOPT_LIBRARY_DIR')
-
-
-def get_include_dirs():
-    dirs = ['src', get_pybind11_include(), get_pybind11_include(user=True), get_ipopt_include()]
-    return [d for d in dirs if d is not None]
-
-
-def get_library_dirs():
-    dirs = [get_ipopt_library_dir()]
-    return [d for d in dirs if d is not None]
-
-
-extensions = [
-    Extension(
-        'galini_core',
-        sources=[
-            'src/uid.cc',
-            'src/ad/values.cc',
-            'src/ad/ad_adapter.cc',
-            'src/expression/expression_base.cc',
-            'src/expression/auxiliary_variable.cc',
-            'src/expression/unary_function_expression.cc',
-            'src/expression/binary_expression.cc',
-            'src/expression/nary_expression.cc',
-            'src/expression/graph.cc',
-            'src/problem/problem_base.cc',
-            'src/problem/root_problem.cc',
-            'src/problem/child_problem.cc',
-            'src/ipopt/ipopt_solve.cc',
-            'src/ad/module.cc',
-            'src/expression/module.cc',
-            'src/problem/module.cc',
-            'src/ipopt/module.cc',
-            'src/core.cc',
-        ],
-        include_dirs=get_include_dirs(),
-        library_dirs=get_library_dirs(),
-        language='c++',
-        depends=glob.glob('src/**/*.h'),
-        libraries=['ipopt'],
-    )
-]
-
-
-class BuildExt(build_ext):
-    def build_extensions(self):
-        ct = self.compiler.compiler_type
-        opts = ['-std=c++14']
-        if ct == 'unix':
-            opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
-            opts.append('-fvisibility=hidden')
-
-        for ext in self.extensions:
-            ext.extra_compile_args = opts
-        build_ext.build_extensions(self)
-
-
 setup(
     name='galini',
     description=about['__description__'],
@@ -230,25 +149,21 @@ setup(
             'sdp=galini.sdp:SdpCutsGenerator',
         ],
     },
-    ext_modules=extensions,
     cmdclass={
         'test': PyTestCommand,
-        'build_ext': BuildExt,
         'generate_proto': GenerateProto,
     },
     include_package_data=True,
     install_requires=[
         'pyomo>=5.6.7',
         'cog-suspect>=1.6.5',
-        'pulp>=1.6',
         'numpy',
         'toml',
         'pydot',
         'texttable>=1.4.0',
-        'pybind11>=2.2.3',
         'pytimeparse>=1.1.8',
     ],
-    setup_requires=['pytest-runner', 'pybind11'],
+    setup_requires=['pytest-runner'],
     tests_require=[
         'pytest',
         'pytest-cov',

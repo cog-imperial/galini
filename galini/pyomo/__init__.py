@@ -14,7 +14,5 @@
 
 """GALINI"""
 
-from .convert import dag_from_pyomo_model, problem_from_pyomo_model
 from .reader import read_pyomo_model
-from .osil_reader import read_osil
 from .util import safe_setlb, safe_setub

@@ -16,7 +16,7 @@ import os
 import importlib
 import importlib.util
 from suspect.pyomo.osil_reader import read_osil
-from galini.pyomo.qplib_reader import read_qplib
+from suspect.pyomo.qplib_reader import read_qplib
 from galini.error import (
     InvalidFileExtensionError,
     InvalidPythonInputError,

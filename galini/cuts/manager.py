@@ -11,21 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Cuts generators manager."""
-import numpy as np
 
-import galini.core as core
+"""Cuts generators manager."""
+
 from galini.config.options import OptionsGroup, StringListOption
 from galini.logging import get_logger
 from galini.registry import Registry
 from galini.timelimit import current_time, seconds_elapsed_since
-from galini.util import expr_to_str
 
 logger = get_logger(__name__)
 
 
 class CutsGeneratorsRegistry(Registry):
     """Registry of CutsGenerators."""
+
     def group_name(self):
         return 'galini.cuts_generators'
 
@@ -42,6 +41,7 @@ class _CutGeneratorCounter:
 
 class CutsGeneratorsManager:
     """Manages cuts generators."""
+
     def __init__(self, galini):
         self.galini = galini
         self._cuts_counters = []
@@ -144,33 +144,4 @@ class CutsGeneratorsManager:
 
 
 def _check_cut_coefficients(cut):
-    root_expr = cut.expr
-    _check_cut_expr_coefficients(cut, root_expr)
-
-
-def _check_cut_expr_coefficients(cut, expr):
-    if isinstance(expr, core.LinearExpression):
-        _check_linear_expr_coefficients(cut, expr)
-        return
-
-    if isinstance(expr, core.QuadraticExpression):
-        for term in expr.terms:
-            if not np.isfinite(term.coefficient):
-                _raise_paranoid_mode_check_fail(cut)
-
-    if isinstance(expr, core.SumExpression):
-        for child in expr.children:
-            _check_cut_expr_coefficients(cut, child)
-
-
-def _check_linear_expr_coefficients(cut, expr):
-    if not np.all(np.isfinite(expr.linear_coefs)):
-        _raise_paranoid_mode_check_fail(cut)
-
-
-def _raise_paranoid_mode_check_fail(cut):
-    raise ValueError(
-        'Cut {} has non finite coefficients: {}'.format(
-            cut.name,
-            expr_to_str(cut.expr),
-        ))
+    raise NotImplemented()
