@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """GALINI IO logging."""
+
 import logging
 from pathlib import Path
 
@@ -198,29 +200,27 @@ class Logger(object):
         """Log message to disk."""
         self.manager._log_message(message)
 
-    def debug(self, run_id, msg, *args, **kwargs):
+    def debug(self, msg, *args, **kwargs):
         """Log msg with DEBUG level."""
-        return self.log(run_id, DEBUG, msg, *args, **kwargs)
+        return self.log(DEBUG, msg, *args, **kwargs)
 
-    def info(self, run_id, msg, *args, **kwargs):
+    def info(self, msg, *args, **kwargs):
         """Log msg with INFO level."""
-        return self.log(run_id, INFO, msg, *args, **kwargs)
+        return self.log(INFO, msg, *args, **kwargs)
 
-    def warning(self, run_id, msg, *args, **kwargs):
+    def warning(self, msg, *args, **kwargs):
         """Log msg with WARNING level."""
-        return self.log(run_id, WARNING, msg, *args, **kwargs)
+        return self.log(WARNING, msg, *args, **kwargs)
 
-    def error(self, run_id, msg, *args, **kwargs):
+    def error(self, msg, *args, **kwargs):
         """Log msg with ERROR level."""
-        return self.log(run_id, ERROR, msg, *args, **kwargs)
+        return self.log(ERROR, msg, *args, **kwargs)
 
-    def log(self, run_id, lvl, msg, *args, **kwargs):
+    def log(self, lvl, msg, *args, **kwargs):
         """Log msg with lvl level and unique run id.
 
         Arguments
         ---------
-        run_id : str
-            run_id used to collate logs
         lvl: int
             logging level
         msg: str
@@ -230,51 +230,57 @@ class Logger(object):
         kwargs: Any
             keyword arguments passed to msg.format
         """
+        # TODO(fra): manage run_id
         if lvl >= self.level:
-            self.manager._log(self.name, run_id, lvl, msg, *args, **kwargs)
+            self.manager._log(self.name, 0, lvl, msg, *args, **kwargs)
 
-    def log_solve_start(self, run_id, solver):
+    def log_solve_start(self, solver):
+        # TODO(fra): manage run_id
         self.log_message(solve_start_message(
             name=self.name,
-            run_id=run_id,
+            run_id=0,
             solver=solver,
         ))
 
-    def log_solve_end(self, run_id, solver):
+    def log_solve_end(self, solver):
+        # TODO(fra): manage run_id
         self.log_message(solve_end_message(
             name=self.name,
-            run_id=run_id,
+            run_id=0,
             solver=solver,
         ))
 
-    def log_add_bab_node(self, run_id, coordinate, lower_bound, upper_bound,
+    def log_add_bab_node(self, coordinate, lower_bound, upper_bound,
                          branching_variables=None):
+        # TODO(fra): manage run_id
         self.log_message(add_bab_node_message(
             name=self.name,
-            run_id=run_id,
+            run_id=0,
             coordinate=coordinate,
             lower_bound=lower_bound,
             upper_bound=upper_bound,
             branching_variables=branching_variables,
         ))
 
-    def log_prune_bab_node(self, run_id, coordinate):
+    def log_prune_bab_node(self, coordinate):
+        # TODO(fra): manage run_id
         self.log_message(prune_bab_node_message(
             name=self.name,
-            run_id=run_id,
+            run_id=0,
             coordinate=coordinate,
         ))
 
-    def update_variable(self, run_id, var_name, iteration, value):
+    def update_variable(self, var_name, iteration, value):
+        # TODO(fra): manage run_id
         self.log_message(update_variable_message(
             name=self.name,
-            run_id=run_id,
+            run_id=0,
             var_name=var_name,
             iteration=iteration,
             value=value,
         ))
 
-    def tensor(self, run_id, group, dataset, data):
+    def tensor(self, group, dataset, data):
         """Log tensor data to data file, if configured.
 
         Arguments
@@ -286,4 +292,5 @@ class Logger(object):
         data : array-like
             the data to log
         """
-        return self.manager._tensor(self.name, run_id, group, dataset, data)
+        # TODO(fra): manage run_id
+        return self.manager._tensor(self.name, 0, group, dataset, data)

@@ -13,6 +13,8 @@
 # limitations under the License.
 
 """GALINI info command."""
+import pyomo.environ as pe
+
 from galini.commands import (
     CliCommandWithProblem,
     OutputTable,
@@ -23,38 +25,38 @@ from galini.commands import (
 
 class InfoCommand(CliCommandWithProblem):
     """Command to output information about a problem."""
-    def execute_with_problem(self, _model, problem, args):
+    def execute_with_model(self, model: pe.ConcreteModel, args):
         tables = [
-            self._output_variables_information(problem),
-            self._output_objectives_information(problem),
-            self._output_constraints_information(problem),
+            self._output_variables_information(model),
+            self._output_objectives_information(model),
+            self._output_constraints_information(model),
         ]
         print_output_table(tables, args)
 
-    def _output_variables_information(self, problem):
-        table = OutputTable('Variables', ['name', 'lower_bound', 'upper_bound'])
-        for var in problem.variables:
-            view = problem.variable_view(var)
+    def _output_variables_information(self, model: pe.ConcreteModel):
+        table = OutputTable('Variables', ['name', 'lower_bound', 'upper_bound', 'domain'])
+        for var in model.component_data_objects(pe.Var, active=True, descend_into=True):
             table.add_row({
                 'name': var.name,
-                'lower_bound': view.lower_bound(),
-                'upper_bound': view.upper_bound(),
+                'lower_bound': var.lb,
+                'upper_bound': var.ub,
+                'domain': var.domain,
             })
         return table
 
-    def _output_objectives_information(self, problem):
+    def _output_objectives_information(self, model: pe.ConcreteModel):
         table = OutputTable('Objectives', ['name', 'sense'])
-        for obj in problem.objectives:
-            table.add_row({'name': obj.name, 'sense': obj.original_sense})
+        for obj in model.component_data_objects(pe.Objective, active=True, descend_into=True):
+            table.add_row({'name': obj.name, 'sense': obj.sense})
         return table
 
-    def _output_constraints_information(self, problem):
+    def _output_constraints_information(self, model: pe.ConcreteModel):
         table = OutputTable('Constraints', ['name', 'lower_bound', 'upper_bound'])
-        for cons in problem.constraints:
+        for cons in model.component_data_objects(pe.Constraint, active=True, descend_into=True):
             table.add_row({
                 'name': cons.name,
-                'lower_bound': cons.lower_bound,
-                'upper_bound': cons.upper_bound
+                'lower_bound': cons.lower,
+                'upper_bound': cons.upper,
             })
         return table
 

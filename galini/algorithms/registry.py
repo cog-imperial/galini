@@ -1,4 +1,4 @@
-# Copyright 2017 Francesco Ceccon
+# Copyright 2020 Francesco Ceccon
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,26 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""GALINI Logging module."""
+"""Algorithms registry module."""
 
-from galini.io.logging import (
-    Logger,
-    LogManager,
-
-    NOTSET,
-    DEBUG,
-    INFO,
-    WARNING,
-    ERROR,
-    CRITICAL,
-)
+from galini.registry import Registry
 
 
-_manager = LogManager()
+class AlgorithmsRegistry(Registry):
+    """Registry of MINLP algorithms."""
 
-
-def get_logger(name):
-    return _manager.get_logger(name)
-
-def apply_config(config):
-    _manager.apply_config(config)
+    def group_name(self):
+        return 'galini.algorithms'

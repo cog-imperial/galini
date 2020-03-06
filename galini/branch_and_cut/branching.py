@@ -19,7 +19,7 @@ import pyomo.environ as pe
 
 from galini.branch_and_bound.strategy import least_reduced_variable
 from galini.branch_and_cut.node_storage import BranchingDecision
-from galini.math import mc, is_close, is_inf
+from galini.math import is_close, is_inf
 from galini.branch_and_bound.strategy import BranchingStrategy
 from galini.branch_and_bound.branching import BranchingPoint
 
@@ -36,7 +36,7 @@ class BranchAndCutBranchingStrategy(BranchingStrategy):
         )
 
 
-def compute_branching_decision(model, linear_model, root_bounds, mip_solution, weights, lambda_):
+def compute_branching_decision(model, linear_model, root_bounds, mip_solution, weights, lambda_, mc):
     """Returns branching variable and point, or None if no branching exists.
 
     Parameters
@@ -68,7 +68,7 @@ def compute_branching_decision(model, linear_model, root_bounds, mip_solution, w
     # TODO(fra): update to use pyomo model
     if False:
         branching_variable = compute_branching_variable(
-            model, linear_model, mip_solution, weights
+            model, linear_model, mip_solution, weights, mc
         )
     branching_variable = None
     if branching_variable is None:
@@ -77,7 +77,7 @@ def compute_branching_decision(model, linear_model, root_bounds, mip_solution, w
             return None
     # TODO(fra): properly convert between different instances variables
     linear_branching_variable = getattr(linear_model, branching_variable.name)
-    point = compute_branching_point(linear_branching_variable, mip_solution, lambda_)
+    point = compute_branching_point(linear_branching_variable, mip_solution, lambda_, mc)
     return BranchingDecision(variable=branching_variable, point=point)
 
 
@@ -220,7 +220,7 @@ def compute_nonlinear_infeasiblity_components(linear_problem, mip_solution):
     }
 
 
-def compute_branching_point(var, mip_solution, lambda_):
+def compute_branching_point(var, mip_solution, lambda_, mc):
     """Compute a convex combination of the midpoint and the solution value.
 
     Given a variable $x_i \in [x_i^L, x_i^U]$, with midpoint
@@ -245,10 +245,10 @@ def compute_branching_point(var, mip_solution, lambda_):
     if not var.is_continuous():
         user_upper_bound = mc.user_integer_upper_bound
 
-    if lb is None or is_inf(lb):
+    if lb is None or is_inf(lb, mc):
         lb = -user_upper_bound
 
-    if ub is None or is_inf(ub):
+    if ub is None or is_inf(ub, mc):
         ub = user_upper_bound
 
     midpoint = lb + 0.5 * (ub - lb)

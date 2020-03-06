@@ -15,8 +15,7 @@
 """Branch & Bound branching strategies."""
 import numpy as np
 import pyomo.environ as pe
-from galini.core import Problem
-from galini.math import mc, is_inf, is_close
+from galini.math import is_inf, is_close
 from galini.branch_and_bound.branching import BranchingPoint
 
 
@@ -62,10 +61,13 @@ def least_reduced_variable(model, root_bounds):
 
 
 class KSectionBranchingStrategy(BranchingStrategy):
-    def __init__(self, k=2):
+    def __init__(self, tolerance, user_upper_bound, user_integer_upper_bound, k=2):
         if k < 2:
             raise ValueError('K must be >= 2')
         self.k = k
+        self.tolerance = tolerance
+        self.user_upper_bound = user_upper_bound
+        self.user_integer_upper_bound = user_integer_upper_bound
 
     def branch(self, node, tree):
         root_problem = tree.root.storage.branching_data()
@@ -73,7 +75,7 @@ class KSectionBranchingStrategy(BranchingStrategy):
         var = least_reduced_variable(node_problem, root_problem)
         if var is None:
             return None
-        if is_close(var.upper_bound(), var.lower_bound(), atol=mc.epsilon):
+        if is_close(var.upper_bound(), var.lower_bound(), atol=self.tolerance):
             return None
         return self._branch_on_var(var)
 
@@ -82,16 +84,16 @@ class KSectionBranchingStrategy(BranchingStrategy):
         domain = var.domain
         if is_inf(lower_bound):
             if domain.is_real():
-                lower_bound = -mc.user_upper_bound
+                lower_bound = -self.user_upper_bound
             else:
-                lower_bound = -mc.user_integer_upper_bound
+                lower_bound = -self.user_integer_upper_bound
 
         upper_bound = var.upper_bound()
         if is_inf(upper_bound):
             if domain.is_real():
-                upper_bound = mc.user_upper_bound
+                upper_bound = self.user_upper_bound
             else:
-                upper_bound = mc.user_integer_upper_bound
+                upper_bound = self.user_integer_upper_bound
 
         step = (upper_bound - lower_bound) / self.k
         points = step * (np.arange(self.k-1) + 1.0) + lower_bound

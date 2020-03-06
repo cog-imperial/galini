@@ -1,4 +1,4 @@
-# Copyright 2018 Francesco Ceccon
+# Copyright 2020 Francesco Ceccon
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,10 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from .command_output import (
-    OutputTable,
-    add_output_format_parser_arguments,
-    print_output_table,
-)
-from .commands import CliCommand, CliCommandWithProblem
+from .algorithm import Algorithm
+from .registry import AlgorithmsRegistry

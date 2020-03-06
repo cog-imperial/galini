@@ -11,10 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """Configuration Manager."""
+
 import toml
+
 from galini.config.configuration import GaliniConfig
-from galini.cuts import CutsGeneratorsManager
 from galini.config.options import (
     OptionsGroup,
     ExternalSolverOptions,
@@ -24,15 +26,16 @@ from galini.config.options import (
     StringOption,
     BoolOption,
 )
+from galini.cuts import CutsGeneratorsManager
 
 
 class ConfigurationManager(object):
-    def __init__(self, solvers_reg, cuts_gen_reg):
+    def __init__(self, algos_reg, cuts_gen_reg):
         self._initialized = False
         self._configuration = None
-        self._initialize(solvers_reg, cuts_gen_reg)
+        self._initialize(algos_reg, cuts_gen_reg)
 
-    def _initialize(self, solvers_reg, cuts_gen_reg):
+    def _initialize(self, algos_reg, cuts_gen_reg):
         config = GaliniConfig()
 
         # add default sections
@@ -43,10 +46,10 @@ class ConfigurationManager(object):
         _assign_options_to_group(_galini_group(), galini_group)
 
         # initialize configuration from solvers
-        for _, solver in solvers_reg.items():
-            solver_options = solver.solver_options()
-            group = config.add_group(solver_options.name)
-            _assign_options_to_group(solver_options, group)
+        for _, algo in algos_reg.items():
+            algo_options = algo.algorithm_options()
+            group = config.add_group(algo_options.name)
+            _assign_options_to_group(algo_options, group)
 
         # initialize configuration from cut manager and generators
         cuts_generator_group = config.add_group('cuts_generator')

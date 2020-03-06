@@ -14,12 +14,10 @@
 
 """Collect telemetry information from solver parts."""
 
-from galini.logging import get_logger
-
 
 class Telemetry:
-    def __init__(self):
-        self._logger = get_logger("galini.telemetry")
+    def __init__(self, galini):
+        self._logger = galini.get_logger(__name__)
         self._counters = []
 
     def create_counter(self, name, initial_value=0):
@@ -43,21 +41,18 @@ class Telemetry:
             for counter in self._counters
         ]
 
-    def log_at_end_of_iteration(self, run_id, iteration):
+    def log_at_end_of_iteration(self, iteration):
         self._logger.info(
-            run_id,
             'Counters value at end of iteration {}',
             iteration,
         )
         for counter in self._counters:
             self._logger.update_variable(
-                run_id,
                 iteration=iteration,
                 var_name=counter.name,
                 value=counter.value,
             )
             self._logger.info(
-                run_id,
                 ' * {} = {}',
                 counter.name,
                 counter.value

@@ -11,13 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """CLI commands base class."""
+
 import abc
-from galini.pyomo import read_pyomo_model, problem_from_pyomo_model
+
+import pyomo.environ as pe
 from suspect.pyomo.connected_model import create_connected_model
 
+from galini.pyomo import read_pyomo_model
 
-class CliCommand(metaclass=abc.ABCMeta): # pragma: no cover
+
+class CliCommand(metaclass=abc.ABCMeta):  # pragma: no cover
     """Abstract class for CLI commands."""
     @abc.abstractmethod
     def execute(self, args):
@@ -44,10 +49,10 @@ class CliCommandWithProblem(CliCommand):
             objective_prefix=args.objective_prefix,
         )
         connected_pyomo_model, _ = create_connected_model(pyomo_model)
-        return self.execute_with_problem(connected_pyomo_model, args)
+        return self.execute_with_model(connected_pyomo_model, args)
 
     @abc.abstractmethod
-    def execute_with_problem(self, model, args):
+    def execute_with_model(self, model: pe.ConcreteModel, args):
         """Run the command."""
         pass
 

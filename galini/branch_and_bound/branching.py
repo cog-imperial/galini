@@ -16,8 +16,6 @@
 import numpy as np
 import copy
 
-from galini.core import VariableView
-
 
 class BranchingPoint:
     def __init__(self, variable, points):

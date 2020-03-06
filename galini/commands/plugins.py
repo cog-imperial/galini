@@ -11,8 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """GALINI plugins subcommand."""
+
 import sys
+
 from galini.commands import (
     CliCommand,
     OutputTable,
@@ -26,7 +29,7 @@ class PluginsCommand(CliCommand):
     """Command to list registered plugins."""
 
     _methods = {
-        'solvers': '_get_solvers',
+        'algo': '_get_algos',
     }
 
     def execute(self, args):
@@ -47,8 +50,8 @@ class PluginsCommand(CliCommand):
         parser.add_argument('selection', choices=['solvers'])
         add_output_format_parser_arguments(parser)
 
-    def _get_solvers(self):
-        table = OutputTable('Solvers', [
+    def _get_algos(self):
+        table = OutputTable('Algorithms', [
             {'id': 'id', 'name': 'ID', 'type': 't'},
             {'id': 'name', 'name': 'Name', 'type': 't'},
             {'id': 'description', 'name': 'Description', 'type': 't'}

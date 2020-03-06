@@ -15,13 +15,19 @@
 """GALINI special_structure command."""
 from suspect.convexity import Convexity
 from suspect.monotonicity import Monotonicity
+import pyomo.environ as pe
 from galini.commands import (
     CliCommandWithProblem,
     OutputTable,
     add_output_format_parser_arguments,
     print_output_table,
 )
-from galini.special_structure import detect_special_structure
+from suspect.pyomo.quadratic import enable_standard_repn_for_quadratic_expression
+from suspect.fbbt import perform_fbbt
+from suspect.propagation import propagate_special_structure
+
+
+enable_standard_repn_for_quadratic_expression()
 
 
 def _cvx_to_str(cvx):
@@ -41,17 +47,16 @@ def _mono_to_str(mono):
 
 
 class SpecialStructureCommand(CliCommandWithProblem):
-    def execute_with_problem(self, _model, problem, args):
-        ctx = detect_special_structure(problem, timelimit=300, maxiter=100)
-
+    def execute_with_model(self, model, args):
+        bounds = perform_fbbt(model, max_iter=100)
+        mono, cvx = propagate_special_structure(model, bounds)
         tables = []
-        tables.append(self._output_variables(problem, ctx))
-        tables.append(self._output_objectives(problem, ctx))
-        tables.append(self._output_constraints(problem, ctx))
+        tables.append(self._output_variables(model, bounds, mono, cvx))
+        tables.append(self._output_objectives(model, bounds, mono, cvx))
+        tables.append(self._output_constraints(model, bounds, mono, cvx))
         print_output_table(tables, args)
 
-    def _output_variables(self, problem, ctx):
-        bounds = ctx.bounds
+    def _output_variables(self, model, bounds, _mono, _cvx):
         table = OutputTable('Variables', [
             {'id': 'name', 'name': 'Var.', 'type': 't'},
             {'id': 'domain', 'name': 'Dom.', 'type': 't'},
@@ -60,39 +65,43 @@ class SpecialStructureCommand(CliCommandWithProblem):
             {'id': 'original_lower_bound', 'name': 'OLB', 'type': 'f'},
             {'id': 'original_upper_bound', 'name': 'OUB', 'type': 'f'},
         ])
-        for variable in problem.variables:
-            var = problem.variable_view(variable)
-            var_bounds = bounds(var.variable)
-            var_domain = var.domain.name[0]
+        for var in model.component_data_objects(pe.Var, active=True, descend_into=True):
+            var_bounds = bounds[var]
             table.add_row({
-                'name': variable.name,
+                'name': var.name,
                 'domain': var.domain,
                 'lower_bound': var_bounds.lower_bound,
                 'upper_bound': var_bounds.upper_bound,
-                'original_lower_bound': variable.lower_bound,
-                'original_upper_bound': variable.upper_bound,
+                'original_lower_bound': var.lb,
+                'original_upper_bound': var.ub,
             })
         return table
 
-    def _output_objectives(self, problem, ctx):
+    def _output_objectives(self, model, bounds, mono, cvx):
         return self._output_expressions(
-            problem,
-            ctx,
-            problem.objectives,
+            model,
+            bounds,
+            mono,
+            cvx,
+            pe.Objective,
+            lambda obj: obj.expr,
             'Obj.',
             'Objectives',
         )
 
-    def _output_constraints(self, problem, ctx):
+    def _output_constraints(self, model, bounds, mono, cvx):
         return self._output_expressions(
-            problem,
-            ctx,
-            problem.constraints,
+            model,
+            bounds,
+            mono,
+            cvx,
+            pe.Constraint,
+            lambda con: con.body,
             'Cons.',
             'Constraints',
         )
 
-    def _output_expressions(self, problem, ctx, expressions, type_, table_name):
+    def _output_expressions(self, model, bounds, mono, cvx, component_type, get_expr, type_, table_name):
         table = OutputTable(table_name, [
             {'id': 'name', 'name': type_, 'type': 't'},
             {'id': 'lower_bound', 'name': 'LB', 'type': 'f'},
@@ -100,17 +109,17 @@ class SpecialStructureCommand(CliCommandWithProblem):
             {'id': 'convexity', 'name': 'Cvx', 'type': 't'},
             {'id': 'monotonicity', 'name': 'Mono', 'type': 't'},
         ])
-        for expr in expressions:
-            root_expr = expr.root_expr
-            cvx = _cvx_to_str(ctx.convexity(root_expr))
-            mono = _mono_to_str(ctx.monotonicity(root_expr))
-            bounds = ctx.bounds(root_expr)
+        for component in model.component_data_objects(component_type, active=True, descend_into=True):
+            root_expr = get_expr(component)
+            cvx_str = _cvx_to_str(cvx[root_expr])
+            mono_str = _mono_to_str(mono[root_expr])
+            expr_bounds = bounds[root_expr]
             table.add_row({
-                'name': expr.name,
-                'lower_bound': bounds.lower_bound,
-                'upper_bound': bounds.upper_bound,
-                'convexity': cvx,
-                'monotonicity': mono,
+                'name': component.name,
+                'lower_bound': expr_bounds.lower_bound,
+                'upper_bound': expr_bounds.upper_bound,
+                'convexity': cvx_str,
+                'monotonicity': mono_str,
             })
         return table
 

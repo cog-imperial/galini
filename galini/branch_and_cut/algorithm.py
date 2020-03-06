@@ -16,29 +16,20 @@
 
 import numpy as np
 import pyomo.environ as pe
-from pyomo.opt import TerminationCondition
 from suspect.expression import ExpressionType
-from suspect.interval import Interval, EmptyIntervalError
 from suspect.fbbt import perform_fbbt
+from suspect.interval import Interval, EmptyIntervalError
 from suspect.propagation import propagate_special_structure
 
-from galini.pyomo import safe_setlb, safe_setub
-from coramin.relaxations import relaxation_data_objects
-from galini.solvers.solution import load_solution_from_model
-import galini.core as core
-from galini.relaxations.relax import relax
 from galini.branch_and_bound.node import NodeSolution
-from galini.branch_and_bound.relaxations import (
-    ConvexRelaxation, LinearRelaxation
-)
 from galini.branch_and_bound.selection import BestLowerBoundSelectionStrategy
 from galini.branch_and_cut.bound_reduction import (
-    perform_obbt_on_model, best_upper_bound, best_lower_bound
+    perform_obbt_on_model, perform_fbbt_on_model, best_upper_bound, best_lower_bound
 )
 from galini.branch_and_cut.branching import compute_branching_decision, \
     BranchAndCutBranchingStrategy
 from galini.branch_and_cut.primal import (
-    solve_primal, solve_primal_with_starting_point, compute_variable_starting_point
+    solve_primal, solve_primal_with_starting_point
 )
 from galini.branch_and_cut.state import CutsState
 from galini.config import (
@@ -46,69 +37,36 @@ from galini.config import (
     IntegerOption,
     BoolOption,
     NumericOption,
+    SolverOptions,
 )
 from galini.cuts.generator import Cut
-from galini.logging import get_logger, DEBUG
-from galini.math import mc, is_close, almost_ge, almost_le, is_inf
+from galini.math import is_close, almost_ge, almost_le, is_inf
+from galini.pyomo import safe_setlb, safe_setub
 from galini.quantities import relative_gap, absolute_gap
-from galini.relaxations.relaxed_problem import RelaxedProblem
+from galini.solvers.solution import load_solution_from_model
 from galini.timelimit import (
-    seconds_left,
     current_time,
     seconds_elapsed_since,
 )
-from galini.util import log_problem
-
-logger = get_logger(__name__)
+from galini.branch_and_bound.algorithm import BranchAndBoundAlgorithm
 
 
 # pylint: disable=too-many-instance-attributes
-class BranchAndCutAlgorithm:
+class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
     """Branch and Cut algorithm."""
     name = 'branch_and_cut'
 
-    def __init__(self, galini, solver, telemetry):
+    def __init__(self, galini):
+        super().__init__(galini)
         self.galini = galini
-        self.solver = solver
         self._nlp_solver = pe.SolverFactory('ipopt')
         self._mip_solver = pe.SolverFactory('cplex')
-        self._cuts_generators_manager = galini.cuts_generators_manager
-        self._bac_telemetry = telemetry
 
-        bab_config = galini.get_configuration_group(solver.name)
+        self._bab_config = self.config['bab']
+        self.cuts_config = self.config['cuts']
 
-        self.tolerance = bab_config['tolerance']
-        self.relative_tolerance = bab_config['relative_tolerance']
-        self.node_limit = bab_config['node_limit']
-        self.fbbt_maxiter = bab_config['fbbt_maxiter']
-        self.fbbt_timelimit = bab_config['fbbt_timelimit']
-        self.root_node_feasible_solution_seed = \
-            bab_config['root_node_feasible_solution_seed']
-
-        self.root_node_feasible_solution_search_timelimit = \
-            bab_config['root_node_feasible_solution_search_timelimit']
-
-        bac_config = galini.get_configuration_group('branch_and_cut.cuts')
-        self.cuts_maxiter = bac_config['maxiter']
-        self._cuts_timelimit = bac_config['timelimit']
-        self._cut_tolerance = bac_config['cut_tolerance']
-        self._use_lp_cut_phase = bac_config['use_lp_cut_phase']
-        self._use_milp_cut_phase = bac_config['use_milp_cut_phase']
-
-        self._branching_weight_sum = bac_config['branching_weight_sum']
-        self._branching_weight_max = bac_config['branching_weight_max']
-        self._branching_weight_min = bac_config['branching_weight_min']
-        self._branching_weight_lambda = bac_config['branching_weight_lambda']
-
-        if not self._use_lp_cut_phase and not self._use_milp_cut_phase:
-            raise RuntimeError('One of LP or MILP cut phase must be active')
-
-        self.branching_strategy = BranchAndCutBranchingStrategy()
-        self.node_selection_strategy = BestLowerBoundSelectionStrategy()
-
-        self._bounds = None
-        self._monotonicity = None
-        self._convexity = None
+        self._branching_strategy = BranchAndCutBranchingStrategy()
+        self._node_selection_strategy = BestLowerBoundSelectionStrategy()
 
         # TODO(fra): refactor telemetry to support nested iterations
         self._cut_loop_outer_iteration = 0
@@ -118,165 +76,100 @@ class BranchAndCutAlgorithm:
     @staticmethod
     def algorithm_options():
         """Return options for BranchAndCutAlgorithm"""
-        return OptionsGroup('cuts', [
-            IntegerOption(
-                'maxiter',
-                default=20,
-                description='Number of cut rounds'
-            ),
-            NumericOption(
-                'cut_tolerance',
-                default=1e-5,
-                description='Terminate if two consecutive cut rounds are within this tolerance'
-            ),
-            IntegerOption(
-                'timelimit',
-                default=120,
-                description='Total timelimit for cut rounds'
-            ),
-            BoolOption(
-                'use_lp_cut_phase',
-                default=True,
-                description='Solve LP in cut loop'
-            ),
-            BoolOption(
-                'use_milp_cut_phase',
-                default=False,
-                description='Add additional cut loop solving MILP'
-            ),
-            NumericOption(
-                'branching_weight_sum',
-                default=1.0,
-                description='Weight of the sum of nonlinear infeasibility'
-            ),
-            NumericOption(
-                'branching_weight_max',
-                default=0.0,
-                description='Weight of the max of nonlinear infeasibility'
-            ),
-            NumericOption(
-                'branching_weight_min',
-                default=0.0,
-                description='Weight of the min of nonlinear infeasibility'
-            ),
-            NumericOption(
-                'branching_weight_lambda',
-                default=0.25,
-                description='Weight of the midpoint when computing convex combination with solution for branching'
-            ),
+        return SolverOptions(BranchAndCutAlgorithm.name, [
+            OptionsGroup('bab', BranchAndBoundAlgorithm.bab_options()),
+            OptionsGroup('cuts', [
+                IntegerOption(
+                    'maxiter',
+                    default=20,
+                    description='Number of cut rounds'
+                ),
+                NumericOption(
+                    'cut_tolerance',
+                    default=1e-5,
+                    description='Terminate if two consecutive cut rounds are within this tolerance'
+                ),
+                IntegerOption(
+                    'timelimit',
+                    default=120,
+                    description='Total timelimit for cut rounds'
+                ),
+            ])
         ])
 
-    def _before_root_node(self, model, upper_bound):
-        obbt_upper_bound = None
-        if upper_bound is not None and not is_inf(upper_bound):
-            obbt_upper_bound = upper_bound
+    @property
+    def branching_strategy(self):
+        return self._branching_strategy
 
-        logger.warning(0, "Skipping OBBT")
-        return
-        obbt_start_time = current_time()
+    @property
+    def node_selection_strategy(self):
+        return self._node_selection_strategy
+
+    @property
+    def bab_config(self):
+        return self._bab_config
+
+    def find_initial_solution(self, model, tree, node):
         try:
-            perform_obbt_on_model(
-                model, obbt_upper_bound,
-                timelimit=self.solver.config['obbt_timelimit'],
-                simplex_maxiter=self.solver.config['obbt_simplex_maxiter'],
+            _, _, cvx = perform_fbbt_on_model(
+                model, tree, node, maxiter=1, eps=self.galini.mc.epsilon
             )
-            self._bac_telemetry.increment_obbt_time(
-                seconds_elapsed_since(obbt_start_time)
-            )
-        except TimeoutError:
-            logger.info(0, 'OBBT timed out')
-            self._bac_telemetry.increment_obbt_time(
-                seconds_elapsed_since(obbt_start_time)
-            )
-            return
 
+            solution = self._try_solve_convex_model(model, convexity=cvx)
+            if solution is not None:
+                return NodeSolution(solution, solution)
+
+            # Don't pass a starting point since it's already loaded in the model
+            solution = solve_primal_with_starting_point(
+                model, pe.ComponentMap(), self._nlp_solver
+            )
+
+            if solution.status.is_success():
+                return NodeSolution(None, solution)
+            return None
         except Exception as ex:
-            logger.warning(0, 'Error performing OBBT: {}', ex)
-            self._bac_telemetry.increment_obbt_time(
-                seconds_elapsed_since(obbt_start_time)
+            if self.galini.paranoid_mode:
+                raise ex
+            self.logger.info('Exception in find_initial_solution: {}', ex)
+            return None
+
+    def solve_problem_at_root(self, tree, node):
+        """Solve problem at root node."""
+        return self._solve_problem_at_node(tree, node, True)
+
+    def solve_problem_at_node(self, tree, node):
+        """Solve problem at non root node."""
+        return self._solve_problem_at_node(tree, node, False)
+
+    def _solve_problem_at_node(self, tree, node, is_root):
+        if is_root:
+            # TODO(fra): perform OBBT if it's root node
+            pass
+
+        model = node.storage.model()
+
+        try:
+            bounds, mono, cvx = perform_fbbt_on_model(
+                model, tree, node, maxiter=self.bab_config['fbbt_maxiter'], eps=self.galini.mc.epsilon
             )
-            raise
+        except EmptyIntervalError:
+            return NodeSolution(None, None)
 
-    def before_solve(self, model):
-        """Callback called before solve."""
-        pass
+        convex_model = node.storage.convex_model()
+        linear_model = node.storage.linear_model()
 
-    def _has_converged(self, state):
-        rel_gap = relative_gap(state.lower_bound, state.upper_bound)
-        abs_gap = absolute_gap(state.lower_bound, state.upper_bound)
-
-        bounds_close = is_close(
-            state.lower_bound,
-            state.upper_bound,
-            rtol=self.relative_tolerance,
-            atol=self.tolerance,
-        )
-
-        if self.galini.paranoid_mode:
-            assert (state.lower_bound <= state.upper_bound or bounds_close)
-
-        return (
-            rel_gap <= self.relative_tolerance or
-            abs_gap <= self.tolerance
-        )
-
-    def _cuts_converged(self, state):
-        cuts_close =  (
-                state.latest_solution is not None and
-                state.previous_solution is not None and
-                is_close(
-                    state.latest_solution,
-                    state.previous_solution,
-                    rtol=self._cut_tolerance
-                )
-        )
-        if cuts_close:
-            return True
-        return self._cuts_generators_manager.has_converged(state)
-
-    def _cuts_iterations_exceeded(self, state):
-        return state.round > self.cuts_maxiter
-
-    def cut_loop_should_terminate(self, state, start_time):
-        elapsed_time = seconds_elapsed_since(start_time)
-        return (
-            self._cuts_converged(state) or
-            self._cuts_iterations_exceeded(state) or
-            self._timeout() or
-            elapsed_time > self._cuts_timelimit
-        )
-
-    def _node_limit_exceeded(self, state):
-        return state.nodes_visited > self.node_limit
-
-    def _timeout(self):
-        return seconds_left() <= 0
-
-    def should_terminate(self, state):
-        return (
-            self._has_converged(state) or
-            self._node_limit_exceeded(state) or
-            self._timeout()
-        )
-
-    # pylint: disable=too-many-branches
-    def _solve_problem_at_node(self, run_id, model, convex_model, linear_model, tree, node):
-        logger.info(
-            run_id,
+        self.logger.info(
             'Starting Cut generation iterations. Maximum iterations={}',
-            self.cuts_maxiter,
+            self.cuts_config['maxiter'],
         )
         generators_name = [
-            g.name for g in self._cuts_generators_manager.generators
+            g.name for g in self.galini.cuts_generators_manager.generators
         ]
 
-        logger.info(
-            run_id,
-            'Using cuts generators: {}',
-            ', '.join(generators_name)
-        )
+        self.logger.info('Using cuts generators: {}', ', '.join(generators_name))
 
-        solution = self._try_solve_convex_model(model)
+        # Try solve the problem as convex NLP
+        solution = self._try_solve_convex_model(model, convexity=cvx)
         if solution is not None:
             return solution
 
@@ -285,9 +178,69 @@ class BranchAndCutAlgorithm:
         else:
             feasible_solution = None
 
-        lower_bound_search_start_time = current_time()
+        # TODO(fra): before start at root/node callback for cut manager
 
-        logger.info(run_id, 'Start LP cut phase')
+        # Find lower bounding solution from linear model
+        feasible, cuts_state, lower_bounding_solution = self._solve_lower_bounding_relaxation(
+            tree, node, model, convex_model, linear_model
+        )
+
+        # TODO(fra): after end at root/node callback for cut manager
+
+        if not feasible:
+            self.logger.info('Lower bounding solution not success: {}', lower_bounding_solution)
+            return NodeSolution(lower_bounding_solution, feasible_solution)
+
+        # Check for timeout
+        if self.galini.timelimit.timeout():
+            return NodeSolution(lower_bounding_solution, feasible_solution)
+
+        # Solve MILP to obtain MILP solution
+        mip_results = self._mip_solver.solve(linear_model)
+        mip_solution = load_solution_from_model(mip_results, linear_model)
+        self.logger.info(
+            'MILP solution after LP cut phase: {} {}',
+            mip_solution.status,
+            mip_solution,
+        )
+
+        if not mip_solution.status.is_success():
+            return NodeSolution(mip_solution, None)
+
+        self._update_node_branching_decision(
+            model, linear_model, mip_solution, node
+        )
+
+        assert cuts_state is not None
+        can_improve_feasible_solution = not (
+           cuts_state.lower_bound >= tree.upper_bound and
+           not is_close(cuts_state.lower_bound, tree.upper_bound, atol=self.galini.mc.epsilon)
+        )
+        self.logger.debug('Can improve feasible solution? {}', can_improve_feasible_solution)
+        if not can_improve_feasible_solution:
+            # No improvement
+            return NodeSolution(mip_solution, None)
+
+        # Check for timeout
+        if self.galini.timelimit.timeout():
+            # No time for finding primal solution
+            return NodeSolution(mip_solution, None)
+
+        # Try to find a feasible solution
+        primal_solution = self._solve_upper_bounding_problem(
+            model, convex_model, linear_model, mip_solution
+        )
+
+        assert primal_solution is not None, 'Should return a solution even if not feasible'
+
+        if not primal_solution.status.is_success():
+            return NodeSolution(mip_solution, feasible_solution)
+
+        return NodeSolution(mip_solution, primal_solution)
+
+    def _solve_lower_bounding_relaxation(self, tree, node, model, convex_model, linear_model):
+        self.logger.info('Solving lower bounding LP')
+
         originally_integer = []
         for var in linear_model.component_data_objects(pe.Var, active=True):
             if var.is_continuous():
@@ -296,132 +249,95 @@ class BranchAndCutAlgorithm:
             var.domain = pe.Reals
 
         feasible, cuts_state, mip_solution = self._perform_cut_loop(
-            run_id, tree, node, model, convex_model, linear_model,
+            tree, node, model, convex_model, linear_model,
         )
 
         for var, domain in originally_integer:
             var.domain = domain
 
-        if not feasible:
-            logger.info(run_id, 'LP solution is not feasible')
-            self._bac_telemetry.increment_lower_bound_time(
-                seconds_elapsed_since(lower_bound_search_start_time)
-            )
-            return NodeSolution(mip_solution, feasible_solution)
+        return feasible, cuts_state, mip_solution
 
-        # Solve MILP to obtain MILP solution
-        mip_results = self._mip_solver.solve(linear_model)
-        mip_solution = load_solution_from_model(mip_results, linear_model)
-        logger.info(
-            run_id,
-            'MILP solution after LP cut phase: {} {}',
-            mip_solution.status,
-            mip_solution,
-        )
-
-        if mip_solution.status.is_success():
-            logger.update_variable(
-                run_id,
-                iteration=self._cut_loop_outer_iteration,
-                var_name='milp_solution',
-                value=mip_solution.objective_value()
-            )
-        else:
-            return NodeSolution(mip_solution, None)
-
-        self._update_node_branching_decision(
-            model, linear_model, mip_solution, node
-        )
-
-        assert cuts_state is not None
-        self._bac_telemetry.increment_lower_bound_time(
-            seconds_elapsed_since(lower_bound_search_start_time)
-        )
-
-        if cuts_state.lower_bound >= tree.upper_bound and \
-                not is_close(cuts_state.lower_bound, tree.upper_bound,
-                             atol=mc.epsilon):
-            # No improvement
-            return NodeSolution(mip_solution, None)
-
-        if self._timeout():
-            # No time for finding primal solution
-            return NodeSolution(mip_solution, None)
-
-        upper_bound_search_start_time = current_time()
-
+    def _solve_upper_bounding_problem(self, model, convex_model, linear_model, mip_solution):
         # TODO(fra): properly map between variables
+        assert mip_solution.status.is_success(), "Should be a feasible point for the relaxation"
         mip_solution_with_model_vars = pe.ComponentMap(
             (var, mip_solution.variables[getattr(linear_model, var.name)])
             for var in model.component_data_objects(pe.Var, active=True)
         )
         # starting_point = [v.value for v in mip_solution.variables]
         primal_solution = solve_primal_with_starting_point(
-            run_id, model, mip_solution_with_model_vars, self._nlp_solver, fix_all=True
+            model, mip_solution_with_model_vars, self._nlp_solver, fix_all=True
         )
         new_primal_solution = solve_primal(
-            run_id, model, mip_solution_with_model_vars, self._nlp_solver
+            model, mip_solution_with_model_vars, self._nlp_solver
         )
+
         if new_primal_solution is not None:
             primal_solution = new_primal_solution
 
-        self._bac_telemetry.increment_upper_bound_time(
-            seconds_elapsed_since(upper_bound_search_start_time)
+        return primal_solution
+
+    def _cuts_converged(self, state):
+        cuts_close = (
+                state.latest_solution is not None and
+                state.previous_solution is not None and
+                is_close(
+                    state.latest_solution,
+                    state.previous_solution,
+                    rtol=self.cuts_config['cut_tolerance']
+                )
         )
+        if cuts_close:
+            return True
+        return self.galini.cuts_generators_manager.has_converged(state)
 
-        if not primal_solution.status.is_success() and \
-                feasible_solution is not None:
-            # Could not get primal solution, but have a feasible solution
-            return NodeSolution(mip_solution, feasible_solution)
+    def _cuts_iterations_exceeded(self, state):
+        return state.round > self.cuts_config['maxiter']
 
-        return NodeSolution(mip_solution, primal_solution)
+    def cut_loop_should_terminate(self, state, start_time):
+        elapsed_time = seconds_elapsed_since(start_time)
+        return (
+            self._cuts_converged(state) or
+            self._cuts_iterations_exceeded(state) or
+            self.galini.timelimit.timeout() or
+            elapsed_time > self.cuts_config['timelimit']
+        )
 
     def _update_node_branching_decision(self, model, linear_model, mip_solution, node):
         weights = {
-            'sum': self._branching_weight_sum,
-            'max': self._branching_weight_max,
-            'min': self._branching_weight_min,
+            'sum': self.bab_config['branching_weight_sum'],
+            'max': self.bab_config['branching_weight_max'],
+            'min': self.bab_config['branching_weight_min'],
         }
-        lambda_ = self._branching_weight_lambda
+        lambda_ = self.bab_config['branching_weight_lambda']
         root_bounds = node.tree.root.storage.model_bounds
         branching_decision = compute_branching_decision(
-            model, linear_model, root_bounds, mip_solution, weights, lambda_
+            model, linear_model, root_bounds, mip_solution, weights, lambda_, self.galini.mc
         )
         node.storage.branching_decision = branching_decision
 
-    def _perform_cut_loop(self, run_id, tree, node, model, convex_model, linear_model):
+    def _perform_cut_loop(self, tree, node, model, convex_model, linear_model):
         cuts_state = CutsState()
         mip_solution = None
 
         # TODO(fra): add back cuts from parent
         if node.parent and False:
-            parent_cuts_count, mip_solution = self._add_cuts_from_parent(
-                run_id, node, relaxed_problem, linear_problem
-            )
-            if self._bac_telemetry:
-                self._bac_telemetry.increment_inherited_cuts(parent_cuts_count)
+            #parent_cuts_count, mip_solution = self._add_cuts_from_parent(
+            #    run_id, node, relaxed_problem, linear_problem
+            #)
+            #if self._bac_telemetry:
+            #    self._bac_telemetry.increment_inherited_cuts(parent_cuts_count)
+            pass
 
         cut_loop_start_time = current_time()
         self._cut_loop_inner_iteration = 0
         while not self.cut_loop_should_terminate(cuts_state, cut_loop_start_time):
             feasible, new_cuts, mip_solution = self._perform_cut_round(
-                run_id, model, convex_model, linear_model, cuts_state, tree, node
+                model, convex_model, linear_model, cuts_state, tree, node
             )
 
             if not feasible:
                 return False, cuts_state, mip_solution
-
-            # output
-            logger.update_variable(
-                run_id,
-                iteration=[
-                    self._cut_loop_outer_iteration,
-                    self._cut_loop_inner_iteration
-                ],
-                var_name='cut_loop_lower_bound',
-                value=mip_solution.objective_value()
-            )
-            self._cut_loop_inner_iteration += 1
 
             # Add cuts as constraints
             new_cuts_constraints = []
@@ -447,178 +363,47 @@ class BranchAndCutAlgorithm:
                     if cons.upper_bound is not None:
                         assert cons.upper_bound <= linear_problem_x[i]
 
-            logger.debug(
-                run_id, 'Updating CutState: State={}, Solution={}',
+            self.logger.debug(
+                'Updating CutState: State={}, Solution={}',
                 cuts_state, mip_solution
             )
 
             cuts_state.update(
                 mip_solution,
                 paranoid=self.galini.paranoid_mode,
-                atol=self.tolerance,
-                rtol=self.relative_tolerance,
+                atol=self.bab_config['tolerance'],
+                rtol=self.bab_config['relative_tolerance'],
             )
-
-            self._bac_telemetry.increment_total_cut_rounds()
 
             if not new_cuts:
                 break
 
         return True, cuts_state, mip_solution
 
-    def find_initial_solution(self, run_id, model, tree, node):
-        try:
-            self._perform_fbbt(run_id, model, tree, node, maxiter=1)
-
-            solution = self._try_solve_convex_model(model)
-            if solution is not None:
-                return NodeSolution(solution, solution)
-
-            # Don't pass a starting point since it's already loaded in the model
-            solution = solve_primal_with_starting_point(
-                run_id, model, pe.ComponentMap(), self._nlp_solver
-            )
-            if solution.status.is_success():
-                return NodeSolution(None, solution)
-            return None
-        except Exception as ex:
-            if self.galini.paranoid_mode:
-                raise ex
-            logger.info(run_id, 'Exception in find_initial_solution: {}', ex)
-            return None
-
-    def solve_problem_at_root(self, run_id, tree, node):
-        """Solve problem at root node."""
-        model = node.storage.model()
-
-        # Perform OBBT/FBBT before rebuilding relaxations
-        self._before_root_node(model, tree.upper_bound)
-        self._perform_fbbt(run_id, model, tree, node)
-
-        convex_model = node.storage.convex_model()
-        linear_model = node.storage.linear_model()
-
-        if False:
-            relaxed_problem = self._build_convex_relaxation(problem)
-            self._cuts_generators_manager.before_start_at_root(
-                run_id, problem, relaxed_problem.relaxed
-            )
-
-        solution = self._solve_problem_at_node(
-            run_id, model, convex_model, linear_model, tree, node
-        )
-
-        if False:
-            self._cuts_generators_manager.after_end_at_root(
-                run_id, problem, relaxed_problem.relaxed, solution
-            )
-        self._bounds = None
-        self._convexity = None
-        self._monotonicity = None
-        self._cut_loop_outer_iteration += 1
-        return solution
-
-    def solve_problem_at_node(self, run_id, tree, node):
-        """Solve problem at non root node."""
-        model = node.storage.model()
-
-        try:
-            self._perform_fbbt(run_id, model, tree, node)
-        except EmptyIntervalError:
-            return NodeSolution(None, None)
-
-        convex_model = node.storage.convex_model()
-        linear_model = node.storage.linear_model()
-
-        if False:
-            self._cuts_generators_manager.before_start_at_node(
-                run_id, problem, relaxed_problem.relaxed
-            )
-
-        solution = self._solve_problem_at_node(
-            run_id, model, convex_model, linear_model, tree, node
-        )
-
-        if False:
-            self._cuts_generators_manager.after_end_at_node(
-                run_id, problem, relaxed_problem.relaxed, solution
-            )
-        self._bounds = None
-        self._convexity = None
-        self._monotonicity = None
-        self._cut_loop_outer_iteration += 1
-        return solution
-
-    def _build_convex_relaxation(self, problem):
-        relaxation = ConvexRelaxation(
-            problem,
-            self._bounds,
-            self._monotonicity,
-            self._convexity,
-        )
-        return RelaxedProblem(relaxation, problem)
-
-    def _build_linear_relaxation(self, problem):
-        relaxation = LinearRelaxation(
-            problem,
-            self._bounds,
-            self._monotonicity,
-            self._convexity,
-        )
-        return RelaxedProblem(relaxation, problem)
-
-    def _perform_cut_round(self, run_id, model, convex_model, linear_model, cuts_state, tree, node):
-        logger.debug(run_id, 'Round {}. Solving linearized problem.', cuts_state.round)
+    def _perform_cut_round(self, model, convex_model, linear_model, cuts_state, tree, node):
+        self.logger.debug('Round {}. Solving linearized problem.', cuts_state.round)
 
         mip_solution = self._mip_solver.solve(linear_model)
 
-        logger.debug(
-            run_id,
+        self.logger.debug(
             'Round {}. Linearized problem solution is {}',
             cuts_state.round, mip_solution.status.description())
-        logger.debug(run_id, 'Objective is {}'.format(mip_solution.objective))
-        logger.debug(run_id, 'Variables are {}'.format(mip_solution.variables))
+        self.logger.debug('Objective is {}'.format(mip_solution.objective))
+        self.logger.debug('Variables are {}'.format(mip_solution.variables))
+
         if not mip_solution.status.is_success():
             return False, None, mip_solution
-        # assert mip_solution.status.is_success()
 
         # Generate new cuts
-        new_cuts = self._cuts_generators_manager.generate(
-            run_id, problem, relaxed_problem, linear_problem, mip_solution,
-            tree, node
+        new_cuts = self.galini.cuts_generators_manager.generate(
+            model, convex_model, linear_model, mip_solution, tree, node
         )
-        logger.debug(
-            run_id, 'Round {}. Adding {} cuts.',
+        self.logger.debug(
+            'Round {}. Adding {} cuts.',
             cuts_state.round, len(new_cuts)
         )
+
         return True, new_cuts, mip_solution
-
-    def _find_root_node_feasible_solution(self, run_id, problem):
-        logger.info(run_id, 'Finding feasible solution at root node')
-
-        if self.root_node_feasible_solution_seed is not None:
-            seed = self.root_node_feasible_solution_seed
-            logger.info(run_id, 'Use numpy seed {}', seed)
-            np.random.seed(seed)
-
-        starting_point = [0.0] * problem.num_variables
-        for i, v in enumerate(problem.variables):
-            if problem.has_starting_point(v):
-                starting_point[i] = problem.starting_point(v)
-            elif problem.domain(v).is_integer():
-                # Variable is integer and will be fixed, but we don't have a
-                # starting point for it. Use lower or upper bound.
-                has_lb = is_inf(problem.lower_bound(v))
-                has_ub = is_inf(problem.upper_bound(v))
-                if has_lb:
-                    starting_point[i] = problem.lower_bound(v)
-                elif has_ub:
-                    starting_point[i] = problem.upper_bound(v)
-                else:
-                    starting_point[i] = 0
-        return solve_primal_with_starting_point(
-            run_id, problem, starting_point, self._nlp_solver
-        )
 
     def _add_cuts_from_parent(self, run_id, node, relaxed_problem, linear_problem):
         logger.info(run_id, 'Adding inherit cuts.')
@@ -698,9 +483,9 @@ class BranchAndCutAlgorithm:
             )
         return inherit_cuts_count, lp_solution
 
-    def _try_solve_convex_model(self, model):
+    def _try_solve_convex_model(self, model, convexity):
         """Check if problem is continuous and convex, in that case use solve it."""
-        if self._convexity and _is_convex(model, self._convexity):
+        if convexity and _is_convex(model, convexity):
             all_continuous = all(
                 var.is_continuous()
                 for var in model.component_data_objects(pe.Var, active=True)
@@ -716,100 +501,6 @@ class BranchAndCutAlgorithm:
         if solution.status.is_success():
             return solution
         return None
-
-    def _perform_fbbt(self, run_id, model, tree, node, maxiter=None):
-        fbbt_start_time = current_time()
-        logger.debug(run_id, 'Performing FBBT')
-
-        objective_upper_bound = None
-        if tree.upper_bound is not None:
-            objective_upper_bound = tree.upper_bound
-
-        fbbt_maxiter = self.fbbt_maxiter
-        if maxiter is not None:
-            fbbt_maxiter = maxiter
-        branching_variable = None
-        if not node.storage.is_root:
-            branching_variable = node.storage.branching_variable
-        self._bounds = perform_fbbt(
-            model,
-            max_iter=fbbt_maxiter,
-            #timelimit=self.fbbt_timelimit,
-            #objective_upper_bound=objective_upper_bound,
-            #branching_variable=branching_variable,
-        )
-        self._monotonicity, self._convexity = \
-            propagate_special_structure(model, self._bounds)
-
-        logger.debug(run_id, 'Set FBBT Bounds')
-        cause_infeasibility = None
-        new_bounds_map = pe.ComponentMap()
-        for var in model.component_data_objects(pe.Var, active=True):
-            new_bound = self._bounds[var]
-            if new_bound is None:
-                new_bound = Interval(None, None)
-
-            new_lb = best_lower_bound(var, new_bound.lower_bound, var.lb)
-            new_ub = best_upper_bound(var, new_bound.upper_bound, var.ub)
-
-            new_bounds_map[var] = (new_lb, new_ub)
-
-            if new_lb > new_ub:
-                cause_infeasibility = var
-                break
-
-        if cause_infeasibility is not None:
-            logger.info(
-                run_id, 'Bounds on variable {} cause infeasibility',
-                cause_infeasibility.name
-            )
-        else:
-            for var, (new_lb, new_ub) in new_bounds_map.items():
-                if np.abs(new_ub - new_lb) < mc.epsilon:
-                    new_lb = new_ub
-                logger.debug(run_id, '  {}: [{}, {}]', var.name, new_lb, new_ub)
-                safe_setlb(var, new_lb)
-                safe_setub(var, new_ub)
-
-        # group_name = '_'.join([str(c) for c in node.coordinate])
-        # logger.tensor(run_id, group_name, 'lb', problem.lower_bounds)
-        # logger.tensor(run_id, group_name, 'ub', problem.upper_bounds)
-        self._bac_telemetry.increment_fbbt_time(
-            seconds_elapsed_since(fbbt_start_time)
-        )
-
-
-def _convert_linear_expr(linear_problem, expr, objvar=None):
-    stack = [expr]
-    coefficients = {}
-    const = 0.0
-    while len(stack) > 0:
-        expr = stack.pop()
-        if expr.expression_type == ExpressionType.Sum:
-            for ch in expr.children:
-                stack.append(ch)
-        elif expr.expression_type == ExpressionType.Linear:
-            const += expr.constant_term
-            for ch in expr.children:
-                if ch.idx not in coefficients:
-                    coefficients[ch.idx] = 0
-                coefficients[ch.idx] += expr.coefficient(ch)
-        else:
-            raise ValueError(
-                'Invalid ExpressionType {}'.format(expr.expression_type)
-            )
-
-    children = []
-    coeffs = []
-    for var, coef in coefficients.items():
-        children.append(linear_problem.variable(var))
-        coeffs.append(coef)
-
-    if objvar is not None:
-        children.append(objvar)
-        coeffs.append(1.0)
-
-    return core.LinearExpression(children, coeffs, const)
 
 
 def _is_convex(model, cvx_map):
@@ -836,61 +527,3 @@ def _constraint_is_convex(cvx_map, cons):
 
     # LB <= g(x) <= UB
     return cvx.is_linear()
-
-
-def _add_cut_from_pool_to_problem(problem, cut):
-    # Cuts from pool are weird because they belong to other problems. So we
-    # duplicate the (linear) cuts and insert that instead.
-    def _duplicate_expr(expr):
-        if expr.is_variable():
-            return problem.relaxed.variable(expr.name)
-        if isinstance(expr, core.LinearExpression):
-            vars = [_duplicate_expr(v) for v in expr.children]
-            return core.LinearExpression(vars, expr.linear_coefs, expr.constant_term)
-        if isinstance(expr, core.SumExpression):
-            children = [_duplicate_expr(ch) for ch in expr.children]
-            return core.SumExpression(children)
-        if isinstance(expr, core.NegationExpression):
-            children = [_duplicate_expr(ch) for ch in expr.children]
-            return core.NegationExpression(children)
-        if isinstance(expr, core.QuadraticExpression):
-            vars1 = [_duplicate_expr(t.var1) for t in expr.terms]
-            vars2 = [_duplicate_expr(t.var2) for t in expr.terms]
-            coefs = [t.coefficient for t in expr.terms]
-            return core.QuadraticExpression(vars1, vars2, coefs)
-        raise RuntimeError('Cut contains expr of type {}', type(expr))
-
-    new_expr = _duplicate_expr(cut.expr)
-    new_cut = Cut(
-        cut.type_,
-        cut.name,
-        new_expr,
-        cut.lower_bound,
-        cut.upper_bound,
-        cut.is_objective
-    )
-    return _add_cut_to_problem(problem, new_cut)
-
-
-def _add_cut_to_problem(problem, cut):
-    if not cut.is_objective:
-        return problem.add_constraint(
-            cut.name,
-            cut.expr,
-            cut.lower_bound,
-            cut.upper_bound,
-        )
-    else:
-        objvar = problem.relaxed.variable('_objvar')
-        assert cut.lower_bound is None
-        assert cut.upper_bound is None
-        new_root_expr = core.SumExpression([
-            cut.expr,
-            core.LinearExpression([objvar], [-1.0], 0.0)
-        ])
-        return problem.add_constraint(
-            cut.name,
-            new_root_expr,
-            None,
-            0.0
-        )

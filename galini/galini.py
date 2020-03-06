@@ -11,58 +11,71 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """GALINI root object. Contains global state."""
+
 from suspect.pyomo.quadratic import enable_standard_repn_for_quadratic_expression
-from galini.cuts import CutsGeneratorsRegistry, CutsGeneratorsManager
+
+from galini.algorithms import AlgorithmsRegistry
 from galini.config import ConfigurationManager
-from galini.math import mc
-from galini.solvers import SolversRegistry
-from galini.fbbt import update_fbbt_settings
-from galini.special_structure import update_special_structure_settings
+from galini.cuts import CutsGeneratorsRegistry, CutsGeneratorsManager
+from galini.io.logging import LogManager
+from galini.math import MathContext
 from galini.telemetry import Telemetry
-from galini.logging import (
-    get_logger,
-    apply_config as apply_log_config,
-)
+from galini.timelimit import Timelimit
 
 
 class Galini:
     """Contains information about the current instance of galini."""
+
     def __init__(self):
-        self._solvers_reg = SolversRegistry()
+        self._algos_reg = AlgorithmsRegistry()
         self._cuts_gen_reg = CutsGeneratorsRegistry()
+        self._log_manager = LogManager()
         self._config_manager = \
-            ConfigurationManager(self._solvers_reg, self._cuts_gen_reg)
+            ConfigurationManager(self._algos_reg, self._cuts_gen_reg)
+
         self._config = self._config_manager.configuration
-        self._telemetry = Telemetry()
-        self.logger = get_logger('galini')
+        self._telemetry = Telemetry(self)
+
+        self.timelimit = Timelimit(0)
         self.cuts_generators_manager = CutsGeneratorsManager(self)
         self.paranoid_mode = False
+        self.mc = MathContext()
+        self.logger = self._log_manager.get_logger('galini')
         enable_standard_repn_for_quadratic_expression()
+
+    @property
+    def config(self):
+        return self.get_configuration_group('galini')
 
     def update_configuration(self, user_config):
         """Update galini configuration with `user_config`."""
         self._config_manager.update_configuration(user_config)
         self._config = self._config_manager.configuration
         self.cuts_generators_manager = CutsGeneratorsManager(self)
-        apply_log_config(self._config.logging)
-        galini_group = self.get_configuration_group('galini')
-        _update_math_context(galini_group)
-        update_fbbt_settings(galini_group)
-        update_special_structure_settings(galini_group)
-        self.paranoid_mode = galini_group['paranoid_mode']
+        self._log_manager.apply_config(self._config.logging)
+        _update_math_context(self.mc, self.config)
+        self.paranoid_mode = self.config['paranoid_mode']
 
-    def get_solver(self, name):
-        """Get solver from the registry."""
-        solver_cls = self._solvers_reg.get(name, None)
-        if solver_cls is None:
-            raise ValueError('No solver "{}"'.format(name))
-        return solver_cls
+    def get_logger(self, name):
+        return self._log_manager.get_logger(name)
 
-    def instantiate_solver(self, solver_name):
-        """Get and instantiate solver from the registry."""
-        solver_cls = self.get_solver(solver_name)
-        return solver_cls(self)
+    def get_algorithm(self, name):
+        """Get algorithm from the registry."""
+        algos_cls = self._algos_reg.get(name, None)
+        if algos_cls is None:
+            raise ValueError('No algorithm "{}"'.format(name))
+        return algos_cls
+
+    def instantiate_algorithm(self, algo_name):
+        """Get and instantiate an algorithm from the registry."""
+        algo_cls = self.get_algorithm(algo_name)
+        return algo_cls(self)
+
+    def available_algorithms(self):
+        """Get avariable algorithms."""
+        return self._algos_reg.keys()
 
     def get_cuts_generator(self, name):
         """Get cuts generator from the registry."""
@@ -92,7 +105,7 @@ class Galini:
         return self._telemetry
 
 
-def _update_math_context(galini):
+def _update_math_context(mc, galini):
     mc.epsilon = galini.epsilon
     mc.infinity = galini.infinity
     mc.integer_infinity = galini.integer_infinity

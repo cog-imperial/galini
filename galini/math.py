@@ -26,9 +26,6 @@ class MathContext:
         self.user_integer_upper_bound = 1e5
 
 
-mc = MathContext()
-
-
 def is_close(a, b, atol=None, rtol=None):
     if atol is None and rtol is None:
         raise ValueError('One of atol and rtol must be specified')
@@ -40,7 +37,7 @@ def is_close(a, b, atol=None, rtol=None):
     return np.isclose(a, b, atol=atol, rtol=rtol)
 
 
-def is_inf(n):
+def is_inf(n, mc):
     """Test element-wise for positive and negative infinity.
 
     This version of is_inf also tests for values greater than

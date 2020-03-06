@@ -13,17 +13,13 @@
 #  limitations under the License.
 
 """Functions to solve primal problem."""
-import numpy as np
 import pyomo.environ as pe
-from galini.pyomo import safe_setub, safe_setlb
 
-from galini.core import Domain
-from galini.math import is_close, mc
-from galini.timelimit import seconds_left
+from galini.pyomo import safe_setub, safe_setlb
 from galini.solvers.solution import load_solution_from_model
 
 
-def solve_primal(run_id, model, mip_solution, solver):
+def solve_primal(model, mip_solution, solver):
     """Solve primal by fixing integer variables and solving the NLP.
 
     If the search fails and f `mip_solution` has a solution pool, then also
@@ -31,8 +27,6 @@ def solve_primal(run_id, model, mip_solution, solver):
 
     Parameters
     ----------
-    run_id : str
-        the run_id used for logging
     model : ConcreteModel
         the mixed integer, (possibly) non convex problem
     mip_solution : MipSolution
@@ -42,39 +36,20 @@ def solve_primal(run_id, model, mip_solution, solver):
     """
     # starting_point = [v.value for v in mip_solution.variables]
     solution = solve_primal_with_starting_point(
-        run_id, model, mip_solution, solver
+        model, mip_solution, solver
     )
 
     if solution.status.is_success():
         return solution
     # TODO(fra): update to use solution pool again
     return solution
-    # Try solutions from mip solution pool, if available
-    if mip_solution.solution_pool is None:
-        return solution
-    for mip_solution_from_pool in mip_solution.solution_pool:
-        if seconds_left() <= 0:
-            return solution
-        starting_point = [
-            v.value
-            for v in mip_solution_from_pool.inner.variables
-        ]
-        solution_from_pool = solve_primal_with_starting_point(
-            run_id, problem, starting_point, solver
-        )
-        if solution_from_pool.status.is_success():
-            return solution_from_pool
-    # No solution from pool was feasible, return original infeasible sol
-    return solution
 
 
-def solve_primal_with_starting_point(run_id, model, starting_point, solver, fix_all=False):
+def solve_primal_with_starting_point(model, starting_point, solver, fix_all=False):
     """Solve primal using mip_solution as starting point and fixing variables.
 
     Parameters
     ----------
-    run_id
-        the run_id used for logging
     model : ConcreteModel
         the mixed integer, (possibly) non convex problem
     starting_point : dict-like

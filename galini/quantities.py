@@ -13,7 +13,7 @@
 # limitations under the License.
 """Compute quantities such as absolute and relative gap."""
 import numpy as np
-from galini.math import is_close, mc
+from galini.math import is_close
 
 
 _finfo = np.finfo(np.float64)

@@ -59,9 +59,9 @@ class BabTree:
             self._add_node(child)
         return children, point
 
-    def add_initial_solution(self, solution):
-        assert is_inf(self.lower_bound)
-        assert is_inf(self.upper_bound)
+    def add_initial_solution(self, solution, mc):
+        assert is_inf(self.lower_bound, mc)
+        assert is_inf(self.upper_bound, mc)
         self._update_node(
             self.root,
             solution,

@@ -15,11 +15,8 @@
 """Cuts generators manager."""
 
 from galini.config.options import OptionsGroup, StringListOption
-from galini.logging import get_logger
 from galini.registry import Registry
 from galini.timelimit import current_time, seconds_elapsed_since
-
-logger = get_logger(__name__)
 
 
 class CutsGeneratorsRegistry(Registry):
@@ -44,6 +41,7 @@ class CutsGeneratorsManager:
 
     def __init__(self, galini):
         self.galini = galini
+        self.logger = galini.get_logger(__name__)
         self._cuts_counters = []
         self._generators = self._initialize_generators(galini)
 
@@ -80,36 +78,34 @@ class CutsGeneratorsManager:
         """Available cuts generators."""
         return self._generators
 
-    def before_start_at_root(self, run_id, problem, relaxed_problem):
+    def before_start_at_root(self, problem, relaxed_problem):
         """Callback called before start at root node."""
         for gen in self._generators:
-            gen.before_start_at_root(run_id, problem, relaxed_problem)
+            gen.before_start_at_root(problem, relaxed_problem)
 
-    def after_end_at_root(self, run_id, problem, relaxed_problem, solution):
+    def after_end_at_root(self, problem, relaxed_problem, solution):
         """Callback called after end at root node."""
         for gen in self._generators:
-            gen.after_end_at_root(run_id, problem, relaxed_problem, solution)
+            gen.after_end_at_root(problem, relaxed_problem, solution)
 
-    def before_start_at_node(self, run_id, problem, relaxation):
+    def before_start_at_node(self, problem, relaxation):
         """Callback called before start at non root nodes."""
         for gen in self._generators:
-            gen.before_start_at_node(run_id, problem, relaxation)
+            gen.before_start_at_node(problem, relaxation)
 
-    def after_end_at_node(self, run_id, problem, relaxed_problem, solution):
+    def after_end_at_node(self, problem, relaxed_problem, solution):
         """Callback called after end at non root nodes."""
         for gen in self._generators:
-            gen.after_end_at_node(run_id, problem, relaxed_problem, solution)
+            gen.after_end_at_node(problem, relaxed_problem, solution)
 
     def has_converged(self, state):
         """Predicated to check if cuts have converged."""
         return all(gen.has_converged(state) for gen in self._generators)
 
-    def generate(self, run_id, problem, relaxed_problem, linear_problem,
-                 mip_solution, tree, node):
+    def generate(self, problem, relaxed_problem, linear_problem, mip_solution, tree, node):
         """Generate a new set of cuts."""
         all_cuts = []
-        logger.info(
-            run_id,
+        self.logger.info(
             'Generating cuts: {}',
             [gen.name for gen in self._generators],
         )
@@ -119,8 +115,7 @@ class CutsGeneratorsManager:
         for gen, counter in zip(self._generators, self._cuts_counters):
             start_time = current_time()
             cuts = gen.generate(
-                run_id, problem, relaxed_problem, linear_problem, mip_solution,
-                tree, node
+                problem, relaxed_problem, linear_problem, mip_solution, tree, node
             )
             elapsed_time = seconds_elapsed_since(start_time)
 
@@ -131,8 +126,8 @@ class CutsGeneratorsManager:
                 raise ValueError(
                     'CutsGenerator.generate must return a list of cuts.'
                 )
-            logger.info(
-                run_id, '  * {} generated {} cuts.', gen.name, len(cuts)
+            self.logger.info(
+                '  * {} generated {} cuts.', gen.name, len(cuts)
             )
 
             for cut in cuts:

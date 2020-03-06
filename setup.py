@@ -130,23 +130,14 @@ setup(
         ],
         'galini.commands': [
             'solve=galini.commands.solve:SolveCommand',
-            'dot=galini.commands.dot:DotCommand',
             'special_structure=galini.commands.special_structure:SpecialStructureCommand',
             'info=galini.commands.info:InfoCommand',
             'plugins=galini.commands.plugins:PluginsCommand',
-            'abb=galini.commands.abb:AbbCommand',
         ],
-        'galini.solvers': [
-            'mip=galini.mip.solver:MIPSolver',
-            'ipopt=galini.ipopt:IpoptNLPSolver',
-            'slsqp=galini.slsqp:SlsqpSolver',
-            'bac=galini.branch_and_cut:BranchAndBoundSolver',
+        'galini.algorithms': [
+            'bac=galini.branch_and_cut:BranchAndCutAlgorithm',
         ],
         'galini.cuts_generators': [
-            'triangle=galini.triangle:TriangleCutsGenerator',
-            'mixed_integer_outer_approximation=galini.outer_approximation:MixedIntegerOuterApproximationCutsGenerator',
-            'outer_approximation=galini.outer_approximation:OuterApproximationCutsGenerator',
-            'sdp=galini.sdp:SdpCutsGenerator',
         ],
     },
     cmdclass={

@@ -24,49 +24,45 @@ from galini.commands import (
     add_output_format_parser_arguments,
 )
 from galini.galini import Galini
-from galini.logging import apply_config as apply_logging_config
-from galini.timelimit import (
-    start_timelimit, set_timelimit, seconds_elapsed_since, current_time
-)
+from galini.timelimit import seconds_elapsed_since, current_time
 
 
-DEFAULT_SOLVER = 'bac'
+DEFAULT_ALGORITHM = 'bac'
 
 
 class SolveCommand(CliCommandWithProblem):
     """Command to solve an optimization problem."""
 
-    def execute_with_problem(self, model, args):
+    def execute_with_model(self, model, args):
         galini = Galini()
+
         if args.config:
             galini.update_configuration(args.config)
 
-        solver_cls = galini.get_solver(args.solver.lower())
+        algo_cls = galini.get_algorithm(args.algorithm.lower())
 
-        if solver_cls is None:
-            available = ', '.join(solvers_reg.keys())
+        if algo_cls is None:
+            available = ', '.join(galini.available_algorithms())
             print(
-                'Solver {} not available. Available solvers: {}'.format(
-                args.solver, available)
+                'Algorithm {} not available. Available algorithms: {}'.format(
+                args.algorithm, available)
             )
             sys.exit(1)
-
-        apply_logging_config(galini.get_configuration_group('logging'))
-        solver = solver_cls(galini)
 
         galini_group = galini.get_configuration_group('galini')
         timelimit = galini_group.get('timelimit')
         elapsed_counter = galini.telemetry.create_gauge('elapsed_time', 0.0)
 
-        set_timelimit(timelimit)
-        start_timelimit()
+        galini.timelimit.set_timelimit(timelimit)
+        galini.timelimit.start_now()
+
         start_time = current_time()
 
         # Check problem only has one objective, if it's maximisation convert it to minimisation
         original_objective = None
         for objective in model.component_data_objects(pe.Objective, active=True):
             if original_objective is not None:
-                raise ValueError('Solver does not support models with multiple objectives')
+                raise ValueError('Algorithm does not support models with multiple objectives')
             original_objective = objective
 
         if not original_objective.is_minimizing():
@@ -77,9 +73,8 @@ class SolveCommand(CliCommandWithProblem):
         model._objective.is_originally_minimizing = original_objective.is_minimizing()
         original_objective.deactivate()
 
-        solver.before_solve(model)
-
-        solution = solver.solve(
+        algo = algo_cls(galini)
+        solution = algo.solve(
             model,
             known_optimal_objective=args.known_optimal_objective
         )
@@ -90,7 +85,7 @@ class SolveCommand(CliCommandWithProblem):
         elapsed_counter.set_value(seconds_elapsed_since(start_time))
 
         if solution is None:
-            raise RuntimeError('Solver did not return a solution')
+            raise RuntimeError('Algorithm did not return a solution')
 
         obj_table = OutputTable('Objectives', [
             {'id': 'name', 'name': 'Objective', 'type': 't'},
@@ -126,15 +121,14 @@ class SolveCommand(CliCommandWithProblem):
 
         print_output_table([obj_table, var_table, counter_table], args)
 
-
     def help_message(self):
         return "Solve a MINLP"
 
     def add_extra_parser_arguments(self, parser):
         parser.add_argument(
-            '--solver',
-            help='Specify the solver to use',
-            default=DEFAULT_SOLVER,
+            '--algorithm',
+            help='Specify the algorithm to use',
+            default=DEFAULT_ALGORITHM,
         )
         parser.add_argument(
             '--config',

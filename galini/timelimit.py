@@ -11,12 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """Time and run time related utilities."""
+
 import datetime
 import signal
 
 
 DEFAULT_TIMELIMIT = 86400
+
 
 class Timelimit(object):
     def __init__(self, timelimit):
@@ -52,12 +55,8 @@ class Timelimit(object):
         time_left = int(self.timelimit - difference.total_seconds())
         return max(0, time_left)
 
-
-_timelimit = Timelimit(DEFAULT_TIMELIMIT)
-set_timelimit = lambda t: _timelimit.set_timelimit(t)
-elapsed_time = lambda: _timelimit.elapsed_time()
-seconds_left = lambda: _timelimit.seconds_left()
-start_timelimit = lambda: _timelimit.start_now()
+    def timeout(self):
+        return self.seconds_left() <= 0
 
 
 def current_time():

@@ -13,22 +13,23 @@
 #  limitations under the License.
 
 """OBBT step of branch-and-cut algorithm."""
-
 import coramin.domain_reduction.obbt as coramin_obbt
 import numpy as np
 import pyomo.environ as pe
 from coramin.relaxations.auto_relax import relax
-from galini.logging import get_logger
-from galini.math import mc, is_close
+from pyomo.core.expr.current import identify_variables
+from pyomo.core.kernel.component_set import ComponentSet
+from suspect.fbbt import perform_fbbt
+from suspect.interval import Interval
+from suspect.propagation import propagate_special_structure
+
+from galini.math import is_close
+from galini.pyomo import safe_setlb, safe_setub
 from galini.timelimit import (
     current_time,
     seconds_elapsed_since,
     timeout,
 )
-from pyomo.core.expr.current import identify_variables
-from pyomo.core.kernel.component_set import ComponentSet
-
-logger = get_logger(__name__)
 
 coramin_logger = coramin_obbt.logger  # pylint: disable=invalid-name
 coramin_logger.disabled = True
@@ -134,7 +135,56 @@ def perform_obbt_on_model(model, upper_bound, timelimit, simplex_maxiter):
         )
 
 
-def best_lower_bound(var, a, b):
+def perform_fbbt_on_model(model, tree, node, maxiter, eps):
+    fbbt_start_time = current_time()
+
+    objective_upper_bound = None
+    if tree.upper_bound is not None:
+        objective_upper_bound = tree.upper_bound
+
+    branching_variable = None
+    if not node.storage.is_root:
+        branching_variable = node.storage.branching_variable
+    bounds = perform_fbbt(
+        model,
+        max_iter=maxiter,
+        #timelimit=self.fbbt_timelimit,
+        #objective_upper_bound=objective_upper_bound,
+        #branching_variable=branching_variable,
+    )
+
+    monotonicity, convexity = \
+        propagate_special_structure(model, bounds)
+
+    cause_infeasibility = None
+    new_bounds_map = pe.ComponentMap()
+    for var in model.component_data_objects(pe.Var, active=True):
+        new_bound = bounds[var]
+        if new_bound is None:
+            new_bound = Interval(None, None)
+
+        new_lb = best_lower_bound(var, new_bound.lower_bound, var.lb, eps)
+        new_ub = best_upper_bound(var, new_bound.upper_bound, var.ub, eps)
+
+        new_bounds_map[var] = (new_lb, new_ub)
+
+        if new_lb > new_ub:
+            cause_infeasibility = var
+            break
+
+    if cause_infeasibility is not None:
+        return None, None, None
+    else:
+        for var, (new_lb, new_ub) in new_bounds_map.items():
+            if np.abs(new_ub - new_lb) < eps:
+                new_lb = new_ub
+            safe_setlb(var, new_lb)
+            safe_setub(var, new_ub)
+
+    return bounds, monotonicity, convexity
+
+
+def best_lower_bound(var, a, b, eps):
     """Returns the best lower bound between `a` and `b`.
 
     Parameters
@@ -152,14 +202,14 @@ def best_lower_bound(var, a, b):
         return None
 
     if (var.is_integer() or var.is_binary()) and lb is not None:
-        if is_close(np.floor(lb), lb, atol=mc.epsilon, rtol=0.0):
+        if is_close(np.floor(lb), lb, atol=eps, rtol=0.0):
             return np.floor(lb)
         return np.ceil(lb)
 
     return lb
 
 
-def best_upper_bound(var, a, b):
+def best_upper_bound(var, a, b, eps):
     """Returns the best upper bound between `a` and `b`.
 
     Parameters
@@ -177,7 +227,7 @@ def best_upper_bound(var, a, b):
         return None
 
     if (var.is_integer() or var.is_binary()) and ub is not None:
-        if is_close(np.ceil(ub), ub, atol=mc.epsilon, rtol=0.0):
+        if is_close(np.ceil(ub), ub, atol=eps, rtol=0.0):
             return np.ceil(ub)
         return np.floor(ub)
 

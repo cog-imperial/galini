@@ -11,13 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """Output GALINI problems to dot files."""
+
 import pydot
 
-import galini.core as core
 
-
-def dag_to_pydot_graph(dag, ctx=None):
+def model_dag_to_pydot_graph(dag, ctx=None):
     """Create pydot graph representing `dag`.
 
     Args:
