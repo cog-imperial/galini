@@ -22,6 +22,8 @@ from suspect.interval import Interval, EmptyIntervalError
 from suspect.fbbt import perform_fbbt
 from suspect.propagation import propagate_special_structure
 
+from galini.pyomo import safe_setlb, safe_setub
+from coramin.relaxations import relaxation_data_objects
 from galini.solvers.solution import load_solution_from_model
 import galini.core as core
 from galini.relaxations.relax import relax
@@ -283,7 +285,6 @@ class BranchAndCutAlgorithm:
         else:
             feasible_solution = None
 
-        cuts_state = None
         lower_bound_search_start_time = current_time()
 
         logger.info(run_id, 'Start LP cut phase')
@@ -326,8 +327,7 @@ class BranchAndCutAlgorithm:
                 value=mip_solution.objective_value()
             )
         else:
-            # TODO(fra): what to do if infeasible?
-            return None
+            return NodeSolution(mip_solution, None)
 
         self._update_node_branching_decision(
             model, linear_model, mip_solution, node
@@ -387,7 +387,6 @@ class BranchAndCutAlgorithm:
         branching_decision = compute_branching_decision(
             model, linear_model, root_bounds, mip_solution, weights, lambda_
         )
-        print(branching_decision)
         node.storage.branching_decision = branching_decision
 
     def _perform_cut_loop(self, run_id, tree, node, model, convex_model, linear_model):
@@ -491,11 +490,13 @@ class BranchAndCutAlgorithm:
     def solve_problem_at_root(self, run_id, tree, node):
         """Solve problem at root node."""
         model = node.storage.model()
-        convex_model = node.storage.convex_model()
-        linear_model = node.storage.linear_model()
 
+        # Perform OBBT/FBBT before rebuilding relaxations
         self._before_root_node(model, tree.upper_bound)
         self._perform_fbbt(run_id, model, tree, node)
+
+        convex_model = node.storage.convex_model()
+        linear_model = node.storage.linear_model()
 
         if False:
             relaxed_problem = self._build_convex_relaxation(problem)
@@ -520,13 +521,14 @@ class BranchAndCutAlgorithm:
     def solve_problem_at_node(self, run_id, tree, node):
         """Solve problem at non root node."""
         model = node.storage.model()
-        convex_model = node.storage.convex_model()
-        linear_model = node.storage.linear_model()
 
         try:
             self._perform_fbbt(run_id, model, tree, node)
         except EmptyIntervalError:
-            return None
+            return NodeSolution(None, None)
+
+        convex_model = node.storage.convex_model()
+        linear_model = node.storage.linear_model()
 
         if False:
             self._cuts_generators_manager.before_start_at_node(
@@ -569,7 +571,6 @@ class BranchAndCutAlgorithm:
         logger.debug(run_id, 'Round {}. Solving linearized problem.', cuts_state.round)
 
         mip_solution = self._mip_solver.solve(linear_model)
-        print(mip_solution)
 
         logger.debug(
             run_id,
@@ -767,8 +768,8 @@ class BranchAndCutAlgorithm:
                 if np.abs(new_ub - new_lb) < mc.epsilon:
                     new_lb = new_ub
                 logger.debug(run_id, '  {}: [{}, {}]', var.name, new_lb, new_ub)
-                var.setlb(new_lb)
-                var.setub(new_ub)
+                safe_setlb(var, new_lb)
+                safe_setub(var, new_ub)
 
         # group_name = '_'.join([str(c) for c in node.coordinate])
         # logger.tensor(run_id, group_name, 'lb', problem.lower_bounds)

@@ -18,6 +18,18 @@ import pyomo.environ as aml
 from pyomo.core.expr.numeric_expr import NumericConstant
 
 
+def safe_setlb(var, lb):
+    if lb is not None:
+        lb = float(lb)
+    var.setlb(lb)
+
+
+def safe_setub(var, ub):
+    if ub is not None:
+        ub = float(ub)
+    var.setub(ub)
+
+
 def model_variables(model):
     """Return a list of variables in the model"""
     for variables in model.component_map(aml.Var, active=True).itervalues():

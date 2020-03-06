@@ -231,7 +231,6 @@ class BabTree:
             solution = node.state.lower_bound_solution
             return solution and solution.status.is_success()
 
-        print([n.coordinate for n in self.fathomed_nodes if _has_solution(n)])
         # Filter only nodes with a solution and remove infeasible nodes
         return self._nodes_minimum_lower_bound(
             [n for n in self.fathomed_nodes if _has_solution(n)],

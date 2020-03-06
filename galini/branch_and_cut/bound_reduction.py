@@ -18,9 +18,6 @@ import coramin.domain_reduction.obbt as coramin_obbt
 import numpy as np
 import pyomo.environ as pe
 from coramin.relaxations.auto_relax import relax
-from pyomo.core.expr.current import identify_variables
-from pyomo.core.kernel.component_set import ComponentSet
-
 from galini.logging import get_logger
 from galini.math import mc, is_close
 from galini.timelimit import (
@@ -28,6 +25,8 @@ from galini.timelimit import (
     seconds_elapsed_since,
     timeout,
 )
+from pyomo.core.expr.current import identify_variables
+from pyomo.core.kernel.component_set import ComponentSet
 
 logger = get_logger(__name__)
 

@@ -236,7 +236,6 @@ def compute_branching_point(var, mip_solution, lambda_):
     lambda_ : float
         the weight
     """
-    print(var, mip_solution)
     x_bar = mip_solution.variables[var]
     lb = var.lb
     ub = var.ub
@@ -246,10 +245,10 @@ def compute_branching_point(var, mip_solution, lambda_):
     if not var.is_continuous():
         user_upper_bound = mc.user_integer_upper_bound
 
-    if is_inf(lb):
+    if lb is None or is_inf(lb):
         lb = -user_upper_bound
 
-    if is_inf(ub):
+    if ub is None or is_inf(ub):
         ub = user_upper_bound
 
     midpoint = lb + 0.5 * (ub - lb)

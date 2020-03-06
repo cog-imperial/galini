@@ -14,6 +14,7 @@
 
 """Generic Branch & Bound solver."""
 import numpy as np
+import pyomo.environ as pe
 
 from galini.branch_and_cut.algorithm import BranchAndCutAlgorithm
 from galini.branch_and_bound.solution import BabSolution, BabStatusInterrupted
@@ -29,6 +30,7 @@ from galini.config import (
 from galini.logging import get_logger
 from galini.math import is_close
 from galini.solvers import Solver, OptimalObjective, OptimalVariable
+from galini.solvers.solution import load_solution_from_model
 from galini.timelimit import elapsed_time
 
 
@@ -139,6 +141,7 @@ class BranchAndBoundSolver(Solver):
 
         while not self._algo.should_terminate(tree.state):
             logger.info(run_id, 'Tree state at beginning of iteration: {}', tree.state)
+            #input('continue...')
             if not tree.has_nodes():
                 logger.info(run_id, 'No more nodes to visit.')
                 break
@@ -179,10 +182,7 @@ class BranchAndBoundSolver(Solver):
                 continue
 
             solution = self._algo.solve_problem_at_node(run_id, tree, current_node)
-            # TODO(fra): what to do here?
-            if solution is None:
-                tree.fathom_node(current_node)
-                continue
+            assert solution is not None
 
             tree.update_node(current_node, solution)
             logger.log_add_bab_node(
@@ -245,16 +245,13 @@ class BranchAndBoundSolver(Solver):
 
         if len(tree.solution_pool) == 0:
             # Return lower bound only
-            optimal_obj = [
-                OptimalObjective(name=problem.objective.name, value=None)
-            ]
-            optimal_vars = [
-                OptimalVariable(name=v.name, value=None)
-                for v in problem.variables
-            ]
+            optimal_vars = pe.ComponentMap(
+                (v, pe.value(v))
+                for v in problem.component_data_objects(pe.Var, active=True)
+            )
             return BabSolution(
                 BabStatusInterrupted(),
-                optimal_obj,
+                None,
                 optimal_vars,
                 dual_bound=tree.state.lower_bound,
                 nodes_visited=nodes_visited,

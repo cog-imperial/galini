@@ -31,6 +31,20 @@ class NodeSolution:
         self.upper_bound_solution = upper_bound_solution
 
     @property
+    def lower_bound_success(self):
+        solution = self.lower_bound_solution
+        if solution is None:
+            return False
+        return solution.status.is_success()
+
+    @property
+    def upper_bound_success(self):
+        solution = self.upper_bound_solution
+        if solution is None:
+            return False
+        return solution.status.is_success()
+
+    @property
     def lower_bound(self):
         solution = self.lower_bound_solution
         if solution is None:

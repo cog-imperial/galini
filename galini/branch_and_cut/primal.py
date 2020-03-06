@@ -15,6 +15,7 @@
 """Functions to solve primal problem."""
 import numpy as np
 import pyomo.environ as pe
+from galini.pyomo import safe_setub, safe_setlb
 
 from galini.core import Domain
 from galini.math import is_close, mc
@@ -106,23 +107,22 @@ def solve_primal_with_starting_point(run_id, model, starting_point, solver, fix_
         lb = var.lb
         ub = var.ub
         if not var.is_continuous() or fix_all:
-            var.setlb(point)
-            var.setub(point)
+            safe_setlb(var, point)
+            safe_setub(var, point)
             fixed_vars.append((var, lb, ub))
-            print('Fix var ', var.name, ' oto ', point)
 
     try:
         results = solver.solve(model)
 
         # unfix all variables
         for var, lb, ub in fixed_vars:
-            var.setlb(lb)
-            var.setub(ub)
+            safe_setlb(var, lb)
+            safe_setub(var, ub)
     except Exception as ex:
         # unfix all variables, then rethrow
         for var, lb, ub in fixed_vars:
-            var.setlb(lb)
-            var.setub(ub)
+            safe_setlb(var, lb)
+            safe_setub(var, ub)
         raise ex
 
     return load_solution_from_model(results, model)

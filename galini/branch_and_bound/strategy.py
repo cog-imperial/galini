@@ -39,6 +39,8 @@ def max_range_ratio(model, root_bounds):
         ub = var.ub
         if lb is None or ub is None:
             continue
+        if np.isclose(root_ub, root_lb):
+            continue
         var_ratio = (ub - lb) / (root_ub - root_lb)
         if var_ratio > max_ratio:
             max_ratio = var_ratio
