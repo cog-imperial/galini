@@ -13,7 +13,6 @@
 # limitations under the License.
 
 """GALINI root object. Contains global state."""
-
 from suspect.pyomo.quadratic import enable_standard_repn_for_quadratic_expression
 
 from galini.algorithms import AlgorithmsRegistry
@@ -57,6 +56,14 @@ class Galini:
         self._log_manager.apply_config(self._config.logging)
         _update_math_context(self.mc, self.config)
         self.paranoid_mode = self.config['paranoid_mode']
+
+    def assert_(self, func, msg):
+        if not func():
+            if self.paranoid_mode:
+                return False
+            else:
+                raise AssertionError(msg)
+        return True
 
     def get_logger(self, name):
         return self._log_manager.get_logger(name)

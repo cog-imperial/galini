@@ -82,7 +82,6 @@ class _NodeStorageBase:
             new_lb, new_ub = compute_bounds_on_expr(rhs_expr)
             safe_setlb(aux_var, new_lb)
             safe_setub(aux_var, new_ub)
-            relaxation.add_cut()
             relaxation.rebuild()
         return linear_model
 

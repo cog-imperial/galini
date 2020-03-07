@@ -121,7 +121,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
             # Don't pass a starting point since it's already loaded in the model
             solution = solve_primal_with_starting_point(
-                model, pe.ComponentMap(), self._nlp_solver
+                model, pe.ComponentMap(), self._nlp_solver, self.galini.mc
             )
 
             if solution.status.is_success():
@@ -204,6 +204,10 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             mip_solution,
         )
 
+        if not self.galini.assert_(lambda: not mip_solution.status.is_unbounded(), 'MIP solution should not be unbounded'):
+            from galini.ipython import embed
+            embed()
+
         if not mip_solution.status.is_success():
             return NodeSolution(mip_solution, None)
 
@@ -266,10 +270,10 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         )
         # starting_point = [v.value for v in mip_solution.variables]
         primal_solution = solve_primal_with_starting_point(
-            model, mip_solution_with_model_vars, self._nlp_solver, fix_all=True
+            model, mip_solution_with_model_vars, self._nlp_solver, self.galini.mc, fix_all=True
         )
         new_primal_solution = solve_primal(
-            model, mip_solution_with_model_vars, self._nlp_solver
+            model, mip_solution_with_model_vars, self._nlp_solver, self.galini.mc
         )
 
         if new_primal_solution is not None:

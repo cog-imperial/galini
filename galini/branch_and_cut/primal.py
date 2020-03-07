@@ -16,10 +16,11 @@
 import pyomo.environ as pe
 
 from galini.pyomo import safe_setub, safe_setlb
+from galini.math import is_inf
 from galini.solvers.solution import load_solution_from_model
 
 
-def solve_primal(model, mip_solution, solver):
+def solve_primal(model, mip_solution, solver, mc):
     """Solve primal by fixing integer variables and solving the NLP.
 
     If the search fails and f `mip_solution` has a solution pool, then also
@@ -36,7 +37,7 @@ def solve_primal(model, mip_solution, solver):
     """
     # starting_point = [v.value for v in mip_solution.variables]
     solution = solve_primal_with_starting_point(
-        model, mip_solution, solver
+        model, mip_solution, solver, mc
     )
 
     if solution.status.is_success():
@@ -45,7 +46,7 @@ def solve_primal(model, mip_solution, solver):
     return solution
 
 
-def solve_primal_with_starting_point(model, starting_point, solver, fix_all=False):
+def solve_primal_with_starting_point(model, starting_point, solver, mc, fix_all=False):
     """Solve primal using mip_solution as starting point and fixing variables.
 
     Parameters
@@ -74,7 +75,7 @@ def solve_primal_with_starting_point(model, starting_point, solver, fix_all=Fals
         if not var.is_continuous() and user_value is not None:
             user_value = int(user_value)
         var.set_value(user_value)
-        point = compute_variable_starting_point(var)
+        point = compute_variable_starting_point(var, mc)
         var.set_value(point)
 
         # Fix integers variables
@@ -87,7 +88,7 @@ def solve_primal_with_starting_point(model, starting_point, solver, fix_all=Fals
             fixed_vars.append((var, lb, ub))
 
     try:
-        results = solver.solve(model)
+        results = solver.solve(model, tee=True)
 
         # unfix all variables
         for var, lb, ub in fixed_vars:
@@ -103,22 +104,26 @@ def solve_primal_with_starting_point(model, starting_point, solver, fix_all=Fals
     return load_solution_from_model(results, model)
 
 
-def compute_variable_starting_point(var):
+def compute_variable_starting_point(var, mc):
     """Compute a variable starting point, using its value if present."""
-    point = _compute_variable_starting_point_as_float(var)
+    point = _compute_variable_starting_point_as_float(var, mc)
     if var.is_continuous():
         return point
     return int(point)
 
 
-def _compute_variable_starting_point_as_float(var):
+def _compute_variable_starting_point_as_float(var, mc):
     # Use starting point if present
     value = pe.value(var, exception=False)
     if value is not None:
         return value
     # If var has both bounds, use midpoint
     lb = var.lb
+    if is_inf(lb, mc):
+        lb = None
     ub = var.ub
+    if is_inf(ub, mc):
+        ub = None
     if lb is not None and ub is not None:
         return lb + 0.5 * (ub - lb)
     # If unbounded, use 0
