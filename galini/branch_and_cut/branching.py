@@ -17,6 +17,7 @@
 import numpy as np
 import pyomo.environ as pe
 
+from coramin.relaxations import relaxation_data_objects
 from galini.branch_and_bound.strategy import least_reduced_variable
 from galini.branch_and_cut.node_storage import BranchingDecision
 from galini.math import is_close, is_inf
@@ -65,12 +66,9 @@ def compute_branching_decision(model, linear_model, root_bounds, mip_solution, w
     if unbounded_variable is not None:
         return BranchingDecision(variable=unbounded_variable, point=0.0)
 
-    # TODO(fra): update to use pyomo model
-    if False:
-        branching_variable = compute_branching_variable(
-            model, linear_model, mip_solution, weights, mc
-        )
-    branching_variable = None
+    branching_variable = compute_branching_variable(
+        model, linear_model, mip_solution, weights, mc
+    )
     if branching_variable is None:
         branching_variable = least_reduced_variable(model, root_bounds)
         if branching_variable is None:
@@ -81,7 +79,8 @@ def compute_branching_decision(model, linear_model, root_bounds, mip_solution, w
     return BranchingDecision(variable=branching_variable, point=point)
 
 
-def compute_branching_variable(problem, linear_problem, mip_solution, weights):
+def compute_branching_variable(problem, linear_problem, mip_solution,
+                               weights, mc):
     """Branch on variable with max nonlinear infeasibility.
 
     Parameters
@@ -108,28 +107,29 @@ def compute_branching_variable(problem, linear_problem, mip_solution, weights):
     # ignore variables that can be considered "fixed"
     branching_var = None
     branching_var_score = None
-    for var_idx in nonlinear_infeasibility['sum'].keys():
-        vv = problem.variable_view(var_idx)
-
-        if is_close(vv.lower_bound(), vv.upper_bound(), rtol=mc.epsilon):
-            continue
+    for var in nonlinear_infeasibility['sum'].keys():
+        lb, ub = var.bounds
+        if not is_inf(lb, mc) and not is_inf(ub, mc):
+            if is_close(lb, ub, rtol=mc.epsilon):
+                continue
 
         if branching_var is None:
-            branching_var = var_idx
+            branching_var = var
             branching_var_score = _infeasibility_score(
-                var_idx, nonlinear_infeasibility, weights
+                var, nonlinear_infeasibility, weights
             )
         else:
             var_score = _infeasibility_score(
-                var_idx, nonlinear_infeasibility, weights
+                var, nonlinear_infeasibility, weights
             )
             if var_score > branching_var_score:
-                branching_var = var_idx
+                branching_var = var
                 branching_var_score = var_score
 
     if branching_var is None:
         return None
-    return problem.variable_view(branching_var)
+
+    return problem.find_component(branching_var.getname(fully_qualified=True))
 
 
 def compute_nonlinear_infeasiblity_components(linear_problem, mip_solution):
@@ -145,12 +145,12 @@ def compute_nonlinear_infeasiblity_components(linear_problem, mip_solution):
     References
     ----------
     Belotti, P., Lee, J., Liberti, L., Margot, F., & Wächter, A. (2009).
-        Branching and bounds tighteningtechniques for non-convex MINLP.
+        Branching and bounds tightening techniques for non-convex MINLP.
         Optimization Methods and Software, 24(4–5), 597–634.
     """
-    nonlinear_infeasibility_sum = dict()
-    nonlinear_infeasibility_min = dict()
-    nonlinear_infeasibility_max = dict()
+    nonlinear_infeasibility_sum = pe.ComponentMap()
+    nonlinear_infeasibility_min = pe.ComponentMap()
+    nonlinear_infeasibility_max = pe.ComponentMap()
 
     if not mip_solution.status.is_success():
         return {
@@ -159,57 +159,55 @@ def compute_nonlinear_infeasiblity_components(linear_problem, mip_solution):
             'min': nonlinear_infeasibility_min,
         }
 
-    for var in linear_problem.variables:
-        if not var.reference:
-            continue
-        if not hasattr(var.reference, 'var1'):
-            continue
-        v1 = var.reference.var1
-        v2 = var.reference.var2
+    for relaxation in relaxation_data_objects(linear_problem):
+        rhs_vars = relaxation.get_rhs_vars()
 
-        w_xk = mip_solution.variables[var.idx].value
-        v1_xk = mip_solution.variables[v1.idx].value
-        v2_xk = mip_solution.variables[v2.idx].value
-
-        if v1_xk is None or v2_xk is None:
+        if len(rhs_vars) > 2:
             continue
 
+        if len(rhs_vars) == 2:
+            v1, v2 = rhs_vars
+        else:
+            assert len(rhs_vars) == 1
+            v1 = v2 = rhs_vars[0]
+        v1_xk = pe.value(v1)
+        v2_xk = pe.value(v2)
 
         # U(x_k) = |x_ik - v_i(x_k)| / (1 + ||grad(v_i(x_k))||)
-        bilinear_discrepancy = np.abs(w_xk - v1_xk*v2_xk)
+        bilinear_discrepancy = relaxation.get_deviation()
         scaling = (1 + np.sqrt(v1_xk**2.0 + v2_xk**2.0))
         err = bilinear_discrepancy / scaling
 
         # First time we see v1
-        if v1.idx not in nonlinear_infeasibility_sum:
-            nonlinear_infeasibility_sum[v1.idx] = 0.0
-            nonlinear_infeasibility_max[v1.idx] = -np.inf
-            nonlinear_infeasibility_min[v1.idx] = np.inf
+        if v1 not in nonlinear_infeasibility_sum:
+            nonlinear_infeasibility_sum[v1] = 0.0
+            nonlinear_infeasibility_max[v1] = -np.inf
+            nonlinear_infeasibility_min[v1] = np.inf
 
         # First time we see v2
-        if v2.idx not in nonlinear_infeasibility_sum:
-            nonlinear_infeasibility_sum[v2.idx] = 0.0
-            nonlinear_infeasibility_max[v2.idx] = -np.inf
-            nonlinear_infeasibility_min[v2.idx] = np.inf
+        if v2 not in nonlinear_infeasibility_sum:
+            nonlinear_infeasibility_sum[v2] = 0.0
+            nonlinear_infeasibility_max[v2] = -np.inf
+            nonlinear_infeasibility_min[v2] = np.inf
 
-        nonlinear_infeasibility_sum[v1.idx] += err
-        nonlinear_infeasibility_sum[v2.idx] += err
+        nonlinear_infeasibility_sum[v1] += err
+        nonlinear_infeasibility_sum[v2] += err
 
-        nonlinear_infeasibility_max[v1.idx] = max(
-            nonlinear_infeasibility_max[v1.idx],
+        nonlinear_infeasibility_max[v1] = max(
+            nonlinear_infeasibility_max[v1],
             err,
         )
-        nonlinear_infeasibility_max[v2.idx] = max(
-            nonlinear_infeasibility_max[v2.idx],
+        nonlinear_infeasibility_max[v2] = max(
+            nonlinear_infeasibility_max[v2],
             err,
         )
 
-        nonlinear_infeasibility_min[v1.idx] = min(
-            nonlinear_infeasibility_min[v1.idx],
+        nonlinear_infeasibility_min[v1] = min(
+            nonlinear_infeasibility_min[v1],
             err,
         )
-        nonlinear_infeasibility_min[v2.idx] = min(
-            nonlinear_infeasibility_min[v2.idx],
+        nonlinear_infeasibility_min[v2] = min(
+            nonlinear_infeasibility_min[v2],
             err,
         )
 
@@ -265,9 +263,9 @@ def _unbounded_variable(model):
     return None
 
 
-def _infeasibility_score(var_idx, nonlinear_infeasibility, weights):
+def _infeasibility_score(var, nonlinear_infeasibility, weights):
     return (
-        nonlinear_infeasibility['sum'][var_idx] * weights['sum'] +
-        nonlinear_infeasibility['max'][var_idx] * weights['max'] +
-        nonlinear_infeasibility['min'][var_idx] * weights['min']
+            nonlinear_infeasibility['sum'][var] * weights['sum'] +
+            nonlinear_infeasibility['max'][var] * weights['max'] +
+            nonlinear_infeasibility['min'][var] * weights['min']
     )

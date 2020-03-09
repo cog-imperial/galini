@@ -35,10 +35,12 @@ def solve_primal(model, mip_solution, solver, mc):
     solver : Solver
         the NLP solver used to solve the problem
     """
-    # starting_point = [v.value for v in mip_solution.variables]
     solution = solve_primal_with_starting_point(
         model, mip_solution, solver, mc
     )
+
+    if solution is None:
+        return None
 
     if solution.status.is_success():
         return solution
@@ -46,7 +48,8 @@ def solve_primal(model, mip_solution, solver, mc):
     return solution
 
 
-def solve_primal_with_starting_point(model, starting_point, solver, mc, fix_all=False):
+def solve_primal_with_starting_point(model, starting_point, solver, mc,
+                                     fix_all=False):
     """Solve primal using mip_solution as starting point and fixing variables.
 
     Parameters
@@ -57,6 +60,8 @@ def solve_primal_with_starting_point(model, starting_point, solver, mc, fix_all=
         the starting point for each variable
     solver : Solver
         the NLP solver used to solve the problem
+    mc : MathContext
+        the math context used for computations
     fix_all
         if `True`, fix all variables, otherwise fix integer variables only
 
@@ -94,6 +99,11 @@ def solve_primal_with_starting_point(model, starting_point, solver, mc, fix_all=
         for var, lb, ub in fixed_vars:
             safe_setlb(var, lb)
             safe_setub(var, ub)
+    except ValueError:
+        for var, lb, ub in fixed_vars:
+            safe_setlb(var, lb)
+            safe_setub(var, ub)
+        return None
     except Exception as ex:
         # unfix all variables, then rethrow
         for var, lb, ub in fixed_vars:

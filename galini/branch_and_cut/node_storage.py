@@ -93,7 +93,9 @@ class _NodeStorageBase:
         assert self.branching_point is None
         self.branching_point = branching_point
 
-        children_bounds = branch_at_point(self.root._model, self._bounds, branching_point)
+        children_bounds = branch_at_point(
+            self.root._model, self._bounds, branching_point
+        )
 
         return [
             NodeStorage(self.root, self, bounds, branching_point.variable)
@@ -117,13 +119,17 @@ class NodeStorage(_NodeStorageBase):
 class RootNodeStorage(_NodeStorageBase):
     def __init__(self, model):
         bounds = pe.ComponentMap(
-            (var, var.bounds) for var in model.component_data_objects(pe.Var, active=True)
+            (var, var.bounds)
+            for var in model.component_data_objects(pe.Var, active=True)
         )
         super().__init__(root=self, parent=None, bounds=bounds)
         self._model = model
         self._convex_model = None
+        self._original_to_convex_var_map = None
         self._linear_model = None
+        self._convex_to_linear_var_map = None
         self._aux_var_relaxation_map = None
+        self._original_to_linear_var_map = None
         self.cut_pool = CutPool(model)
         self.cut_node_storage = CutNodeStorage(None, self.cut_pool)
 
@@ -137,9 +143,11 @@ class RootNodeStorage(_NodeStorageBase):
     def linear_model(self):
         if self._linear_model is not None:
             return self._linear_model
-        linear_model, aux_var_relaxation_map = relax(self._model)
-        self._linear_model = linear_model
-        self._aux_var_relaxation_map = aux_var_relaxation_map
+        (
+            self._linear_model,
+            self._aux_var_relaxation_map,
+            self._convex_to_linear_var_map,
+        ) = relax(self._model)
         return self._linear_model
 
 

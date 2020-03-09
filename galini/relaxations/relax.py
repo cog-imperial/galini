@@ -30,7 +30,17 @@ _relax_root_to_leaf_map[QuadraticExpression] = _relax_root_to_leaf_SumExpression
 
 
 def relax(model):
-    model = model.clone()
+    new_model = model.clone()
+
+    original_to_new_var_map = pe.ComponentMap()
+
+    for var in model.component_data_objects(pe.Var,
+                                            active=True,
+                                            descend_into=True):
+        new_var = new_model.find_component(var.getname(fully_qualified=True))
+        original_to_new_var_map[var] = new_var
+
+    model = new_model
 
     aux_var_map = dict()
 
@@ -106,4 +116,4 @@ def relax(model):
     for _, relaxation in aux_var_map.values():
         relaxation.use_linear_relaxation = True
         relaxation.rebuild()
-    return model, var_relax_map
+    return model, var_relax_map, original_to_new_var_map
