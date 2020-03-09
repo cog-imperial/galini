@@ -13,7 +13,7 @@
 # limitations under the License.
 
 try:
-    from IPython import embed
+    from IPython import embed as embed_ipython
 except ImportError:
-    def embed(**kwargs):
+    def embed_ipython(**kwargs):
         pass

@@ -65,6 +65,13 @@ class Galini:
                 raise AssertionError(msg)
         return True
 
+    def debug_assert_(self, func, msg):
+        if self.paranoid_mode:
+            if not func():
+                if self.paranoid_mode:
+                    return False
+        return True
+
     def get_logger(self, name):
         return self._log_manager.get_logger(name)
 

@@ -208,8 +208,8 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         if not self.galini.assert_(
                 lambda: not mip_solution.status.is_unbounded(),
                 'MIP solution should not be unbounded'):
-            from galini.ipython import embed
-            embed()
+            from galini.ipython import embed_ipython
+            embed_ipython(header='Unbounded MIP solution')
 
         if not mip_solution.status.is_success():
             return NodeSolution(mip_solution, None)
