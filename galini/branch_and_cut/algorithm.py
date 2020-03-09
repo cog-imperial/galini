@@ -152,6 +152,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             bounds, mono, cvx = perform_fbbt_on_model(
                 model, tree, node, maxiter=self.bab_config['fbbt_maxiter'], eps=self.galini.mc.epsilon
             )
+            node.storage.update_bounds(bounds)
         except EmptyIntervalError:
             return NodeSolution(None, None)
 
@@ -204,7 +205,9 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             mip_solution,
         )
 
-        if not self.galini.assert_(lambda: not mip_solution.status.is_unbounded(), 'MIP solution should not be unbounded'):
+        if not self.galini.assert_(
+                lambda: not mip_solution.status.is_unbounded(),
+                'MIP solution should not be unbounded'):
             from galini.ipython import embed
             embed()
 

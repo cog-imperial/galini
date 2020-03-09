@@ -13,6 +13,7 @@
 #  limitations under the License.
 
 """Branch & Bound branching."""
+import pyomo.environ as pe
 import numpy as np
 import copy
 
@@ -32,12 +33,19 @@ class BranchingPoint:
 
 def branch_at_point(model, current_bounds, branching_point):
     """Branch problem at branching_point, returning a list of child problems."""
+    current_bounds = pe.ComponentMap()
+    for var in model.component_data_objects(pe.Var, active=True, descend_into=True):
+        var_lb = var.lb
+        var_ub = var.ub
+        if var_lb is None:
+            var_lb = -np.inf
+        if var_ub is None:
+            var_ub = np.inf
+        current_bounds[var] = (var_lb, var_ub)
+
     var = branching_point.variable
     var_lb, var_ub = current_bounds[var]
-    if var_lb is None:
-        var_lb = -np.inf
-    if var_ub is None:
-        var_ub = np.inf
+
     for point in branching_point.points:
         if point < var_lb or point > var_ub:
             raise RuntimeError(

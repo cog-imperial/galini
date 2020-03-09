@@ -251,11 +251,6 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
                     )
             )
 
-            print('nxxx')
-            print(solution.lower_bound_solution)
-            print(solution.upper_bound_solution)
-            print(node_relaxation_is_feasible_or_unbounded)
-            # input('xxxx')
             if not current_node_converged and node_relaxation_is_feasible_or_unbounded:
                 node_children, branching_point = tree.branch_at_node(current_node)
                 self.logger.info('Branched at point {}', branching_point)

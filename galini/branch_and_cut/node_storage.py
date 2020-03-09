@@ -36,7 +36,6 @@ class BranchingDecision:
         )
 
 
-
 class _NodeStorageBase:
     def __init__(self, root, parent, bounds):
         self.root = root
@@ -57,6 +56,11 @@ class _NodeStorageBase:
 
     def branching_data(self):
         return self.model()
+
+    def update_bounds(self, bounds):
+        for var in self._bounds.keys():
+            var_bounds = bounds[var]
+            self._bounds[var] = (var_bounds.lower_bound, var_bounds.upper_bound)
 
     def model(self):
         for var, (lb, ub) in self._bounds.items():
