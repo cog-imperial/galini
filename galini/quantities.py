@@ -19,7 +19,7 @@ from galini.math import is_close
 _finfo = np.finfo(np.float64)
 
 
-def absolute_gap(lb, ub):
+def absolute_gap(lb, ub, mc):
     """Compute absolute gap `ub - lb`."""
     assert not np.isnan(ub)
     assert not np.isnan(lb)
@@ -28,7 +28,7 @@ def absolute_gap(lb, ub):
     return ub - lb
 
 
-def relative_gap(lb, ub):
+def relative_gap(lb, ub, mc):
     """Compute relative gap `(ub - lb) / ub`."""
     assert not np.isnan(ub)
     assert not np.isnan(lb)
@@ -40,7 +40,7 @@ def relative_gap(lb, ub):
 
 
 def relative_bound_improvement(first_solution, prev_solution,
-                               latest_solution):
+                               latest_solution, mc):
     """Lower bound improvement between the last two consecutive cut rounds.
 
     The relative bound improvement is defined as:

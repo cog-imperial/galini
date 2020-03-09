@@ -110,8 +110,12 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
         return state.nodes_visited > self.bab_config['node_limit']
 
     def has_converged(self, state):
-        rel_gap = relative_gap(state.lower_bound, state.upper_bound)
-        abs_gap = absolute_gap(state.lower_bound, state.upper_bound)
+        rel_gap = relative_gap(
+            state.lower_bound, state.upper_bound, self.galini.mc
+        )
+        abs_gap = absolute_gap(
+            state.lower_bound, state.upper_bound, self.galini.mc
+        )
 
         bounds_close = is_close(
             state.lower_bound,
