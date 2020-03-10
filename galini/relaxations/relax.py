@@ -17,15 +17,16 @@ from coramin.relaxations.auto_relax import (
     RelaxationCounter,
     _relax_root_to_leaf_map,
     _relax_leaf_to_root_map,
-    _relax_leaf_to_root_SumExpression,
     _relax_root_to_leaf_SumExpression,
     _relax_expr,
 )
 from coramin.utils.coramin_enums import RelaxationSide
 from pyomo.core.expr.numvalue import polynomial_degree
 from suspect.pyomo.quadratic import QuadraticExpression
+from galini.relaxations.expressions import _relax_leaf_to_root_QuadraticExpression
 
-_relax_leaf_to_root_map[QuadraticExpression] = _relax_leaf_to_root_SumExpression
+
+_relax_leaf_to_root_map[QuadraticExpression] = _relax_leaf_to_root_QuadraticExpression
 _relax_root_to_leaf_map[QuadraticExpression] = _relax_root_to_leaf_SumExpression
 
 

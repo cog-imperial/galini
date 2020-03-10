@@ -156,8 +156,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         except EmptyIntervalError:
             return NodeSolution(None, None)
 
-        convex_model = node.storage.convex_model()
-        linear_model = node.storage.linear_model()
+        linear_model = node.storage.model_relaxation()
 
         self.logger.info(
             'Starting Cut generation iterations. Maximum iterations={}',
@@ -183,7 +182,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
         # Find lower bounding solution from linear model
         feasible, cuts_state, lower_bounding_solution = self._solve_lower_bounding_relaxation(
-            tree, node, model, convex_model, linear_model
+            tree, node, model, linear_model
         )
 
         # TODO(fra): after end at root/node callback for cut manager
@@ -235,7 +234,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
         # Try to find a feasible solution
         primal_solution = self._solve_upper_bounding_problem(
-            model, convex_model, linear_model, mip_solution
+            model, linear_model, mip_solution
         )
 
         assert primal_solution is not None, 'Should return a solution even if not feasible'
@@ -245,7 +244,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
         return NodeSolution(mip_solution, primal_solution)
 
-    def _solve_lower_bounding_relaxation(self, tree, node, model, convex_model, linear_model):
+    def _solve_lower_bounding_relaxation(self, tree, node, model, linear_model):
         self.logger.info('Solving lower bounding LP')
 
         originally_integer = []
@@ -256,7 +255,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             var.domain = pe.Reals
 
         feasible, cuts_state, mip_solution = self._perform_cut_loop(
-            tree, node, model, convex_model, linear_model,
+            tree, node, model, linear_model,
         )
 
         for var, domain in originally_integer:
@@ -264,7 +263,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
         return feasible, cuts_state, mip_solution
 
-    def _solve_upper_bounding_problem(self, model, convex_model, linear_model, mip_solution):
+    def _solve_upper_bounding_problem(self, model, linear_model, mip_solution):
         # TODO(fra): properly map between variables
         assert mip_solution.status.is_success(), "Should be a feasible point for the relaxation"
         mip_solution_with_model_vars = pe.ComponentMap(
@@ -323,7 +322,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         )
         node.storage.branching_decision = branching_decision
 
-    def _perform_cut_loop(self, tree, node, model, convex_model, linear_model):
+    def _perform_cut_loop(self, tree, node, model, linear_model):
         cuts_state = CutsState()
         mip_solution = None
 
@@ -340,7 +339,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         self._cut_loop_inner_iteration = 0
         while not self.cut_loop_should_terminate(cuts_state, cut_loop_start_time):
             feasible, new_cuts, mip_solution = self._perform_cut_round(
-                model, convex_model, linear_model, cuts_state, tree, node
+                model, linear_model, cuts_state, tree, node
             )
 
             if not feasible:
@@ -387,7 +386,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
         return True, cuts_state, mip_solution
 
-    def _perform_cut_round(self, model, convex_model, linear_model, cuts_state, tree, node):
+    def _perform_cut_round(self, model, linear_model, cuts_state, tree, node):
         self.logger.debug('Round {}. Solving linearized problem.', cuts_state.round)
 
         mip_solution = self._mip_solver.solve(linear_model)
@@ -403,7 +402,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
         # Generate new cuts
         new_cuts = self.galini.cuts_generators_manager.generate(
-            model, convex_model, linear_model, mip_solution, tree, node
+            model, linear_model, mip_solution, tree, node
         )
         self.logger.debug(
             'Round {}. Adding {} cuts.',

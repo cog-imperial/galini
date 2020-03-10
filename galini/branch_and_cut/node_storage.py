@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-"""Branch & Cut node storage. Contains original and convex problem."""
+"""Branch & Cut node storage. Contains original relaxed problem."""
 import pyomo.environ as pe
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 
@@ -68,15 +68,10 @@ class _NodeStorageBase:
             safe_setub(var, ub)
         return self.root._model
 
-    def convex_model(self):
-        # TODO(fra): really use a convex model
-        return None
-
-    def linear_model(self):
+    def model_relaxation(self):
         linear_model = self.root._linear_model
         for var, (lb, ub) in self._bounds.items():
-            # TODO(fra): proper map between vars
-            linear_var = getattr(linear_model, var.name)
+            linear_var = self.root._model_to_relaxation_var_map[var]
             safe_setlb(linear_var, lb)
             safe_setub(linear_var, ub)
 
@@ -124,32 +119,24 @@ class RootNodeStorage(_NodeStorageBase):
         )
         super().__init__(root=self, parent=None, bounds=bounds)
         self._model = model
-        self._convex_model = None
-        self._original_to_convex_var_map = None
         self._linear_model = None
-        self._convex_to_linear_var_map = None
         self._aux_var_relaxation_map = None
-        self._original_to_linear_var_map = None
+        self._model_to_relaxation_var_map = None
         self.cut_pool = CutPool(model)
         self.cut_node_storage = CutNodeStorage(None, self.cut_pool)
 
     def model(self):
         return self._model
 
-    def convex_model(self):
-        # TODO(fra): really use a convex model
-        return None
-
-    def linear_model(self):
+    def model_relaxation(self):
         if self._linear_model is not None:
             return self._linear_model
         (
             self._linear_model,
             self._aux_var_relaxation_map,
-            self._convex_to_linear_var_map,
+            self._model_to_relaxation_var_map,
         ) = relax(self._model)
         return self._linear_model
-
 
     @property
     def is_root(self):
