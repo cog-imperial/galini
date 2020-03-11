@@ -48,8 +48,7 @@ def solve_primal(model, mip_solution, solver, mc):
     return solution
 
 
-def solve_primal_with_starting_point(model, starting_point, solver, mc,
-                                     fix_all=False):
+def solve_primal_with_starting_point(model, starting_point, solver, mc, fix_all=False):
     """Solve primal using mip_solution as starting point and fixing variables.
 
     Parameters
@@ -79,15 +78,17 @@ def solve_primal_with_starting_point(model, starting_point, solver, mc,
         user_value = starting_point.get(var, None)
         if not var.is_continuous() and user_value is not None:
             user_value = int(user_value)
-        var.set_value(user_value)
-        point = compute_variable_starting_point(var, mc)
-        var.set_value(point)
+            var.set_value(user_value)
+        else:
+            point = compute_variable_starting_point(var, mc)
+            var.set_value(point)
 
         # Fix integers variables
         # We set bounds to avoid issues with ipopt
         lb = var.lb
         ub = var.ub
         if not var.is_continuous() or fix_all:
+            point = pe.value(var)
             safe_setlb(var, point)
             safe_setub(var, point)
             fixed_vars.append((var, lb, ub))

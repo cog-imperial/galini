@@ -102,7 +102,7 @@ class CutsGeneratorsManager:
         """Predicated to check if cuts have converged."""
         return all(gen.has_converged(state) for gen in self._generators)
 
-    def generate(self, problem, relaxed_problem, linear_problem, mip_solution, tree, node):
+    def generate(self, problem, relaxed_problem, mip_solution, tree, node):
         """Generate a new set of cuts."""
         all_cuts = []
         self.logger.info(
@@ -110,12 +110,10 @@ class CutsGeneratorsManager:
             [gen.name for gen in self._generators],
         )
 
-        paranoid_mode = self.galini.paranoid_mode
-
         for gen, counter in zip(self._generators, self._cuts_counters):
             start_time = current_time()
             cuts = gen.generate(
-                problem, relaxed_problem, linear_problem, mip_solution, tree, node
+                problem, relaxed_problem, mip_solution, tree, node
             )
             elapsed_time = seconds_elapsed_since(start_time)
 
@@ -131,12 +129,16 @@ class CutsGeneratorsManager:
             )
 
             for cut in cuts:
-                if paranoid_mode:
-                    _check_cut_coefficients(cut)
+                if False and not self.galini.debug_assert_(
+                        lambda: _check_cut_coefficients_are_numerically_reasonable(cut),
+                        'Numerical coefficients in cut are not reasonable'):
+                    from galini.ipython import embed_ipython
+                    embed_ipython(header='Numerical coefficients in cut are not reasonable')
+
                 all_cuts.append(cut)
             counter.increment(len(cuts), elapsed_time)
         return all_cuts
 
 
-def _check_cut_coefficients(cut):
+def _check_cut_coefficients_are_numerically_reasonable(cut):
     raise NotImplemented()

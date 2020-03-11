@@ -30,7 +30,7 @@ class CutsState:
     def update(self, solution, paranoid=False, atol=None, rtol=None):
         """Update cut state with `solution`."""
         self.round += 1
-        current_objective = solution.objective.value
+        current_objective = solution.objective
         if paranoid:
             close = is_close(
                 current_objective, self.lower_bound, atol=atol, rtol=rtol

@@ -136,6 +136,7 @@ class RootNodeStorage(_NodeStorageBase):
             self._aux_var_relaxation_map,
             self._model_to_relaxation_var_map,
         ) = relax(self._model)
+        self._linear_model.cut_pool = pe.ConstraintList()
         return self._linear_model
 
     @property

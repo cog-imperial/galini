@@ -180,6 +180,8 @@ def perform_fbbt_on_model(model, tree, node, maxiter, eps):
                 new_lb = new_ub
             safe_setlb(var, new_lb)
             safe_setub(var, new_ub)
+            # Also update bounds map
+            bounds[var] = Interval(new_lb, new_ub)
 
     return bounds, monotonicity, convexity
 

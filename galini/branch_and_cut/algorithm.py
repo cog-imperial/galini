@@ -26,6 +26,7 @@ from galini.branch_and_bound.selection import BestLowerBoundSelectionStrategy
 from galini.branch_and_cut.bound_reduction import (
     perform_obbt_on_model, perform_fbbt_on_model, best_upper_bound, best_lower_bound
 )
+from galini.pyomo.util import constraint_violation
 from galini.branch_and_cut.branching import compute_branching_decision, \
     BranchAndCutBranchingStrategy
 from galini.branch_and_cut.primal import (
@@ -174,18 +175,29 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             return solution
 
         if not node.has_parent:
+            assert is_root
             feasible_solution = node.initial_feasible_solution
         else:
             feasible_solution = None
 
         # TODO(fra): before start at root/node callback for cut manager
 
+        cuts_manager = self.galini.cuts_generators_manager
+
+        if is_root:
+            cuts_manager.before_start_at_root(model, linear_model)
+        else:
+            cuts_manager.before_start_at_node(model, linear_model)
+
         # Find lower bounding solution from linear model
         feasible, cuts_state, lower_bounding_solution = self._solve_lower_bounding_relaxation(
             tree, node, model, linear_model
         )
 
-        # TODO(fra): after end at root/node callback for cut manager
+        if is_root:
+            cuts_manager.after_end_at_root(model, linear_model, lower_bounding_solution)
+        else:
+            cuts_manager.after_end_at_node(model, linear_model, lower_bounding_solution)
 
         if not feasible:
             self.logger.info('Lower bounding solution not success: {}', lower_bounding_solution)
@@ -348,26 +360,18 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             # Add cuts as constraints
             new_cuts_constraints = []
             for cut in new_cuts:
-                node.storage.cut_pool.add_cut(cut)
-                node.storage.cut_node_storage.add_cut(cut)
-                new_cons = _add_cut_to_problem(linear_problem, cut)
+                # TODO(fra): add to cut pool
+                new_cons = linear_model.cut_pool.add(cut)
                 new_cuts_constraints.append(new_cons)
 
             if self.galini.paranoid_mode:
-                # Check added constraints are violated
-                linear_problem_tree_data = \
-                    linear_problem.relaxed.expression_tree_data()
-                mip_x = [x.value for x in mip_solution.variables]
-                linear_problem_eval = linear_problem_tree_data.eval(
-                    mip_x,
-                    [new_cons.root_expr.idx for new_cons in new_cuts_constraints]
-                )
-                linear_problem_x = linear_problem_eval.forward(0, mip_x)
-                for i, cons in enumerate(new_cuts_constraints):
-                    if cons.lower_bound is not None:
-                        assert cons.lower_bound >= linear_problem_x[i]
-                    if cons.upper_bound is not None:
-                        assert cons.upper_bound <= linear_problem_x[i]
+                # Check added cuts are violated
+                for cons in new_cuts_constraints:
+                    if not self.galini.assert_(
+                            lambda: constraint_violation(cons) > 0.0,
+                            'New cut must be violated'):
+                        from galini.ipython import embed_ipython
+                        embed_ipython(header='Cut {} must be violated'.format(cons.name))
 
             self.logger.debug(
                 'Updating CutState: State={}, Solution={}',
@@ -389,13 +393,13 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
     def _perform_cut_round(self, model, linear_model, cuts_state, tree, node):
         self.logger.debug('Round {}. Solving linearized problem.', cuts_state.round)
 
-        mip_solution = self._mip_solver.solve(linear_model)
+        results = self._mip_solver.solve(linear_model)
+        mip_solution = load_solution_from_model(results, model)
 
         self.logger.debug(
             'Round {}. Linearized problem solution is {}',
             cuts_state.round, mip_solution.status.description())
         self.logger.debug('Objective is {}'.format(mip_solution.objective))
-        self.logger.debug('Variables are {}'.format(mip_solution.variables))
 
         if not mip_solution.status.is_success():
             return False, None, mip_solution
@@ -404,6 +408,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         new_cuts = self.galini.cuts_generators_manager.generate(
             model, linear_model, mip_solution, tree, node
         )
+
         self.logger.debug(
             'Round {}. Adding {} cuts.',
             cuts_state.round, len(new_cuts)

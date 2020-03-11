@@ -17,7 +17,6 @@
 import pyomo.environ as pe
 
 
-
 def safe_setlb(var, lb):
     if lb is not None:
         lb = float(lb)
@@ -28,6 +27,15 @@ def safe_setub(var, ub):
     if ub is not None:
         ub = float(ub)
     var.setub(ub)
+
+
+def constraint_violation(constraint):
+    if constraint.has_lb() and constraint.has_ub():
+        raise ValueError('Constraint with lower and upper bound is not supported')
+    if constraint.has_lb():
+        return abs(min(constraint.lslack(), 0.0))
+    assert constraint.has_ub()
+    return abs(min(constraint.uslack(), 0.0))
 
 
 def model_variables(model):

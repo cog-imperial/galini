@@ -17,10 +17,11 @@
 import networkx as nx
 
 from suspect.pyomo.quadratic import QuadraticExpression
+import pyomo.environ as pe
 from suspect.convexity.rules.quadratic import QuadraticRule
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from coramin.utils.coramin_enums import RelaxationSide, FunctionShape
-from coramin.relaxations.multivariate import MultivariateRelaxation
+from galini.relaxations.multivariate import FactorableConvexExpressionRelaxation
 from coramin.relaxations.auto_relax import replace_sub_expression_with_aux_var
 
 _convexity_rule = QuadraticRule()
@@ -89,12 +90,13 @@ def _relax_leaf_to_root_QuadraticExpression(node, values, aux_var_map, degree_ma
         new_aux_var = parent_block.aux_vars.add()
         new_aux_var.setlb(lb)
         new_aux_var.setub(ub)
+        new_aux_var.value = 0.0
         degree_map[new_aux_var] = 1.0
-        relaxation = MultivariateRelaxation()
-        relaxation.set_input(
+        relaxation = FactorableConvexExpressionRelaxation()
+        relaxation.build(
             aux_var=new_aux_var,
-            shape=FunctionShape.CONVEX,
-            f_x_expr=aux_var_expr,
+            relaxed_f_x_expr=aux_var_expr,
+            original_f_x_expr=expr,
         )
         setattr(parent_block.relaxations, 'rel'+str(counter), relaxation)
         counter.increment()

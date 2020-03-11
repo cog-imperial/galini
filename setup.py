@@ -138,6 +138,7 @@ setup(
             'bac=galini.branch_and_cut:BranchAndCutAlgorithm',
         ],
         'galini.cuts_generators': [
+            'outer_approximation=galini.outer_approximation:OuterApproximationCutsGenerator'
         ],
     },
     cmdclass={

@@ -14,16 +14,26 @@
 
 import numpy as np
 
+from pyomo.core.expr.calculus.diff_with_pyomo import _diff_SumExpression, _diff_map
+from suspect.pyomo.quadratic import QuadraticExpression
+import pyomo.environ as pe
+from pyomo.core.expr.calculus.derivatives import differentiate
+from coramin.relaxations import relaxation_data_objects
+from coramin.utils.coramin_enums import RelaxationSide
+
+
 from galini.config import CutsGeneratorOptions, NumericOption
 from galini.cuts import CutsGenerator
-from galini.expression_relaxation.expression_relaxation import RelaxationSide
-from galini.logging import get_logger
 from galini.math import almost_ge, almost_le
-from galini.outer_approximation.shared import (
-    problem_is_linear, mip_variable_value, generate_cut
-)
 
-logger = get_logger(__name__)
+
+_diff_map[QuadraticExpression] = _diff_SumExpression
+
+
+def get_deviation_adjusted_by_side(aux_var, rhs_expr, side):
+    if side == RelaxationSide.UNDER or side == RelaxationSide.BOTH:
+        return -min(0, pe.value(aux_var) - pe.value(rhs_expr))
+    return -min(0, pe.value(rhs_expr) - pe.value(aux_var))
 
 
 class OuterApproximationCutsGenerator(CutsGenerator):
@@ -34,8 +44,9 @@ class OuterApproximationCutsGenerator(CutsGenerator):
     def __init__(self, galini, config):
         super().__init__(galini, config)
         self.galini = galini
+        self.logger = galini.get_logger(__name__)
 
-        self._relaxation_is_linear = False
+        self._convex_relaxations_map = None
         self._prefix = 'outer_approximation'
         self._counter = 0
 
@@ -52,137 +63,64 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         ])
 
     def _check_if_problem_is_nolinear(self, relaxed_problem):
-        self._relaxation_is_linear = problem_is_linear(relaxed_problem)
+        self._convex_relaxations_map = pe.ComponentMap()
+        for relaxation in relaxation_data_objects(relaxed_problem, active=True, descend_into=True):
+            is_convex = (
+                relaxation.is_rhs_convex() and
+                relaxation.relaxation_side in [RelaxationSide.BOTH, RelaxationSide.UNDER]
+            ) or (
+                relaxation.is_rhs_concave() and
+                relaxation.relaxation_side in [RelaxationSide.BOTH, RelaxationSide.OVER]
+            )
+            if is_convex:
+                rhs_expr = relaxation.get_rhs_expr()
+                rhs_vars = relaxation.get_rhs_vars()
+                aux_var = relaxation.get_aux_var()
+                rel_expr = rhs_expr - aux_var
+                rel_vars = rhs_vars + [aux_var]
+                self._convex_relaxations_map[relaxation] = (rel_expr, rel_vars)
 
-    def before_start_at_root(self, run_id, problem, relaxed_problem):
+    def before_start_at_root(self, problem, relaxed_problem):
         self._check_if_problem_is_nolinear(relaxed_problem)
 
-    def after_end_at_root(self, run_id, problem, relaxed_problem, solution):
+    def after_end_at_root(self, problem, relaxed_problem, solution):
         pass
 
-    def before_start_at_node(self, run_id, problem, relaxed_problem):
+    def before_start_at_node(self, problem, relaxed_problem):
         self._check_if_problem_is_nolinear(relaxed_problem)
 
-    def after_end_at_node(self, run_id, problem, relaxed_problem, solution):
+    def after_end_at_node(self, problem, relaxed_problem, solution):
         pass
 
     def has_converged(self, state):
-        if self._relaxation_is_linear:
+        if not self._convex_relaxations_map:
             return True
         return False
 
-    def generate(self, run_id, problem, relaxed_problem, linear_problem,
-                 mip_solution, tree, node):
-
-        if self._relaxation_is_linear:
+    def generate(self, problem, relaxed_problem, mip_solution, tree, node):
+        if not self._convex_relaxations_map:
             return []
 
-        nonlinear_constraints = [
-            constraint
-            for constraint in relaxed_problem.constraints
-            if constraint.root_expr.polynomial_degree() > 1
-        ]
+        cuts = []
+        for relaxation, (rel_expr, rel_vars) in self._convex_relaxations_map.items():
+            # TODO(fra): add parameter for violation
+            aux_var = relaxation.get_aux_var()
+            rhs_expr = relaxation.get_rhs_expr()
+            side = relaxation.relaxation_side
+            deviation = get_deviation_adjusted_by_side(aux_var, rhs_expr, side)
+            if deviation < 1e-5:
+                continue
+            diff_map = differentiate(rel_expr, wrt_list=rel_vars)
+            cut_expr = pe.value(rel_expr) + sum(diff_map[i] * (v - pe.value(v)) for i, v in enumerate(rel_vars))
+            relaxation_side = relaxation.relaxation_side
+            if relaxation_side == RelaxationSide.UNDER:
+                cut_ineq = cut_expr <= 0
+            elif relaxation_side == RelaxationSide.OVER:
+                cut_ineq = cut_expr >= 0
+            else:
+                assert relaxation_side == RelaxationSide.BOTH
+                cut_ineq = cut_expr <= 0
 
-        linearized_nonlinear_constraints = [
-            linear_problem.constraint(constraint.name)
-            for constraint in nonlinear_constraints
-        ]
+            cuts.append(cut_ineq)
 
-        if not nonlinear_constraints:
-            return []
-
-        nonlinear_constraints_idx = [
-            con.root_expr.idx for con in nonlinear_constraints
-        ]
-
-        linearized_nonlinear_constraints_idx = [
-            con.root_expr.idx for con in linearized_nonlinear_constraints
-        ]
-
-        mip_values_relaxed_vars = [
-            mip_variable_value(linear_problem, v)
-            for v in mip_solution.variables[:relaxed_problem.num_variables]
-        ]
-
-        mip_values_vars = [
-            mip_variable_value(linear_problem, v)
-            for v in mip_solution.variables
-        ]
-
-        nonlinear_expr_eval = \
-            relaxed_problem.expression_tree_data()\
-                .eval(mip_values_relaxed_vars, nonlinear_constraints_idx)
-
-        linearized_nonlinear_expr_eval = \
-            linear_problem.expression_tree_data()\
-                .eval(mip_values_vars, linearized_nonlinear_constraints_idx)
-
-        nonlinear_constraints_value = \
-            np.array(nonlinear_expr_eval.forward(0, mip_values_relaxed_vars))
-
-        linearized_nonlinear_constraints_value = \
-            np.array(linearized_nonlinear_expr_eval.forward(0, mip_values_vars))
-
-
-        w = np.zeros_like(nonlinear_constraints_value)
-        x_k = mip_values_relaxed_vars
-        g_x = nonlinear_constraints_value
-
-        cuts = [
-            self._generate_cut_if_violated(i, constraint, relaxed_problem.variables, w, x_k, nonlinear_expr_eval, nonlinear_constraints_value)
-            for i, constraint in enumerate(nonlinear_constraints)
-        ]
-        return [c for c in cuts if c is not None]
-
-    def _generate_cut_if_violated(self, i, constraint, variables, w, x_k, fg, g_x):
-        cons_lb = constraint.lower_bound
-        cons_ub = constraint.upper_bound
-        constraint_x = g_x[i]
-
-        self._counter += 1
-
-        original_side = constraint.metadata.get('original_side', None)
-        if cons_lb is None:
-            # g(x) <= c
-            above_threshold = not almost_le(
-                constraint_x,
-                cons_ub,
-                atol=self.threshold,
-            )
-            if above_threshold:
-                return generate_cut(
-                    self._prefix, self._counter, i, constraint, variables,
-                    w, x_k, fg, g_x
-                )
-        elif cons_ub is None:
-            # c <= g(x)
-            below_threshold = not almost_ge(
-                constraint_x,
-                cons_lb,
-                atol=self.threshold,
-            )
-            if below_threshold:
-                return generate_cut(
-                    self._prefix, self._counter, i, constraint, variables,
-                    w, x_k, fg, g_x
-                )
-        else:
-            above_threshold = below_threshold = False
-            if original_side == RelaxationSide.UNDER:
-                above_threshold = not almost_le(
-                    constraint_x,
-                    cons_ub,
-                    atol=self.threshold,
-                )
-            elif original_side == RelaxationSide.OVER:
-                below_threshold = not almost_ge(
-                    constraint_x,
-                    cons_lb,
-                    atol=self.threshold,
-                )
-
-            if above_threshold or below_threshold:
-                return generate_cut(
-                    self._prefix, self._counter, i, constraint, variables,
-                    w, x_k, fg, g_x, original_side=original_side,
-                )
+        return cuts

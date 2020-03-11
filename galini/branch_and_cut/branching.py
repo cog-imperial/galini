@@ -73,8 +73,8 @@ def compute_branching_decision(model, linear_model, root_bounds, mip_solution, w
         branching_variable = least_reduced_variable(model, root_bounds)
         if branching_variable is None:
             return None
-    # TODO(fra): properly convert between different instances variables
-    linear_branching_variable = getattr(linear_model, branching_variable.name)
+    linear_branching_variable = \
+        linear_model.find_component(branching_variable.getname(fully_qualified=True))
     point = compute_branching_point(linear_branching_variable, mip_solution, lambda_, mc)
     return BranchingDecision(variable=branching_variable, point=point)
 
@@ -165,16 +165,19 @@ def compute_nonlinear_infeasiblity_components(linear_problem, mip_solution):
         if len(rhs_vars) > 2:
             continue
 
+        aux_var = relaxation.get_aux_var()
+
         if len(rhs_vars) == 2:
             v1, v2 = rhs_vars
         else:
             assert len(rhs_vars) == 1
             v1 = v2 = rhs_vars[0]
-        v1_xk = pe.value(v1)
-        v2_xk = pe.value(v2)
+        v1_xk = mip_solution.variables[v1]
+        v2_xk = mip_solution.variables[v2]
+        aux_xk = mip_solution.variables[aux_var]
 
         # U(x_k) = |x_ik - v_i(x_k)| / (1 + ||grad(v_i(x_k))||)
-        bilinear_discrepancy = relaxation.get_deviation()
+        bilinear_discrepancy = np.abs(aux_xk - v1_xk*v2_xk)
         scaling = (1 + np.sqrt(v1_xk**2.0 + v2_xk**2.0))
         err = bilinear_discrepancy / scaling
 
