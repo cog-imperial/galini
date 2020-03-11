@@ -282,7 +282,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             (var, mip_solution.variables[getattr(linear_model, var.name)])
             for var in model.component_data_objects(pe.Var, active=True)
         )
-        # starting_point = [v.value for v in mip_solution.variables]
+
         primal_solution = solve_primal_with_starting_point(
             model, mip_solution_with_model_vars, self._nlp_solver, self.galini.mc, fix_all=True
         )
@@ -338,14 +338,11 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         cuts_state = CutsState()
         mip_solution = None
 
-        # TODO(fra): add back cuts from parent
-        if node.parent and False:
-            #parent_cuts_count, mip_solution = self._add_cuts_from_parent(
-            #    run_id, node, relaxed_problem, linear_problem
-            #)
-            #if self._bac_telemetry:
-            #    self._bac_telemetry.increment_inherited_cuts(parent_cuts_count)
-            pass
+        if node.parent:
+            parent_cuts_count, mip_solution = self._add_cuts_from_parent(
+                node, model, linear_model
+            )
+            # TODO(fra): output telemetry
 
         cut_loop_start_time = current_time()
         self._cut_loop_inner_iteration = 0
@@ -416,79 +413,38 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
         return True, new_cuts, mip_solution
 
-    def _add_cuts_from_parent(self, run_id, node, relaxed_problem, linear_problem):
-        logger.info(run_id, 'Adding inherit cuts.')
+    def _add_cuts_from_parent(self, node, model, linear_model):
+        self.logger.debug('Adding cuts from cut pool')
         first_loop = True
         num_violated_cuts = 0
         inherit_cuts_count = 0
         lp_solution = None
+
+        # Deactivate all cuts before starting loop
+        for cut in linear_model.cut_pool.values():
+            cut.deactivate()
+
         while first_loop or num_violated_cuts > 0:
             first_loop = False
             num_violated_cuts = 0
 
-            lp_solution = self._mip_solver.solve(linear_problem.relaxed)
-            variables_x = [
-                v.value
-                for v in lp_solution.variables[:relaxed_problem.num_variables]
-            ]
-
-            # If the LP does not contain a variable, it's solution will be
-            # None. Fix to (valid) numerical value so that we can evaluate
-            # the expression.
-            for i, var in enumerate(relaxed_problem.variables):
-                if variables_x[i] is None:
-                    lb = relaxed_problem.lower_bound(var)
-                    if lb is not None:
-                        variables_x[i] = lb
-                        continue
-                    ub = relaxed_problem.upper_bound(var)
-                    if ub is not None:
-                        variables_x[i] = ub
-                        continue
-                    variables_x[i] = 0.0
+            results = self._mip_solver.solve(linear_model)
+            lp_solution = load_solution_from_model(results, linear_model)
 
             if not lp_solution.status.is_success():
                 break
 
-            for cut in node.storage.cut_node_storage.cuts:
-                is_duplicate = False
-                for constraint in linear_problem.relaxed.constraints:
-                    if constraint.name == cut.name:
-                        is_duplicate = True
-                if is_duplicate:
+            for cut in linear_model.cut_pool.values():
+                # TODO(fra): add cut violation parameter
+                if cut.active:
                     continue
-                expr_tree_data = cut.expr.expression_tree_data(
-                    relaxed_problem.num_variables
-                )
-                fg = expr_tree_data.eval(variables_x)
-                fg_x = fg.forward(0, variables_x)[0]
-                violated = False
-                violation_lb = None
-                violation_ub = None
 
-                if cut.lower_bound is not None:
-                    if not almost_ge(fg_x, cut.lower_bound, atol=mc.epsilon):
-                        violation_lb = fg_x - cut.lower_bound
-                        violated = True
-                if cut.upper_bound is not None:
-                    if not almost_le(fg_x, cut.upper_bound, atol=mc.epsilon):
-                        violation_ub = fg_x - cut.upper_bound
-                        violated = True
-
-                if violated:
-                    logger.debug(
-                        run_id,
-                        'Cut {} was violated. Adding back to problem. Violation: LB={}; UB={}',
-                        cut.name,
-                        violation_lb,
-                        violation_ub,
-                    )
-                    num_violated_cuts += 1
+                if constraint_violation(cut) > 1e-5:
+                    cut.activate()
                     inherit_cuts_count += 1
-                    _add_cut_from_pool_to_problem(linear_problem, cut)
+                    num_violated_cuts += 1
 
-            logger.info(
-                run_id,
+            self.logger.info(
                 'Number of violated cuts at end of loop: {}',
                 num_violated_cuts,
             )
