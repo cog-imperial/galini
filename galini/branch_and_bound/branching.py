@@ -13,9 +13,10 @@
 #  limitations under the License.
 
 """Branch & Bound branching."""
-import pyomo.environ as pe
-import numpy as np
 import copy
+
+import numpy as np
+import pyomo.environ as pe
 
 
 class BranchingPoint:

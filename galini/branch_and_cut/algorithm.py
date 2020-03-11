@@ -14,19 +14,15 @@
 
 """Branch & Cut algorithm."""
 
-import numpy as np
 import pyomo.environ as pe
-from suspect.expression import ExpressionType
-from suspect.fbbt import perform_fbbt
-from suspect.interval import Interval, EmptyIntervalError
-from suspect.propagation import propagate_special_structure
+from suspect.interval import EmptyIntervalError
 
+from galini.branch_and_bound.algorithm import BranchAndBoundAlgorithm
 from galini.branch_and_bound.node import NodeSolution
 from galini.branch_and_bound.selection import BestLowerBoundSelectionStrategy
 from galini.branch_and_cut.bound_reduction import (
-    perform_obbt_on_model, perform_fbbt_on_model, best_upper_bound, best_lower_bound
+    perform_obbt_on_model, perform_fbbt_on_model
 )
-from galini.pyomo.util import constraint_violation, instantiate_solver_with_options
 from galini.branch_and_cut.branching import compute_branching_decision, \
     BranchAndCutBranchingStrategy
 from galini.branch_and_cut.primal import (
@@ -36,22 +32,18 @@ from galini.branch_and_cut.state import CutsState
 from galini.config import (
     OptionsGroup,
     IntegerOption,
-    BoolOption,
     NumericOption,
     SolverOptions,
     StringOption,
     ExternalSolverOptions,
 )
-from galini.cuts.generator import Cut
-from galini.math import is_close, almost_ge, almost_le, is_inf
-from galini.pyomo import safe_setlb, safe_setub
-from galini.quantities import relative_gap, absolute_gap
+from galini.math import is_close
+from galini.pyomo.util import constraint_violation, instantiate_solver_with_options
 from galini.solvers.solution import load_solution_from_model
 from galini.timelimit import (
     current_time,
     seconds_elapsed_since,
 )
-from galini.branch_and_bound.algorithm import BranchAndBoundAlgorithm
 
 
 # pylint: disable=too-many-instance-attributes
@@ -107,7 +99,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             OptionsGroup('mip_solver', [
                 StringOption(
                     'name',
-                    default='cplex',
+                    default='cplex_direct',
                     description='MIP solver name'
                 ),
                 ExternalSolverOptions('options'),

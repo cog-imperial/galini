@@ -16,13 +16,13 @@
 
 import numpy as np
 import pyomo.environ as pe
-
 from coramin.relaxations import relaxation_data_objects
+
+from galini.branch_and_bound.branching import BranchingPoint
+from galini.branch_and_bound.strategy import BranchingStrategy
 from galini.branch_and_bound.strategy import least_reduced_variable
 from galini.branch_and_cut.node_storage import BranchingDecision
 from galini.math import is_close, is_inf
-from galini.branch_and_bound.strategy import BranchingStrategy
-from galini.branch_and_bound.branching import BranchingPoint
 
 
 class BranchAndCutBranchingStrategy(BranchingStrategy):

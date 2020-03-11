@@ -14,11 +14,12 @@
 
 """Branch & Bound tree."""
 from collections import namedtuple
+
 import numpy as np
+
 from galini.branch_and_bound.node import Node, NodeSolution
 from galini.math import is_inf
 from galini.solvers.solution import SolutionPool
-
 
 TreeState = namedtuple('TreeState', ['lower_bound', 'upper_bound', 'nodes_visited'])
 

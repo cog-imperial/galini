@@ -16,13 +16,11 @@
 import coramin.domain_reduction.obbt as coramin_obbt
 import numpy as np
 import pyomo.environ as pe
-from coramin.relaxations.auto_relax import relax
-from pyomo.core.expr.current import identify_variables
+from coramin.relaxations.iterators import relaxation_data_objects
 from pyomo.core.kernel.component_set import ComponentSet
 from suspect.fbbt import perform_fbbt
 from suspect.interval import Interval
 from suspect.propagation import propagate_special_structure
-from coramin.relaxations.iterators import relaxation_data_objects
 
 from galini.math import is_close
 from galini.pyomo import safe_setlb, safe_setub

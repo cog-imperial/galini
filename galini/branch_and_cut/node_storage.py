@@ -14,12 +14,13 @@
 
 """Branch & Cut node storage. Contains original relaxed problem."""
 import pyomo.environ as pe
+from coramin.relaxations import relaxation_data_objects
+from coramin.relaxations.univariate import PWXSquaredRelaxationData
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 
-from coramin.relaxations import relaxation_data_objects
-from galini.pyomo import safe_setlb, safe_setub
 from galini.branch_and_bound.branching import branch_at_point
 from galini.cuts.pool import CutNodeStorage, CutPool
+from galini.pyomo import safe_setlb, safe_setub
 from galini.relaxations.relax import relax
 
 
@@ -83,6 +84,16 @@ class _NodeStorageBase:
             new_lb, new_ub = compute_bounds_on_expr(rhs_expr)
             safe_setlb(aux_var, new_lb)
             safe_setub(aux_var, new_ub)
+
+            if isinstance(relaxation, PWXSquaredRelaxationData):
+                # w >= x^2: add an oa point in the midpoint
+                relaxation.clean_oa_points()
+                var_values = pe.ComponentMap()
+                x_var = relaxation.get_rhs_vars()[0]
+                midpoint = x_var.lb + 0.5*(x_var.ub - x_var.lb)
+                var_values[x_var] = midpoint
+                relaxation.add_oa_point(var_values)
+
             relaxation.rebuild()
         return linear_model
 

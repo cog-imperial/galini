@@ -15,8 +15,9 @@
 """Branch & Bound branching strategies."""
 import numpy as np
 import pyomo.environ as pe
-from galini.math import is_inf, is_close
+
 from galini.branch_and_bound.branching import BranchingPoint
+from galini.math import is_inf, is_close
 
 
 class BranchingStrategy(object):

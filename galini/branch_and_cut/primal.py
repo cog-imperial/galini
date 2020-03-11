@@ -15,8 +15,8 @@
 """Functions to solve primal problem."""
 import pyomo.environ as pe
 
-from galini.pyomo import safe_setub, safe_setlb
 from galini.math import is_inf
+from galini.pyomo import safe_setub, safe_setlb
 from galini.solvers.solution import load_solution_from_model
 
 
