@@ -59,7 +59,9 @@ class _NodeStorageBase:
 
     def update_bounds(self, bounds):
         for var in self._bounds.keys():
-            var_bounds = bounds[var]
+            var_bounds = bounds.get(var, None)
+            if var_bounds is None:
+                continue
             self._bounds[var] = (var_bounds.lower_bound, var_bounds.upper_bound)
 
     def model(self):

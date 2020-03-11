@@ -143,10 +143,6 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         return self._solve_problem_at_node(tree, node, False)
 
     def _solve_problem_at_node(self, tree, node, is_root):
-        if is_root:
-            # TODO(fra): perform OBBT if it's root node
-            pass
-
         model = node.storage.model()
 
         try:
@@ -158,6 +154,19 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             return NodeSolution(None, None)
 
         linear_model = node.storage.model_relaxation()
+
+        if is_root:
+            self.logger.info('OBBT start')
+            new_bounds = perform_obbt_on_model(
+                model,
+                linear_model,
+                upper_bound=None,
+                timelimit=self.bab_config['obbt_timelimit'],
+                simplex_maxiter=self.bab_config['obbt_simplex_maxiter'],
+                mc=self.galini.mc,
+            )
+            node.storage.update_bounds(new_bounds)
+            self.logger.info('OBBT completed')
 
         self.logger.info(
             'Starting Cut generation iterations. Maximum iterations={}',

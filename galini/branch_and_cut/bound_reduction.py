@@ -22,6 +22,7 @@ from pyomo.core.kernel.component_set import ComponentSet
 from suspect.fbbt import perform_fbbt
 from suspect.interval import Interval
 from suspect.propagation import propagate_special_structure
+from coramin.relaxations.iterators import relaxation_data_objects
 
 from galini.math import is_close
 from galini.pyomo import safe_setlb, safe_setub
@@ -35,104 +36,77 @@ coramin_logger = coramin_obbt.logger  # pylint: disable=invalid-name
 coramin_logger.disabled = True
 
 
-def perform_obbt_on_model(model, upper_bound, timelimit, simplex_maxiter):
+def perform_obbt_on_model(model, linear_model, upper_bound, timelimit, simplex_maxiter, mc):
     """Perform OBBT on Pyomo model using Coramin.
 
     Parameters
     ----------
     model : ConcreteModel
         the pyomo concrete model
+    linear_model : ConcreteModel
+        the linear relaxation of model
     upper_bound : float or None
         the objective value upper bound, if known
     timelimit : int
         a timelimit, in seconds
     simplex_maxiter : int
         the maximum number of simplex iterations
-
+    mc : MathContext
+        GALINI math context
     """
     obbt_start_time = current_time()
 
-    for var in model.component_data_objects(ctype=pe.Var):
+    for var in linear_model.component_data_objects(ctype=pe.Var):
         var.domain = pe.Reals
 
-        if not (var.lb is None or np.isfinite(var.lb)):
-            var.setlb(None)
-
-        if not (var.ub is None or np.isfinite(var.ub)):
-            var.setub(None)
-
-    relaxed_model = relax(model)
-
-    solver = pe.SolverFactory('cplex_persistent')
-    solver.set_instance(relaxed_model)
+    solver = pe.SolverFactory('cplex')
     # TODO(fra): make this non-cplex specific
-    simplex_limits = solver._solver_model.parameters.simplex.limits  # pylint: disable=protected-access
-    simplex_limits.iterations.set(simplex_maxiter)
+    solver.options['parameters simplex limits iterations'] = simplex_maxiter
+
     # collect variables in nonlinear constraints
     nonlinear_variables = ComponentSet()
-    for constraint in model.component_data_objects(ctype=pe.Constraint):
-        # skip linear constraint
-        if constraint.body.polynomial_degree() == 1:
-            continue
-
-        for var in identify_variables(constraint.body,
-                                      include_fixed=False):
+    for relaxation in relaxation_data_objects(linear_model, active=True, descend_into=True):
+        for var in relaxation.get_rhs_vars():
             # Coramin will complain about variables that are fixed
             # Note: Coramin uses an hard-coded 1e-6 tolerance
             if not var.has_lb() or not var.has_ub():
                 nonlinear_variables.add(var)
             else:
-                if not np.abs(var.ub - var.lb) < 1e-6:
+                if not np.abs(var.ub - var.lb) < mc.epsilon:
                     nonlinear_variables.add(var)
 
-    relaxed_vars = [
-        getattr(relaxed_model, v.name)
-        for v in nonlinear_variables
-    ]
-
-    logger.info(0, 'Performing OBBT on {} variables', len(relaxed_vars))
-
-    # Avoid Coramin raising an exception if the problem has no objective
-    # value but we set an upper bound.
-    objectives = model.component_data_objects(
-        pe.Objective, active=True, sort=True, descend_into=True
-    )
-    if len(list(objectives)) == 0:
-        upper_bound = None
-
     time_left = timelimit - seconds_elapsed_since(obbt_start_time)
+    nonlinear_variables = list(nonlinear_variables)
     with timeout(time_left, 'Timeout in OBBT'):
         result = coramin_obbt.perform_obbt(
-            relaxed_model, solver,
-            varlist=relaxed_vars,
-            objective_bound=upper_bound
+            linear_model, solver,
+            varlist=nonlinear_variables,
+            objective_bound=upper_bound,
+            warning_threshold=mc.epsilon
         )
 
     if result is None:
         return
 
-    logger.debug(0, 'New Bounds')
-    for v, new_lb, new_ub in zip(relaxed_vars, *result):
-        vv = problem.variable_view(v.name)
-        if new_lb is None or new_ub is None:
-            logger.warning(0, 'Could not tighten variable {}', v.name)
-        old_lb = vv.lower_bound()
-        old_ub = vv.upper_bound()
-        new_lb = best_lower_bound(vv.domain, new_lb, old_lb)
-        new_ub = best_upper_bound(vv.domain, new_ub, old_ub)
-        if not new_lb is None and not new_ub is None:
-            if is_close(new_lb, new_ub, atol=mc.epsilon):
-                if old_lb is not None and \
-                        is_close(new_lb, old_lb, atol=mc.epsilon):
-                    new_ub = new_lb
-                else:
-                    new_lb = new_ub
-        vv.set_lower_bound(new_lb)
-        vv.set_upper_bound(new_ub)
-        logger.debug(
-            0, '  {}: [{}, {}]',
-            v.name, vv.lower_bound(), vv.upper_bound()
-        )
+    new_bounds = pe.ComponentMap()
+
+    eps = mc.epsilon
+
+    for var, new_lb, new_ub in zip(nonlinear_variables, *result):
+        new_lb = best_lower_bound(var, new_lb, var.lb, eps)
+        new_ub = best_upper_bound(var, new_ub, var.ub, eps)
+        new_bounds[var] = (new_lb, new_ub)
+        var.setlb(new_lb)
+        var.setub(new_ub)
+        original_var = model.find_component(var.getname(fully_qualified=True))
+        original_var.setlb(new_lb)
+        original_var.setub(new_ub)
+
+    # Rebuild relaxations since bounds changed
+    for relaxation in relaxation_data_objects(linear_model, active=True, descend_into=True):
+        relaxation.rebuild()
+
+    return new_bounds
 
 
 def perform_fbbt_on_model(model, tree, node, maxiter, eps):
