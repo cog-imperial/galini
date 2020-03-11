@@ -59,21 +59,8 @@ def model_objectives(model):
             yield obj[idx]
 
 
-class _ChainedComponentMap:
-    def __init__(self, source, target):
-        self._s = source
-        self._t = target
-
-    def __getitem__(self, item):
-        v = self._s[item]
-        return self._t[v]
-
-    def get(self, item, default=None):
-        v = self._s.get(item, None)
-        if v is None:
-            return default
-        return self._t.get(v, default)
-
-
-def chain_component_maps(source, target):
-    return _ChainedComponentMap(source, target)
+def instantiate_solver_with_options(name, options):
+    solver = pe.SolverFactory(name)
+    for key, value in options.items():
+        solver.options[key] = value
+    return solver

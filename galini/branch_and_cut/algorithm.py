@@ -26,7 +26,7 @@ from galini.branch_and_bound.selection import BestLowerBoundSelectionStrategy
 from galini.branch_and_cut.bound_reduction import (
     perform_obbt_on_model, perform_fbbt_on_model, best_upper_bound, best_lower_bound
 )
-from galini.pyomo.util import constraint_violation
+from galini.pyomo.util import constraint_violation, instantiate_solver_with_options
 from galini.branch_and_cut.branching import compute_branching_decision, \
     BranchAndCutBranchingStrategy
 from galini.branch_and_cut.primal import (
@@ -39,6 +39,8 @@ from galini.config import (
     BoolOption,
     NumericOption,
     SolverOptions,
+    StringOption,
+    ExternalSolverOptions,
 )
 from galini.cuts.generator import Cut
 from galini.math import is_close, almost_ge, almost_le, is_inf
@@ -60,8 +62,14 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
     def __init__(self, galini):
         super().__init__(galini)
         self.galini = galini
-        self._nlp_solver = pe.SolverFactory('ipopt')
-        self._mip_solver = pe.SolverFactory('cplex')
+        self._nlp_solver = instantiate_solver_with_options(
+            self.config['nlp_solver']['name'],
+            self.config['nlp_solver']['options']
+        )
+        self._mip_solver = instantiate_solver_with_options(
+            self.config['mip_solver']['name'],
+            self.config['mip_solver']['options']
+        )
 
         self._bab_config = self.config['bab']
         self.cuts_config = self.config['cuts']
@@ -95,7 +103,23 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
                     default=120,
                     description='Total timelimit for cut rounds'
                 ),
-            ])
+            ]),
+            OptionsGroup('mip_solver', [
+                StringOption(
+                    'name',
+                    default='cplex',
+                    description='MIP solver name'
+                ),
+                ExternalSolverOptions('options'),
+            ]),
+            OptionsGroup('nlp_solver', [
+                StringOption(
+                    'name',
+                    default='ipopt',
+                    description='NLP solver name'
+                ),
+                ExternalSolverOptions('options'),
+            ]),
         ])
 
     @property
