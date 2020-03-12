@@ -24,6 +24,7 @@ from suspect.propagation import propagate_special_structure
 
 from galini.math import is_close
 from galini.pyomo import safe_setlb, safe_setub
+from galini.pyomo.util import update_solver_options
 from galini.timelimit import (
     current_time,
     seconds_elapsed_since,
@@ -34,11 +35,14 @@ coramin_logger = coramin_obbt.logger  # pylint: disable=invalid-name
 coramin_logger.disabled = True
 
 
-def perform_obbt_on_model(model, linear_model, upper_bound, timelimit, simplex_maxiter, mc):
+def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, relative_gap, absolute_gap,
+                          simplex_maxiter, mc):
     """Perform OBBT on Pyomo model using Coramin.
 
     Parameters
     ----------
+    solver : Solver
+        the mip solver to use
     model : ConcreteModel
         the pyomo concrete model
     linear_model : ConcreteModel
@@ -47,6 +51,10 @@ def perform_obbt_on_model(model, linear_model, upper_bound, timelimit, simplex_m
         the objective value upper bound, if known
     timelimit : int
         a timelimit, in seconds
+    relative_gap : float
+        mip relative gap
+    absolute_gap : float
+        mip absolute gap
     simplex_maxiter : int
         the maximum number of simplex iterations
     mc : MathContext
@@ -57,16 +65,11 @@ def perform_obbt_on_model(model, linear_model, upper_bound, timelimit, simplex_m
     for var in linear_model.component_data_objects(ctype=pe.Var):
         var.domain = pe.Reals
 
-    solver = pe.SolverFactory('cplex')
-    # TODO(fra): make this non-cplex specific
-    solver.options['parameters simplex limits iterations'] = simplex_maxiter
-
     # collect variables in nonlinear constraints
     nonlinear_variables = ComponentSet()
     for relaxation in relaxation_data_objects(linear_model, active=True, descend_into=True):
         for var in relaxation.get_rhs_vars():
             # Coramin will complain about variables that are fixed
-            # Note: Coramin uses an hard-coded 1e-6 tolerance
             if not var.has_lb() or not var.has_ub():
                 nonlinear_variables.add(var)
             else:
@@ -75,13 +78,22 @@ def perform_obbt_on_model(model, linear_model, upper_bound, timelimit, simplex_m
 
     time_left = timelimit - seconds_elapsed_since(obbt_start_time)
     nonlinear_variables = list(nonlinear_variables)
-    with timeout(time_left, 'Timeout in OBBT'):
-        result = coramin_obbt.perform_obbt(
-            linear_model, solver,
-            varlist=nonlinear_variables,
-            objective_bound=upper_bound,
-            warning_threshold=mc.epsilon
-        )
+
+    update_solver_options(
+        solver,
+        timelimit=time_left,
+        maxiter=simplex_maxiter,
+        relative_gap=relative_gap,
+        absolute_gap=absolute_gap,
+    )
+
+    result = coramin_obbt.perform_obbt(
+        linear_model,
+        solver,
+        varlist=nonlinear_variables,
+        objective_bound=upper_bound,
+        warning_threshold=mc.epsilon
+    )
 
     if result is None:
         return

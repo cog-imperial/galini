@@ -106,6 +106,11 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
                     description='The name of the option to set the MIP solver timelimit'
                 ),
                 StringOption(
+                    'maxiter_option',
+                    default='simplex_limits_iterations',
+                    description='The name of the option to set the MIP solver maximum iterations'
+                ),
+                StringOption(
                     'relative_gap_option',
                     default='mip_tolerances_mipgap',
                     description='The name of the option to set the MIP solver relative gap tolerance'
@@ -127,6 +132,11 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
                     'timelimit_option',
                     default='max_cpu_time',
                     description='The name of the option to set the NLP solver timelimit'
+                ),
+                StringOption(
+                    'maxiter_option',
+                    default='max_iter',
+                    description='The name of the option to set the NLP solver maximum iterations'
                 ),
                 StringOption(
                     'relative_gap_option',
@@ -221,11 +231,14 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         if is_root:
             self.logger.info('OBBT start')
             new_bounds = perform_obbt_on_model(
+                self._mip_solver,
                 model,
                 linear_model,
                 upper_bound=None,
                 timelimit=self.bab_config['obbt_timelimit'],
                 simplex_maxiter=self.bab_config['obbt_simplex_maxiter'],
+                absolute_gap=self.bab_config['absolute_gap'],
+                relative_gap=self.bab_config['relative_gap'],
                 mc=self.galini.mc,
             )
             node.storage.update_bounds(new_bounds)

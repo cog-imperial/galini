@@ -70,13 +70,13 @@ def instantiate_solver_with_options(solver_options):
 
     solver._galini_meta = dict(
         (k, solver_options[k])
-        for k in ['timelimit_option', 'relative_gap_option', 'absolute_gap_option']
+        for k in ['timelimit_option', 'relative_gap_option', 'absolute_gap_option', 'maxiter_option']
     )
 
     return solver
 
 
-def update_solver_options(solver, timelimit=None, relative_gap=None, absolute_gap=None):
+def update_solver_options(solver, timelimit=None, relative_gap=None, absolute_gap=None, maxiter=None):
     """Update the solver with the given timelimit and gaps."""
     assert hasattr(solver, '_galini_meta'), 'Create solver using instantiate_solver_with_options'
 
@@ -96,3 +96,8 @@ def update_solver_options(solver, timelimit=None, relative_gap=None, absolute_ga
         absolute_gap_option = meta['absolute_gap_option']
         if absolute_gap_option:
             solver.options[absolute_gap_option] = absolute_gap
+
+    if maxiter is not None:
+        maxiter_option = meta['maxiter_option']
+        if maxiter_option:
+            solver.options[maxiter_option] = maxiter
