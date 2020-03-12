@@ -90,6 +90,7 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
     result = coramin_obbt.perform_obbt(
         linear_model,
         solver,
+        time_limit=time_left,
         varlist=nonlinear_variables,
         objective_bound=upper_bound,
         warning_threshold=mc.epsilon

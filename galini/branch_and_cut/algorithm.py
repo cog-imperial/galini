@@ -489,7 +489,11 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         self.logger.debug('Round {}. Solving linearized problem.', cuts_state.round)
 
         self._update_solver_options(self._mip_solver)
-        results = self._mip_solver.solve(linear_model)
+        try:
+            results = self._mip_solver.solve(linear_model)
+        except ValueError as ex:
+            self.logger.warning('Error in cut round {}: {}', cuts_state.round, ex)
+            return False, None, None
         mip_solution = load_solution_from_model(results, model)
 
         self.logger.debug(
