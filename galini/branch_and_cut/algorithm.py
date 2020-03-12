@@ -382,8 +382,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             # Add cuts as constraints
             new_cuts_constraints = []
             for cut in new_cuts:
-                # TODO(fra): add to cut pool
-                new_cons = linear_model.cut_pool.add(cut)
+                new_cons = node.storage.cut_node_storage.add_cut(cut)
                 new_cuts_constraints.append(new_cons)
 
             if self.galini.paranoid_mode:
@@ -445,9 +444,9 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         inherit_cuts_count = 0
         lp_solution = None
 
-        # Deactivate all cuts before starting loop
-        for cut in linear_model.cut_pool.values():
-            cut.deactivate()
+        node.storage.cut_pool.deactivate_all()
+
+        cut_storage = node.storage.cut_node_storage
 
         while first_loop or num_violated_cuts > 0:
             first_loop = False
@@ -459,7 +458,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             if not lp_solution.status.is_success():
                 break
 
-            for cut in linear_model.cut_pool.values():
+            for cut in cut_storage.cuts:
                 # TODO(fra): add cut violation parameter
                 if cut.active:
                     continue

@@ -132,24 +132,32 @@ class RootNodeStorage(_NodeStorageBase):
         )
         super().__init__(root=self, parent=None, bounds=bounds)
         self._model = model
+
+        # Lazily instantiate when creating linear model
         self._linear_model = None
         self._aux_var_relaxation_map = None
         self._model_to_relaxation_var_map = None
-        self.cut_pool = CutPool(model)
-        self.cut_node_storage = CutNodeStorage(None, self.cut_pool)
+        self.cut_pool = None
+        self.cut_node_storage = None
 
     def model(self):
         return self._model
 
     def model_relaxation(self):
         if self._linear_model is not None:
+            assert self.cut_pool is not None
+            assert self.cut_node_storage is not None
             return self._linear_model
+
         (
             self._linear_model,
             self._aux_var_relaxation_map,
             self._model_to_relaxation_var_map,
         ) = relax(self._model)
-        self._linear_model.cut_pool = pe.ConstraintList()
+
+        self.cut_pool = CutPool(self._linear_model)
+        self.cut_node_storage = CutNodeStorage(None, self.cut_pool)
+
         return self._linear_model
 
     @property

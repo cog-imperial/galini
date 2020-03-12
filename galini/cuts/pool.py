@@ -26,6 +26,8 @@
 
 """Problem cut pool."""
 
+import pyomo.environ as pe
+
 
 class CutNodeStorage:
     def __init__(self, parent_node_storage, pool):
@@ -35,30 +37,32 @@ class CutNodeStorage:
                 'Trying to create CutNodeStorage without a pool'
             )
         self.pool = pool
-        self._cuts_indexes = []
+        self._cuts = []
 
-    def add_cut(self, cut):
-        self._cuts_indexes.append(cut.index)
+    def add_cut(self, inequality):
+        new_cut = self.pool.add_cut(inequality)
+        self._cuts.append(new_cut)
+        return new_cut
 
     @property
     def cuts(self):
         if self.parent_node_storage is not None:
             for cut in self.parent_node_storage.cuts:
                 yield cut
-        for cut_index in self._cuts_indexes:
-            yield self.pool.cut_at_index(cut_index)
+        for cut in self._cuts:
+            yield cut
 
 
 class CutPool:
-    def __init__(self, problem):
-        self.problem = problem
-        self._cuts = []
+    def __init__(self, linear_model):
+        self._model = linear_model
+        self._cut_pool = pe.Block()
+        self._cut_pool.cuts = pe.ConstraintList()
+        self._model.cut_pool = self._cut_pool
 
-    def add_cut(self, cut):
-        index = len(self._cuts)
-        cut.index = index
-        self._cuts.append(cut)
-        return index
+    def add_cut(self, inequality):
+        return self._cut_pool.cuts.add(inequality)
 
-    def cut_at_index(self, index):
-        return self._cuts[index]
+    def deactivate_all(self):
+        for cut in self._cut_pool.cuts.values():
+            cut.deactivate()
