@@ -58,6 +58,8 @@ class NumericOption(Option):
     def __init__(self, name, min_value=None, max_value=None,
                  default=None, description=None):
         super().__init__(name, default, description)
+        self.min_value = min_value
+        self.max_value = max_value
 
     def is_valid(self):
         if self.min_value is not None:
@@ -73,6 +75,8 @@ class IntegerOption(Option):
     def __init__(self, name, min_value=None, max_value=None,
                  default=None, description=None):
         super().__init__(name, default, description)
+        self.min_value = min_value
+        self.max_value = max_value
 
     def is_valid(self):
         if self.min_value is not None:
@@ -81,7 +85,7 @@ class IntegerOption(Option):
         if self.max_value is not None:
             if self.value > self.max_value:
                 return False
-        return isinstance(self.value, (int, long))
+        return isinstance(self.value, (int,))
 
 
 class BoolOption(Option):

@@ -38,7 +38,7 @@ from galini.config import (
     ExternalSolverOptions,
 )
 from galini.math import is_close
-from galini.pyomo.util import constraint_violation, instantiate_solver_with_options
+from galini.pyomo.util import constraint_violation, instantiate_solver_with_options, update_solver_options
 from galini.solvers.solution import load_solution_from_model
 from galini.timelimit import (
     current_time,
@@ -55,12 +55,10 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         super().__init__(galini)
         self.galini = galini
         self._nlp_solver = instantiate_solver_with_options(
-            self.config['nlp_solver']['name'],
-            self.config['nlp_solver']['options']
+            self.config['nlp_solver'],
         )
         self._mip_solver = instantiate_solver_with_options(
-            self.config['mip_solver']['name'],
-            self.config['mip_solver']['options']
+            self.config['mip_solver'],
         )
 
         self._bab_config = self.config['bab']
@@ -102,6 +100,21 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
                     default='cplex_direct',
                     description='MIP solver name'
                 ),
+                StringOption(
+                    'timelimit_option',
+                    default='timelimit',
+                    description='The name of the option to set the MIP solver timelimit'
+                ),
+                StringOption(
+                    'relative_gap_option',
+                    default='mip_tolerances_mipgap',
+                    description='The name of the option to set the MIP solver relative gap tolerance'
+                ),
+                StringOption(
+                    'absolute_gap_option',
+                    default='mip_tolerances_absmipgap',
+                    description='The name of the option to set the MIP solver absolute gap tolerance'
+                ),
                 ExternalSolverOptions('options'),
             ]),
             OptionsGroup('nlp_solver', [
@@ -109,6 +122,21 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
                     'name',
                     default='ipopt',
                     description='NLP solver name'
+                ),
+                StringOption(
+                    'timelimit_option',
+                    default='max_cpu_time',
+                    description='The name of the option to set the NLP solver timelimit'
+                ),
+                StringOption(
+                    'relative_gap_option',
+                    default='tol',
+                    description='The name of the option to set the NLP solver relative gap tolerance'
+                ),
+                StringOption(
+                    'absolute_gap_option',
+                    default='',
+                    description='The name of the option to set the NLP solver absolute gap tolerance'
                 ),
                 ExternalSolverOptions('options'),
             ]),
@@ -126,6 +154,20 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
     def bab_config(self):
         return self._bab_config
 
+    def _update_solver_options(self, solver, timelimit=None):
+        if timelimit is None:
+            # Set sub solver timelimit to something reasonable:
+            #  * at least 1 second
+            #  * give one second for galini to finish
+            timelimit = max(self.galini.timelimit.seconds_left() - 1, 1)
+
+        update_solver_options(
+            solver,
+            timelimit=timelimit,
+            absolute_gap=self.bab_config['absolute_gap'],
+            relative_gap=self.bab_config['relative_gap'],
+        )
+
     def find_initial_solution(self, model, tree, node):
         try:
             _, _, cvx = perform_fbbt_on_model(
@@ -137,6 +179,11 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
                 return NodeSolution(solution, solution)
 
             # Don't pass a starting point since it's already loaded in the model
+            timelimit = min(
+                self.bab_config['root_node_feasible_solution_search_timelimit'],
+                self.galini.timelimit.seconds_left(),
+            )
+            self._update_solver_options(self._nlp_solver, timelimit=timelimit)
             solution = solve_primal_with_starting_point(
                 model, pe.ComponentMap(), self._nlp_solver, self.galini.mc
             )
@@ -233,6 +280,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             return NodeSolution(lower_bounding_solution, feasible_solution)
 
         # Solve MILP to obtain MILP solution
+        self._update_solver_options(self._mip_solver)
         mip_results = self._mip_solver.solve(linear_model)
         mip_solution = load_solution_from_model(mip_results, linear_model)
         self.logger.info(
@@ -308,9 +356,12 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             for var in model.component_data_objects(pe.Var, active=True)
         )
 
+        self._update_solver_options(self._nlp_solver)
         primal_solution = solve_primal_with_starting_point(
             model, mip_solution_with_model_vars, self._nlp_solver, self.galini.mc, fix_all=True
         )
+
+        self._update_solver_options(self._nlp_solver)
         new_primal_solution = solve_primal(
             model, mip_solution_with_model_vars, self._nlp_solver, self.galini.mc
         )
@@ -402,8 +453,8 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             cuts_state.update(
                 mip_solution,
                 paranoid=self.galini.paranoid_mode,
-                atol=self.bab_config['tolerance'],
-                rtol=self.bab_config['relative_tolerance'],
+                atol=self.bab_config['absolute_gap'],
+                rtol=self.bab_config['relative_gap'],
             )
 
             if not new_cuts:
@@ -414,6 +465,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
     def _perform_cut_round(self, model, linear_model, cuts_state, tree, node):
         self.logger.debug('Round {}. Solving linearized problem.', cuts_state.round)
 
+        self._update_solver_options(self._mip_solver)
         results = self._mip_solver.solve(linear_model)
         mip_solution = load_solution_from_model(results, model)
 
@@ -452,6 +504,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             first_loop = False
             num_violated_cuts = 0
 
+            self._update_solver_options(self._mip_solver)
             results = self._mip_solver.solve(linear_model)
             lp_solution = load_solution_from_model(results, linear_model)
 
@@ -486,6 +539,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         return None
 
     def _solve_convex_model(self, model):
+        self._update_solver_options(self._nlp_solver)
         solver = self._nlp_solver
         results = solver.solve(model)
         solution = load_solution_from_model(results, model)

@@ -59,8 +59,40 @@ def model_objectives(model):
             yield obj[idx]
 
 
-def instantiate_solver_with_options(name, options):
+def instantiate_solver_with_options(solver_options):
+    """Create a new Pyomo solver."""
+    name = solver_options['name']
+    options = solver_options['options']
+
     solver = pe.SolverFactory(name)
     for key, value in options.items():
         solver.options[key] = value
+
+    solver._galini_meta = dict(
+        (k, solver_options[k])
+        for k in ['timelimit_option', 'relative_gap_option', 'absolute_gap_option']
+    )
+
     return solver
+
+
+def update_solver_options(solver, timelimit=None, relative_gap=None, absolute_gap=None):
+    """Update the solver with the given timelimit and gaps."""
+    assert hasattr(solver, '_galini_meta'), 'Create solver using instantiate_solver_with_options'
+
+    meta = solver._galini_meta
+
+    if timelimit is not None:
+        timelimit_option = meta['timelimit_option']
+        if timelimit_option:
+            solver.options[timelimit_option] = timelimit
+
+    if relative_gap is not None:
+        relative_gap_option = meta['relative_gap_option']
+        if relative_gap_option:
+            solver.options[relative_gap_option] = relative_gap
+
+    if absolute_gap is not None:
+        absolute_gap_option = meta['absolute_gap_option']
+        if absolute_gap_option:
+            solver.options[absolute_gap_option] = absolute_gap

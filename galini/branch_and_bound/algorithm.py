@@ -44,8 +44,8 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
     @staticmethod
     def bab_options():
         return [
-            NumericOption('tolerance', default=1e-6),
-            NumericOption('relative_tolerance', default=1e-6),
+            NumericOption('absolute_gap', default=1e-6),
+            NumericOption('relative_gap', default=1e-6),
             IntegerOption('node_limit', default=100000000),
             IntegerOption('root_node_feasible_solution_seed', default=None),
             NumericOption('root_node_feasible_solution_search_timelimit', default=6000000),
@@ -120,16 +120,16 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
         bounds_close = is_close(
             state.lower_bound,
             state.upper_bound,
-            rtol=self.bab_config['relative_tolerance'],
-            atol=self.bab_config['tolerance'],
+            rtol=self.bab_config['relative_gap'],
+            atol=self.bab_config['absolute_gap'],
         )
 
         if self.galini.paranoid_mode:
             assert (state.lower_bound <= state.upper_bound or bounds_close)
 
         return (
-            rel_gap <= self.bab_config['relative_tolerance'] or
-            abs_gap <= self.bab_config['tolerance']
+            rel_gap <= self.bab_config['relative_gap'] or
+            abs_gap <= self.bab_config['absolute_gap']
         )
 
     def should_terminate(self, state):
@@ -214,8 +214,8 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
             node_can_not_improve_solution = is_close(
                 current_node.parent.lower_bound,
                 tree.upper_bound,
-                atol=self.bab_config['tolerance'],
-                rtol=self.bab_config['relative_tolerance'],
+                atol=self.bab_config['absolute_gap'],
+                rtol=self.bab_config['relative_gap'],
             ) or current_node.parent.lower_bound > tree.upper_bound
 
             if node_can_not_improve_solution:
@@ -243,8 +243,8 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
             current_node_converged = is_close(
                 solution.lower_bound,
                 solution.upper_bound,
-                atol=self.bab_config['tolerance'],
-                rtol=self.bab_config['relative_tolerance'],
+                atol=self.bab_config['absolute_gap'],
+                rtol=self.bab_config['relative_gap'],
             )
 
             node_relaxation_is_feasible_or_unbounded = (
