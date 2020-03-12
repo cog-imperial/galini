@@ -181,7 +181,12 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
     def find_initial_solution(self, model, tree, node):
         try:
             _, _, cvx = perform_fbbt_on_model(
-                model, tree, node, maxiter=1, eps=self.galini.mc.epsilon
+                model,
+                tree,
+                node,
+                maxiter=1,
+                timelimit=self.bab_config['fbbt_timelimit'],
+                eps=self.galini.mc.epsilon
             )
 
             solution = self._try_solve_convex_model(model, convexity=cvx)
@@ -220,7 +225,12 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
         try:
             bounds, mono, cvx = perform_fbbt_on_model(
-                model, tree, node, maxiter=self.bab_config['fbbt_maxiter'], eps=self.galini.mc.epsilon
+                model,
+                tree,
+                node,
+                maxiter=self.bab_config['fbbt_maxiter'],
+                timelimit=self.bab_config['fbbt_timelimit'],
+                eps=self.galini.mc.epsilon
             )
             node.storage.update_bounds(bounds)
         except EmptyIntervalError:

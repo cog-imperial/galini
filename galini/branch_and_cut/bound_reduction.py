@@ -119,21 +119,37 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
     return new_bounds
 
 
-def perform_fbbt_on_model(model, tree, node, maxiter, eps):
-    fbbt_start_time = current_time()
+def perform_fbbt_on_model(model, tree, node, maxiter, timelimit, eps):
+    """
 
-    objective_upper_bound = None
-    if tree.upper_bound is not None:
-        objective_upper_bound = tree.upper_bound
+    Parameters
+    ----------
+    model
+    tree
+    node
+    maxiter
+    timelimit
+    eps
+
+    Returns
+    -------
+
+    """
+    objective_bounds = pe.ComponentMap()
+    objective_bounds[model._objective] = (tree.lower_bound, tree.upper_bound)
 
     branching_variable = None
     if not node.storage.is_root:
         branching_variable = node.storage.branching_variable
+
+    fbbt_start_time = current_time()
+    should_continue = lambda: seconds_elapsed_since(fbbt_start_time) <= timelimit
+
     bounds = perform_fbbt(
         model,
         max_iter=maxiter,
-        #timelimit=self.fbbt_timelimit,
-        #objective_upper_bound=objective_upper_bound,
+        objective_bounds=objective_bounds,
+        should_continue=should_continue,
         #branching_variable=branching_variable,
     )
 
