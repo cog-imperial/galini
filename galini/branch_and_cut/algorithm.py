@@ -15,8 +15,6 @@
 """Branch & Cut algorithm."""
 
 import pyomo.environ as pe
-from suspect.interval import EmptyIntervalError
-
 from galini.branch_and_bound.algorithm import BranchAndBoundAlgorithm
 from galini.branch_and_bound.node import NodeSolution
 from galini.branch_and_bound.selection import BestLowerBoundSelectionStrategy
@@ -44,6 +42,7 @@ from galini.timelimit import (
     current_time,
     seconds_elapsed_since,
 )
+from suspect.interval import EmptyIntervalError
 
 
 # pylint: disable=too-many-instance-attributes

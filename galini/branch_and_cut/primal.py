@@ -14,10 +14,10 @@
 
 """Functions to solve primal problem."""
 import pyomo.environ as pe
-
 from galini.math import is_inf
 from galini.pyomo import safe_setub, safe_setlb
 from galini.solvers.solution import load_solution_from_model
+from pyutilib.common import ApplicationError
 
 
 def solve_primal(model, mip_solution, solver, mc):
@@ -100,7 +100,7 @@ def solve_primal_with_starting_point(model, starting_point, solver, mc, fix_all=
         for var, lb, ub in fixed_vars:
             safe_setlb(var, lb)
             safe_setub(var, ub)
-    except ValueError:
+    except (ValueError, ApplicationError):
         for var, lb, ub in fixed_vars:
             safe_setlb(var, lb)
             safe_setub(var, ub)
