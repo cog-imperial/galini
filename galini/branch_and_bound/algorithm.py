@@ -170,7 +170,8 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
 
         self.logger.info('Finding initial feasible solution')
 
-        initial_solution = self.find_initial_solution(model, tree, tree.root)
+        with self._telemetry.timespan('branch_and_bound.find_initial_solution'):
+            initial_solution = self.find_initial_solution(model, tree, tree.root)
 
         if initial_solution is not None:
             tree.add_initial_solution(initial_solution, self.galini.mc)
@@ -179,7 +180,8 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
                 return
 
         self.logger.info('Solving root problem')
-        root_solution = self.solve_problem_at_root(tree, tree.root)
+        with self._telemetry.timespan('branch_and_bound.solve_problem_at_root'):
+            root_solution = self.solve_problem_at_root(tree, tree.root)
         tree.update_root(root_solution)
         self._telemetry.log_at_end_of_iteration(bab_iteration)
         bab_iteration += 1
@@ -230,7 +232,8 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
                 bab_iteration += 1
                 continue
 
-            solution = self.solve_problem_at_node(tree, current_node)
+            with self._telemetry.timespan('branch_and_bound.solve_problem_at_node'):
+                solution = self.solve_problem_at_node(tree, current_node)
             assert solution is not None
 
             tree.update_node(current_node, solution)

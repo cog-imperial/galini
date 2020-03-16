@@ -15,4 +15,4 @@
 """GALINI"""
 
 from .reader import read_pyomo_model
-from .util import safe_setlb, safe_setub
+from .util import safe_setlb, safe_setub, safe_set_bounds

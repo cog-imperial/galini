@@ -17,6 +17,11 @@
 import pyomo.environ as pe
 
 
+def safe_set_bounds(var, lb, ub):
+    safe_setlb(var, lb)
+    safe_setub(var, ub)
+
+
 def safe_setlb(var, lb):
     if lb is not None:
         lb = float(lb)

@@ -13,32 +13,38 @@
 # limitations under the License.
 
 """Collect telemetry information from solver parts."""
-
+from contextlib import contextmanager
+from galini.timelimit import seconds_elapsed_since, current_time
 
 class Telemetry:
+
     def __init__(self, galini):
         self._logger = galini.get_logger(__name__)
-        self._counters = []
+        self._counters = dict()
 
     def create_counter(self, name, initial_value=0):
+        if name in self._counters:
+            raise ValueError('Counter {} already exists'.format(name))
         counter = Counter(name, initial_value)
-        self._counters.append(counter)
+        self._counters[name] = counter
         return counter
 
     def create_gauge(self, name, initial_value=0):
+        if name in self._counters:
+            raise ValueError('Counter {} already exists'.format(name))
         gauge = Gauge(name, initial_value)
-        self._counters.append(gauge)
+        self._counters[name] = gauge
         return gauge
 
     def counters_values(self):
         def _counter_to_dict(counter):
             return {
-            'name': counter.name,
-            'value': counter.value,
+                'name': counter.name,
+                'value': counter.value,
             }
         return [
             _counter_to_dict(counter)
-            for counter in self._counters
+            for counter in self._counters.values()
         ]
 
     def log_at_end_of_iteration(self, iteration):
@@ -46,7 +52,7 @@ class Telemetry:
             'Counters value at end of iteration {}',
             iteration,
         )
-        for counter in self._counters:
+        for counter in self._counters.values():
             self._logger.update_variable(
                 iteration=iteration,
                 var_name=counter.name,
@@ -57,6 +63,12 @@ class Telemetry:
                 counter.name,
                 counter.value
             )
+
+    def get_counter(self, name):
+        return self._counters.get(name, None)
+
+    def timespan(self, name):
+        return timespan(self, name)
 
 
 class Counter:
@@ -86,3 +98,15 @@ class Gauge:
     @property
     def value(self):
         return self._value
+
+
+@contextmanager
+def timespan(telemetry, name):
+    counter = telemetry.get_counter(name)
+    if counter is None:
+        counter = telemetry.create_counter(name, 0.0)
+
+    start = current_time()
+    yield
+    duration = seconds_elapsed_since(start)
+    counter.increment(duration)

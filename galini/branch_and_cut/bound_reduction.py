@@ -17,19 +17,17 @@ import coramin.domain_reduction.obbt as coramin_obbt
 import numpy as np
 import pyomo.environ as pe
 from coramin.relaxations.iterators import relaxation_data_objects
-from pyomo.core.kernel.component_set import ComponentSet
-from suspect.fbbt import perform_fbbt
-from suspect.interval import Interval
-from suspect.propagation import propagate_special_structure
-
 from galini.math import is_close
-from galini.pyomo import safe_setlb, safe_setub
+from galini.pyomo import safe_set_bounds
 from galini.pyomo.util import update_solver_options
 from galini.timelimit import (
     current_time,
     seconds_elapsed_since,
-    timeout,
 )
+from pyomo.core.kernel.component_set import ComponentSet
+from suspect.fbbt import perform_fbbt
+from suspect.interval import Interval
+from suspect.propagation import propagate_special_structure
 
 coramin_logger = coramin_obbt.logger  # pylint: disable=invalid-name
 coramin_logger.disabled = True
@@ -62,8 +60,11 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
     """
     obbt_start_time = current_time()
 
+    originally_integer = []
     for var in linear_model.component_data_objects(ctype=pe.Var):
-        var.domain = pe.Reals
+        if var.is_continuous():
+            originally_integer.append((var, var.domain))
+            var.domain = pe.Reals
 
     # collect variables in nonlinear constraints
     nonlinear_variables = ComponentSet()
@@ -96,6 +97,9 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
         warning_threshold=mc.epsilon
     )
 
+    for var, domain in originally_integer:
+        var.domain = domain
+
     if result is None:
         return
 
@@ -104,14 +108,12 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
     eps = mc.epsilon
 
     for var, new_lb, new_ub in zip(nonlinear_variables, *result):
+        original_var = model.find_component(var.getname(fully_qualified=True))
         new_lb = best_lower_bound(var, new_lb, var.lb, eps)
         new_ub = best_upper_bound(var, new_ub, var.ub, eps)
         new_bounds[var] = (new_lb, new_ub)
-        var.setlb(new_lb)
-        var.setub(new_ub)
-        original_var = model.find_component(var.getname(fully_qualified=True))
-        original_var.setlb(new_lb)
-        original_var.setub(new_ub)
+        safe_set_bounds(var, new_lb, new_ub)
+        safe_set_bounds(original_var, new_lb, new_ub)
 
     # Rebuild relaxations since bounds changed
     for relaxation in relaxation_data_objects(linear_model, active=True, descend_into=True):
@@ -168,7 +170,6 @@ def perform_fbbt_on_model(model, tree, node, maxiter, timelimit, eps):
         new_ub = best_upper_bound(var, new_bound.upper_bound, var.ub, eps)
 
         new_bounds_map[var] = (new_lb, new_ub)
-
         if new_lb > new_ub:
             cause_infeasibility = var
             break
@@ -179,8 +180,7 @@ def perform_fbbt_on_model(model, tree, node, maxiter, timelimit, eps):
         for var, (new_lb, new_ub) in new_bounds_map.items():
             if np.abs(new_ub - new_lb) < eps:
                 new_lb = new_ub
-            safe_setlb(var, new_lb)
-            safe_setub(var, new_ub)
+            safe_set_bounds(var, new_lb, new_ub)
             # Also update bounds map
             bounds[var] = Interval(new_lb, new_ub)
 

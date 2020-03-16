@@ -94,7 +94,7 @@ def solve_primal_with_starting_point(model, starting_point, solver, mc, fix_all=
             fixed_vars.append((var, lb, ub))
 
     try:
-        results = solver.solve(model, tee=True)
+        results = solver.solve(model, tee=False)
 
         # unfix all variables
         for var, lb, ub in fixed_vars:

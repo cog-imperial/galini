@@ -179,14 +179,15 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
     def find_initial_solution(self, model, tree, node):
         try:
-            _, _, cvx = perform_fbbt_on_model(
-                model,
-                tree,
-                node,
-                maxiter=1,
-                timelimit=self.bab_config['fbbt_timelimit'],
-                eps=self.galini.mc.epsilon
-            )
+            with self._telemetry.timespan('branch_and_cut.fbbt'):
+                _, _, cvx = perform_fbbt_on_model(
+                    model,
+                    tree,
+                    node,
+                    maxiter=1,
+                    timelimit=self.bab_config['fbbt_timelimit'],
+                    eps=self.galini.mc.epsilon
+                )
 
             solution = self._try_solve_convex_model(model, convexity=cvx)
             if solution is not None:
@@ -223,34 +224,38 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         model = node.storage.model()
 
         try:
-            bounds, mono, cvx = perform_fbbt_on_model(
-                model,
-                tree,
-                node,
-                maxiter=self.bab_config['fbbt_maxiter'],
-                timelimit=self.bab_config['fbbt_timelimit'],
-                eps=self.galini.mc.epsilon
-            )
-            node.storage.update_bounds(bounds)
+            with self._telemetry.timespan('branch_and_cut.fbbt'):
+                bounds, mono, cvx = perform_fbbt_on_model(
+                    model,
+                    tree,
+                    node,
+                    maxiter=self.bab_config['fbbt_maxiter'],
+                    timelimit=self.bab_config['fbbt_timelimit'],
+                    eps=self.galini.mc.epsilon
+                )
+                if bounds is not None:
+                    node.storage.update_bounds(bounds)
         except EmptyIntervalError:
             return NodeSolution(None, None)
 
-        linear_model = node.storage.model_relaxation()
+        with self._telemetry.timespan('branch_and_cut.model_relaxation'):
+            linear_model = node.storage.model_relaxation()
 
         if is_root:
             self.logger.info('OBBT start')
-            new_bounds = perform_obbt_on_model(
-                self._mip_solver,
-                model,
-                linear_model,
-                upper_bound=None,
-                timelimit=self.bab_config['obbt_timelimit'],
-                simplex_maxiter=self.bab_config['obbt_simplex_maxiter'],
-                absolute_gap=self.bab_config['absolute_gap'],
-                relative_gap=self.bab_config['relative_gap'],
-                mc=self.galini.mc,
-            )
-            node.storage.update_bounds(new_bounds)
+            with self._telemetry.timespan('branch_and_cut.obbt'):
+                new_bounds = perform_obbt_on_model(
+                    self._mip_solver,
+                    model,
+                    linear_model,
+                    upper_bound=tree.upper_bound,
+                    timelimit=self.bab_config['obbt_timelimit'],
+                    simplex_maxiter=self.bab_config['obbt_simplex_maxiter'],
+                    absolute_gap=self.bab_config['absolute_gap'],
+                    relative_gap=self.bab_config['relative_gap'],
+                    mc=self.galini.mc,
+                )
+                node.storage.update_bounds(new_bounds)
             self.logger.info('OBBT completed')
 
         self.logger.info(
@@ -264,9 +269,10 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         self.logger.info('Using cuts generators: {}', ', '.join(generators_name))
 
         # Try solve the problem as convex NLP
-        solution = self._try_solve_convex_model(model, convexity=cvx)
-        if solution is not None:
-            return solution
+        with self._telemetry.timespan('branch_and_cut.try_solve_convex_model'):
+            solution = self._try_solve_convex_model(model, convexity=cvx)
+            if solution is not None:
+                return solution
 
         if not node.has_parent:
             assert is_root
@@ -274,24 +280,27 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         else:
             feasible_solution = None
 
-        # TODO(fra): before start at root/node callback for cut manager
-
         cuts_manager = self.galini.cuts_generators_manager
 
         if is_root:
-            cuts_manager.before_start_at_root(model, linear_model)
+            with self._telemetry.timespan('cuts_manager.before_start_at_root'):
+                cuts_manager.before_start_at_root(model, linear_model)
         else:
-            cuts_manager.before_start_at_node(model, linear_model)
+            with self._telemetry.timespan('cuts_manager.before_start_at_node'):
+                cuts_manager.before_start_at_node(model, linear_model)
 
         # Find lower bounding solution from linear model
-        feasible, cuts_state, lower_bounding_solution = self._solve_lower_bounding_relaxation(
-            tree, node, model, linear_model
-        )
+        with self._telemetry.timespan('cuts_manager.solve_lower_bounding_relaxation'):
+            feasible, cuts_state, lower_bounding_solution = self._solve_lower_bounding_relaxation(
+                tree, node, model, linear_model
+            )
 
         if is_root:
-            cuts_manager.after_end_at_root(model, linear_model, lower_bounding_solution)
+            with self._telemetry.timespan('cuts_manager.after_end_at_root'):
+                cuts_manager.after_end_at_root(model, linear_model, lower_bounding_solution)
         else:
-            cuts_manager.after_end_at_node(model, linear_model, lower_bounding_solution)
+            with self._telemetry.timespan('cuts_manager.after_end_at_node'):
+                cuts_manager.after_end_at_node(model, linear_model, lower_bounding_solution)
 
         if not feasible:
             self.logger.info('Lower bounding solution not success: {}', lower_bounding_solution)
@@ -303,8 +312,9 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
         # Solve MILP to obtain MILP solution
         self._update_solver_options(self._mip_solver)
-        mip_results = self._mip_solver.solve(linear_model)
-        mip_solution = load_solution_from_model(mip_results, linear_model)
+        with self._telemetry.timespan('branch_and_cut.solve_mip'):
+            mip_results = self._mip_solver.solve(linear_model)
+            mip_solution = load_solution_from_model(mip_results, linear_model)
         self.logger.info(
             'MILP solution after LP cut phase: {} {}',
             mip_solution.status,
@@ -320,9 +330,10 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         if not mip_solution.status.is_success():
             return NodeSolution(mip_solution, None)
 
-        self._update_node_branching_decision(
-            model, linear_model, mip_solution, node
-        )
+        with self._telemetry.timespan('branch_and_cut.update_node_branching_decision'):
+            self._update_node_branching_decision(
+                model, linear_model, mip_solution, node
+            )
 
         assert cuts_state is not None
         can_improve_feasible_solution = not (
@@ -340,9 +351,10 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             return NodeSolution(mip_solution, None)
 
         # Try to find a feasible solution
-        primal_solution = self._solve_upper_bounding_problem(
-            model, linear_model, mip_solution
-        )
+        with self._telemetry.timespan('branch_and_cut.solve_upper_bounding_problem'):
+            primal_solution = self._solve_upper_bounding_problem(
+                model, linear_model, mip_solution
+            )
 
         assert primal_solution is not None, 'Should return a solution even if not feasible'
 
