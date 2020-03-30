@@ -74,7 +74,7 @@ class _NodeStorageBase:
     def model_relaxation(self):
         linear_model = self.root._linear_model
         for var, (lb, ub) in self._bounds.items():
-            linear_var = self.root._model_to_relaxation_var_map[var]
+            linear_var = self.root.model_to_relaxation_var_map[var]
             safe_setlb(linear_var, lb)
             safe_setub(linear_var, ub)
 
@@ -123,6 +123,10 @@ class NodeStorage(_NodeStorageBase):
     def is_root(self):
         return False
 
+    @property
+    def model_to_relaxation_var_map(self):
+        return self.root.model_to_relaxation_var_map
+
 
 class RootNodeStorage(_NodeStorageBase):
     def __init__(self, model):
@@ -136,7 +140,7 @@ class RootNodeStorage(_NodeStorageBase):
         # Lazily instantiate when creating linear model
         self._linear_model = None
         self._aux_var_relaxation_map = None
-        self._model_to_relaxation_var_map = None
+        self.model_to_relaxation_var_map = None
         self.cut_pool = None
         self.cut_node_storage = None
 
@@ -152,7 +156,7 @@ class RootNodeStorage(_NodeStorageBase):
         (
             self._linear_model,
             self._aux_var_relaxation_map,
-            self._model_to_relaxation_var_map,
+            self.model_to_relaxation_var_map,
         ) = relax(self._model)
 
         self.cut_pool = CutPool(self._linear_model)

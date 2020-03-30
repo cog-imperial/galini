@@ -353,7 +353,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         # Try to find a feasible solution
         with self._telemetry.timespan('branch_and_cut.solve_upper_bounding_problem'):
             primal_solution = self._solve_upper_bounding_problem(
-                model, linear_model, mip_solution
+                model, node, linear_model, mip_solution
             )
 
         assert primal_solution is not None, 'Should return a solution even if not feasible'
@@ -382,11 +382,12 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
         return feasible, cuts_state, mip_solution
 
-    def _solve_upper_bounding_problem(self, model, linear_model, mip_solution):
+    def _solve_upper_bounding_problem(self, model, node, linear_model, mip_solution):
         # TODO(fra): properly map between variables
         assert mip_solution.status.is_success(), "Should be a feasible point for the relaxation"
+        model_var_map = node.storage.model_to_relaxation_var_map
         mip_solution_with_model_vars = pe.ComponentMap(
-            (var, mip_solution.variables[getattr(linear_model, var.name)])
+            (var, mip_solution.variables[model_var_map[var]])
             for var in model.component_data_objects(pe.Var, active=True)
         )
 
