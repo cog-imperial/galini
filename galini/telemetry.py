@@ -102,6 +102,7 @@ class Gauge:
 
 @contextmanager
 def timespan(telemetry, name):
+    name = 'time.{}'.format(name)
     counter = telemetry.get_counter(name)
     if counter is None:
         counter = telemetry.create_counter(name, 0.0)
