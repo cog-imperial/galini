@@ -80,7 +80,7 @@ def solve_primal_with_starting_point(model, starting_point, solver, mc, fix_all=
             user_value = int(user_value)
             var.set_value(user_value)
         else:
-            point = compute_variable_starting_point(var, mc)
+            point = compute_variable_starting_point(var, mc, user_value)
             var.set_value(point)
 
         # Fix integers variables
@@ -115,17 +115,16 @@ def solve_primal_with_starting_point(model, starting_point, solver, mc, fix_all=
     return load_solution_from_model(results, model)
 
 
-def compute_variable_starting_point(var, mc):
+def compute_variable_starting_point(var, mc, user_value):
     """Compute a variable starting point, using its value if present."""
-    point = _compute_variable_starting_point_as_float(var, mc)
+    point = _compute_variable_starting_point_as_float(var, mc, user_value)
     if var.is_continuous():
         return point
     return int(point)
 
 
-def _compute_variable_starting_point_as_float(var, mc):
+def _compute_variable_starting_point_as_float(var, mc, value):
     # Use starting point if present
-    value = pe.value(var, exception=False)
     if value is not None:
         return value
     # If var has both bounds, use midpoint
