@@ -159,7 +159,7 @@ def compute_nonlinear_infeasiblity_components(linear_problem, mip_solution):
             'min': nonlinear_infeasibility_min,
         }
 
-    for relaxation in relaxation_data_objects(linear_problem):
+    for relaxation in linear_problem.galini_nonlinear_relaxations:
         rhs_vars = relaxation.get_rhs_vars()
 
         if len(rhs_vars) > 2:

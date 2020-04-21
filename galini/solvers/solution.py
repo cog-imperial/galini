@@ -37,7 +37,7 @@ def load_solution_from_model(results, model):
 
         obj = pe.value(objective)
         vars = pe.ComponentMap(
-            (var, pe.value(var))
+            (var, pe.value(var, exception=False))
             for var in model.component_data_objects(pe.Var, active=True)
         )
         return Solution(status, obj, vars)

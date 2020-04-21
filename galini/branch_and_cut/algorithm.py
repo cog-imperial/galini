@@ -383,8 +383,8 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         return feasible, cuts_state, mip_solution
 
     def _solve_upper_bounding_problem(self, model, node, linear_model, mip_solution):
-        # TODO(fra): properly map between variables
         assert mip_solution.status.is_success(), "Should be a feasible point for the relaxation"
+
         model_var_map = node.storage.model_to_relaxation_var_map
         mip_solution_with_model_vars = pe.ComponentMap(
             (var, mip_solution.variables[model_var_map[var]])
@@ -506,7 +506,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         except ValueError as ex:
             self.logger.warning('Error in cut round {}: {}', cuts_state.round, ex)
             return False, None, None
-        mip_solution = load_solution_from_model(results, model)
+        mip_solution = load_solution_from_model(results, linear_model)
 
         self.logger.debug(
             'Round {}. Linearized problem solution is {}',

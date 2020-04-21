@@ -159,6 +159,11 @@ class RootNodeStorage(_NodeStorageBase):
             self.model_to_relaxation_var_map,
         ) = relax(self._model)
 
+        # Pre-compute nonlinear relaxations objects
+        # This is also needed to avoid branching on auxiliary variables
+        # introduced by cut generators.
+        self._linear_model.galini_nonlinear_relaxations = \
+            list(relaxation_data_objects(self._linear_model))
         self.cut_pool = CutPool(self._linear_model)
         self.cut_node_storage = CutNodeStorage(None, self.cut_pool)
 
