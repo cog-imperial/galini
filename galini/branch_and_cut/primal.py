@@ -110,7 +110,7 @@ def solve_primal_with_starting_point(model, starting_point, solver, mc, fix_all=
         for var, lb, ub in fixed_vars:
             safe_setlb(var, lb)
             safe_setub(var, ub)
-        raise ex
+        raise
 
     return load_solution_from_model(results, model)
 

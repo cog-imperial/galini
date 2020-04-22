@@ -124,7 +124,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             OptionsGroup('nlp_solver', [
                 StringOption(
                     'name',
-                    default='ipopt',
+                    default='pypopt_direct',
                     description='NLP solver name'
                 ),
                 StringOption(
@@ -208,7 +208,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             return None
         except Exception as ex:
             if self.galini.paranoid_mode:
-                raise ex
+                raise
             self.logger.info('Exception in find_initial_solution: {}', ex)
             return None
 

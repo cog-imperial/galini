@@ -15,6 +15,7 @@
 """Utility functions for galini.pyomo."""
 
 import pyomo.environ as pe
+from pypopt.solver import PypoptDirectSolver
 
 
 def safe_set_bounds(var, lb, ub):

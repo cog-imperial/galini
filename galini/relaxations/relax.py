@@ -49,6 +49,7 @@ def relax(model, use_linear_relaxation=True):
 
     model.relaxations = pe.Block()
     model.aux_vars = pe.VarList()
+    model.aux_cons = pe.ConstraintList()
 
     counter = RelaxationCounter()
 
