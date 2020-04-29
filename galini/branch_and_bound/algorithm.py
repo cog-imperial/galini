@@ -154,7 +154,7 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
     def _bab_loop(self, model, **kwargs):
         known_optimal_objective = kwargs.get('known_optimal_objective', None)
         if known_optimal_objective is not None:
-            if not model.__objective.is_originally_minimizing:
+            if not model._objective.is_originally_minimizing:
                 known_optimal_objective = -known_optimal_objective
 
         branching_strategy = self.branching_strategy
