@@ -88,8 +88,6 @@ def update_solver_options(solver, timelimit=None, relative_gap=None, absolute_ga
 
     meta = solver._galini_meta
 
-    solver.options = dict()
-
     if timelimit is not None:
         timelimit_option = meta['timelimit_option']
         if timelimit_option:

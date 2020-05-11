@@ -247,8 +247,12 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         if is_root:
             self.logger.info('OBBT start')
             with self._telemetry.timespan('branch_and_cut.obbt'):
+                obbt_solver = instantiate_solver_with_options(
+                    self.config['mip_solver'],
+                )
+
                 new_bounds = perform_obbt_on_model(
-                    self._mip_solver,
+                    obbt_solver,
                     model,
                     linear_model,
                     upper_bound=tree.upper_bound,
