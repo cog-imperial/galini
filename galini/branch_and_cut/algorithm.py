@@ -203,6 +203,9 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
                 model, pe.ComponentMap(), self._nlp_solver, self.galini.mc
             )
 
+            if solution is None:
+                return None
+
             if solution.status.is_success():
                 return NodeSolution(None, solution)
             return None
