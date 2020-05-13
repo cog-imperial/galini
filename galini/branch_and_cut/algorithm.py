@@ -179,15 +179,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
     def find_initial_solution(self, model, tree, node):
         try:
-            with self._telemetry.timespan('branch_and_cut.fbbt'):
-                _, _, cvx = perform_fbbt_on_model(
-                    model,
-                    tree,
-                    node,
-                    maxiter=1,
-                    timelimit=self.bab_config['fbbt_timelimit'],
-                    eps=self.galini.mc.epsilon
-                )
+            _, _, cvx = self._perform_fbbt_on_model(tree, node, model, maxiter=1)
 
             solution = self._try_solve_convex_model(model, convexity=cvx)
             if solution is not None:
@@ -227,17 +219,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         model = node.storage.model()
 
         try:
-            with self._telemetry.timespan('branch_and_cut.fbbt'):
-                bounds, mono, cvx = perform_fbbt_on_model(
-                    model,
-                    tree,
-                    node,
-                    maxiter=self.bab_config['fbbt_maxiter'],
-                    timelimit=self.bab_config['fbbt_timelimit'],
-                    eps=self.galini.mc.epsilon
-                )
-                if bounds is not None:
-                    node.storage.update_bounds(bounds)
+            bounds, mono, cvx = self._perform_fbbt_on_model(tree, node, model)
         except EmptyIntervalError:
             return NodeSolution(None, None)
 
@@ -263,7 +245,11 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
                     mc=self.galini.mc,
                 )
                 node.storage.update_bounds(new_bounds)
-            self.logger.info('OBBT completed')
+            self.logger.info('OBBT completed. Starting one more round of FBBT')
+            bounds, mono, cvx = self._perform_fbbt_on_model(tree, node, model)
+            # Recompute linear relaxation to have better bounds on linear_model
+            node.storage.recompute_model_relaxation_bounds()
+            linear_model = node.storage.model_relaxation()
 
         self.logger.info(
             'Starting Cut generation iterations. Maximum iterations={}',
@@ -592,6 +578,23 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         if solution.status.is_success():
             return solution
         return None
+
+    def _perform_fbbt_on_model(self, tree, node, model, maxiter=None):
+        if maxiter is None:
+            maxiter = self.bab_config['fbbt_maxiter']
+
+        with self._telemetry.timespan('branch_and_cut.fbbt'):
+            bounds, mono, cvx = perform_fbbt_on_model(
+                model,
+                tree,
+                node,
+                maxiter=maxiter,
+                timelimit=self.bab_config['fbbt_timelimit'],
+                eps=self.galini.mc.epsilon
+            )
+            if bounds is not None:
+                node.storage.update_bounds(bounds)
+            return bounds, mono, cvx
 
 
 def _is_convex(model, cvx_map):

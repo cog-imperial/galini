@@ -72,6 +72,10 @@ class _NodeStorageBase:
         return self.root._model
 
     def model_relaxation(self):
+        self.recompute_model_relaxation_bounds()
+        return self.root._linear_model
+
+    def recompute_model_relaxation_bounds(self):
         linear_model = self.root._linear_model
         for var, (lb, ub) in self._bounds.items():
             linear_var = self.root.model_to_relaxation_var_map[var]
@@ -95,7 +99,6 @@ class _NodeStorageBase:
                 relaxation.add_oa_point(var_values)
 
             relaxation.rebuild()
-        return linear_model
 
     def branch_at_point(self, branching_point):
         assert self.branching_point is None
