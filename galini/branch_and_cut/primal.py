@@ -17,7 +17,44 @@ import pyomo.environ as pe
 from galini.math import is_inf
 from galini.pyomo import safe_setub, safe_setlb
 from galini.solvers.solution import load_solution_from_model
+from galini.branch_and_bound.node import NodeSolution
+from galini.registry import Registry
 from pyutilib.common import ApplicationError
+
+
+class PrimalSearchStrategyRegistry(Registry):
+    """Registry of primal search strategies."""
+    def group_name(self):
+        return 'galini.primal_search'
+
+
+class DefaultPrimalSearchStrategy:
+    def __init__(self, algorithm):
+        self.algorithm = algorithm
+
+    def solve(self, model, tree, node):
+        _, _, cvx = self.algorithm._perform_fbbt_on_model(tree, node, model, maxiter=1)
+
+        solution = self.algorithm._try_solve_convex_model(model, convexity=cvx)
+        if solution is not None:
+            return NodeSolution(solution, solution)
+
+        # Don't pass a starting point since it's already loaded in the model
+        timelimit = min(
+            self.algorithm.bab_config['root_node_feasible_solution_search_timelimit'],
+            self.algorithm.galini.timelimit.seconds_left(),
+        )
+        self.algorithm._update_solver_options(self.algorithm._nlp_solver, timelimit=timelimit)
+        solution = solve_primal_with_starting_point(
+            model, pe.ComponentMap(), self.algorithm._nlp_solver, self.algorithm.galini.mc
+        )
+
+        if solution is None:
+            return None
+
+        if solution.status.is_success():
+            return NodeSolution(None, solution)
+        return None
 
 
 def solve_primal(model, mip_solution, solver, mc):

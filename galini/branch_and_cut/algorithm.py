@@ -24,7 +24,9 @@ from galini.branch_and_cut.bound_reduction import (
 from galini.branch_and_cut.branching import compute_branching_decision, \
     BranchAndCutBranchingStrategy
 from galini.branch_and_cut.primal import (
-    solve_primal, solve_primal_with_starting_point
+    PrimalSearchStrategyRegistry,
+    solve_primal,
+    solve_primal_with_starting_point
 )
 from galini.branch_and_cut.state import CutsState
 from galini.config import (
@@ -92,6 +94,9 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
                     default=120,
                     description='Total timelimit for cut rounds'
                 ),
+            ]),
+            OptionsGroup('primal_search', [
+                StringOption('strategy', default='default')
             ]),
             OptionsGroup('mip_solver', [
                 StringOption(
@@ -179,28 +184,12 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
     def find_initial_solution(self, model, tree, node):
         try:
-            _, _, cvx = self._perform_fbbt_on_model(tree, node, model, maxiter=1)
-
-            solution = self._try_solve_convex_model(model, convexity=cvx)
-            if solution is not None:
-                return NodeSolution(solution, solution)
-
-            # Don't pass a starting point since it's already loaded in the model
-            timelimit = min(
-                self.bab_config['root_node_feasible_solution_search_timelimit'],
-                self.galini.timelimit.seconds_left(),
-            )
-            self._update_solver_options(self._nlp_solver, timelimit=timelimit)
-            solution = solve_primal_with_starting_point(
-                model, pe.ComponentMap(), self._nlp_solver, self.galini.mc
-            )
-
-            if solution is None:
-                return None
-
-            if solution.status.is_success():
-                return NodeSolution(None, solution)
-            return None
+            reg = PrimalSearchStrategyRegistry()
+            strategy_name = self.config['primal_search']['strategy']
+            strategy_cls = reg.get(strategy_name, None)
+            assert strategy_cls is not None
+            strategy = strategy_cls(self)
+            return strategy.solve(model, tree, node)
         except Exception as ex:
             if self.galini.paranoid_mode:
                 raise

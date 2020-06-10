@@ -137,6 +137,9 @@ setup(
         'galini.algorithms': [
             'bac=galini.branch_and_cut:BranchAndCutAlgorithm',
         ],
+        'galini.primal_search': [
+            'default=galini.branch_and_cut.primal:DefaultPrimalSearchStrategy',
+        ],
         'galini.cuts_generators': [
             'outer_approximation=galini.outer_approximation:OuterApproximationCutsGenerator'
         ],
