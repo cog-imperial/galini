@@ -62,6 +62,7 @@ def relax(model, use_linear_relaxation=True):
         assert obj.is_minimizing()
 
         relaxation_side = RelaxationSide.UNDER
+        relaxation_side = RelaxationSide.BOTH
         relaxation_side_map = pe.ComponentMap()
         relaxation_side_map[obj.expr] = relaxation_side
 
@@ -84,6 +85,7 @@ def relax(model, use_linear_relaxation=True):
         else:
             raise ValueError('Encountered a constraint without a lower or an upper bound: ' + str(c))
 
+        relaxation_side = RelaxationSide.BOTH
         relaxation_side_map = pe.ComponentMap()
         relaxation_side_map[cons.body] = relaxation_side
 
