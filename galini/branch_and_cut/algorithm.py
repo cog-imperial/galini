@@ -299,7 +299,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         self._update_solver_options(self._mip_solver)
         with self._telemetry.timespan('branch_and_cut.solve_mip'):
             mip_results = self._mip_solver.solve(linear_model)
-            mip_solution = load_solution_from_model(mip_results, linear_model)
+            mip_solution = load_solution_from_model(mip_results, linear_model, solver=self._mip_solver)
         self.logger.info(
             'MILP solution after LP cut phase: {} {}',
             mip_solution.status,
@@ -491,7 +491,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         except ValueError as ex:
             self.logger.warning('Error in cut round {}: {}', cuts_state.round, ex)
             return False, None, None
-        mip_solution = load_solution_from_model(results, linear_model)
+        mip_solution = load_solution_from_model(results, linear_model, solver=self._mip_solver)
 
         self.logger.debug(
             'Round {}. Linearized problem solution is {}',
@@ -530,7 +530,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
             self._update_solver_options(self._mip_solver)
             results = self._mip_solver.solve(linear_model)
-            lp_solution = load_solution_from_model(results, linear_model)
+            lp_solution = load_solution_from_model(results, linear_model, solver=self._mip_solver)
 
             if not lp_solution.status.is_success():
                 break
@@ -566,7 +566,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         self._update_solver_options(self._nlp_solver)
         solver = self._nlp_solver
         results = solver.solve(model)
-        solution = load_solution_from_model(results, model)
+        solution = load_solution_from_model(results, model, solver=solver)
         if solution.status.is_success():
             return solution
         return None

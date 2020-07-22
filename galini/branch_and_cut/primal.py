@@ -81,7 +81,17 @@ def solve_primal(model, mip_solution, solver, mc):
 
     if solution.status.is_success():
         return solution
-    # TODO(fra): update to use solution pool again
+
+    mip_solution_pool = getattr(mip_solution, 'solution_pool', None)
+    if mip_solution_pool is not None:
+        for mip_solution in mip_solution_pool:
+            solution_from_pool = solve_primal_with_starting_point(
+                model, mip_solution, solver, mc
+            )
+            if solution_from_pool.status.is_success():
+                return solution_from_pool
+
+    # No solution was feasible, return original infeasible solution.
     return solution
 
 
@@ -149,7 +159,7 @@ def solve_primal_with_starting_point(model, starting_point, solver, mc, fix_all=
             safe_setub(var, ub)
         raise
 
-    return load_solution_from_model(results, model)
+    return load_solution_from_model(results, model, solver=solver)
 
 
 def compute_variable_starting_point(var, mc, user_value):

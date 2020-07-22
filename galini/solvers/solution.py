@@ -15,10 +15,10 @@
 """Base class for solutions."""
 
 import abc
-import warnings
 from collections import namedtuple
 
 import pyomo.environ as pe
+from pyomo.solvers.plugins.solvers.cplex_direct import CPLEXDirect
 from pyomo.opt import TerminationCondition
 
 
@@ -26,7 +26,7 @@ OptimalObjective = namedtuple('OptimalObjective', ['name', 'value'])
 OptimalVariable = namedtuple('OptimalVariable', ['name', 'value'])
 
 
-def load_solution_from_model(results, model):
+def load_solution_from_model(results, model, solver=None):
     termination_condition = results.solver.termination_condition
     status = PyomoStatus(termination_condition)
     if status.is_success():
@@ -42,7 +42,8 @@ def load_solution_from_model(results, model):
         )
         # Since we always minimize, the lower bound is the best obj estimate.
         best_obj_estimate = results.problem.lower_bound
-        return Solution(status, obj, vars, best_obj_estimate=best_obj_estimate)
+        solution_pool = solution_pool_from_solver(solver)
+        return Solution(status, obj, vars, best_obj_estimate=best_obj_estimate, solution_pool=solution_pool)
     else:
         return Solution(status)
 
@@ -97,7 +98,7 @@ class Solution:
     Solvers can subclass this class to add solver-specific information
     to the solution.
     """
-    def __init__(self, status, optimal_obj=None, optimal_vars=None, best_obj_estimate=None):
+    def __init__(self, status, optimal_obj=None, optimal_vars=None, best_obj_estimate=None, solution_pool=None):
         if not isinstance(status, Status):
             raise TypeError('status must be subclass of Status')
 
@@ -105,6 +106,9 @@ class Solution:
         self.objective = optimal_obj
         self.variables = optimal_vars
         self.best_obj_estimate = best_obj_estimate
+        if solution_pool is None:
+            solution_pool = []
+        self.solution_pool = solution_pool
 
     def __str__(self):
         return 'Solution(status={}, objective_value={})'.format(
@@ -170,3 +174,24 @@ class _SolutionPoolSolution:
 
     def __repr__(self):
         return '<{} at {}>'.format(str(self), hex(id(self)))
+
+
+def solution_pool_from_solver(solver):
+    if not isinstance(solver, CPLEXDirect):
+        return None
+    solver_model = solver._solver_model
+    solver_pool = solver_model.solution.pool
+    num_sol = solver_pool.get_num()
+    if not num_sol:
+        return None
+    pool = []
+    var_map = solver._pyomo_var_to_ndx_map
+    for i in range(num_sol):
+        values = solver_pool.get_values(i)
+        vars_to_load = var_map.keys()
+        sol = pe.ComponentMap(
+            (var, value)
+            for var, value in zip(vars_to_load, values)
+        )
+        pool.append(sol)
+    return pool
