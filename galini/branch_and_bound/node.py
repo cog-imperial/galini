@@ -51,7 +51,7 @@ class NodeSolution:
             return -np.inf
         if not solution.status.is_success():
             return -np.inf
-        return solution.objective_value()
+        return solution.best_objective_estimate()
 
     @property
     def upper_bound(self):
@@ -122,10 +122,10 @@ class Node:
             return -np.inf
         if self.parent:
             return max(
-                solution.objective_value(),
+                solution.best_objective_estimate(),
                 self.parent.lower_bound,
             )
-        return solution.objective_value()
+        return solution.best_objective_estimate()
 
     def branch(self, strategy=None):
         """Branch at the current node using strategy."""

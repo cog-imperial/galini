@@ -40,7 +40,9 @@ def load_solution_from_model(results, model):
             (var, pe.value(var, exception=False))
             for var in model.component_data_objects(pe.Var, active=True)
         )
-        return Solution(status, obj, vars)
+        # Since we always minimize, the lower bound is the best obj estimate.
+        best_obj_estimate = results.problem.lower_bound
+        return Solution(status, obj, vars, best_obj_estimate=best_obj_estimate)
     else:
         return Solution(status)
 
@@ -95,13 +97,14 @@ class Solution:
     Solvers can subclass this class to add solver-specific information
     to the solution.
     """
-    def __init__(self, status, optimal_obj=None, optimal_vars=None):
+    def __init__(self, status, optimal_obj=None, optimal_vars=None, best_obj_estimate=None):
         if not isinstance(status, Status):
             raise TypeError('status must be subclass of Status')
 
         self.status = status
         self.objective = optimal_obj
         self.variables = optimal_vars
+        self.best_obj_estimate = best_obj_estimate
 
     def __str__(self):
         return 'Solution(status={}, objective_value={})'.format(
@@ -112,6 +115,11 @@ class Solution:
         if self.objective is None:
             return None
         return self.objective
+
+    def best_objective_estimate(self):
+        if self.best_obj_estimate is None:
+            return None
+        return self.best_obj_estimate
 
 
 
