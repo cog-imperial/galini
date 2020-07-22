@@ -222,18 +222,21 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
                     self.config['mip_solver'],
                 )
 
-                new_bounds = perform_obbt_on_model(
-                    obbt_solver,
-                    model,
-                    linear_model,
-                    upper_bound=tree.upper_bound,
-                    timelimit=self.bab_config['obbt_timelimit'],
-                    simplex_maxiter=self.bab_config['obbt_simplex_maxiter'],
-                    absolute_gap=self.bab_config['absolute_gap'],
-                    relative_gap=self.bab_config['relative_gap'],
-                    mc=self.galini.mc,
-                )
-                node.storage.update_bounds(new_bounds)
+                try:
+                    new_bounds = perform_obbt_on_model(
+                        obbt_solver,
+                        model,
+                        linear_model,
+                        upper_bound=tree.upper_bound,
+                        timelimit=self.bab_config['obbt_timelimit'],
+                        simplex_maxiter=self.bab_config['obbt_simplex_maxiter'],
+                        absolute_gap=self.bab_config['absolute_gap'],
+                        relative_gap=self.bab_config['relative_gap'],
+                        mc=self.galini.mc,
+                    )
+                    node.storage.update_bounds(new_bounds)
+                except Exception as ex:
+                    self.logger.warning('OBBT Exception: {}', ex)
             self.logger.info('OBBT completed. Starting one more round of FBBT')
             bounds, mono, cvx = self._perform_fbbt_on_model(tree, node, model)
             # Recompute linear relaxation to have better bounds on linear_model
