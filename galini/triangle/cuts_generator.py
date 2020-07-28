@@ -336,9 +336,20 @@ class TriangleCutsGenerator(CutsGenerator):
                 upper_bounds[x] = x.ub
                 upper_bounds[y] = y.ub
 
-                domains[w] = w.ub - w.lb
-                domains[x] = x.ub - x.lb
-                domains[y] = y.ub - y.lb
+                if w.has_lb() and w.has_ub():
+                    domains[w] = w.ub - w.lb
+                else:
+                    domains[w] = np.inf
+
+                if x.has_lb() and x.has_ub():
+                    domains[x] = x.ub - x.lb
+                else:
+                    domains[x] = np.inf
+
+                if y.has_lb() and y.has_ub():
+                    domains[y] = y.ub - y.lb
+                else:
+                    domains[y] = np.inf
 
                 aux_vars[id(x), id(y)] = aux_vars[id(y), id(x)] = w
 
@@ -357,8 +368,15 @@ class TriangleCutsGenerator(CutsGenerator):
                 upper_bounds[w] = w.ub
                 upper_bounds[x] = x.ub
 
-                domains[w] = w.ub - w.lb
-                domains[x] = x.ub - x.lb
+                if w.has_lb() and w.has_ub():
+                    domains[w] = w.ub - w.lb
+                else:
+                    domains[w] = np.inf
+
+                if x.has_lb() and x.has_ub():
+                    domains[x] = x.ub - x.lb
+                else:
+                    domains[x] = np.inf
 
                 aux_vars[id(x), id(x)] = w
 
