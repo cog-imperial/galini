@@ -53,8 +53,8 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
             IntegerOption('obbt_simplex_maxiter', default=1000),
             NumericOption('obbt_timelimit', default=6000000),
             NumericOption('fbbt_timelimit', default=6000000),
-            IntegerOption('fbbt_max_quadratic_size', default=1000),
-            IntegerOption('fbbt_max_expr_children', default=1000),
+            IntegerOption('fbbt_max_quadratic_size', default=100),
+            IntegerOption('fbbt_max_expr_children', default=100),
             BoolOption('catch_keyboard_interrupt', default=True),
             NumericOption(
                 'branching_weight_sum',
