@@ -141,15 +141,20 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
 
     def actual_solve(self, model, **kwargs):
         # Run branch_and_bound loop, catch keyboard interrupt from users
+        success = None
         if self._catch_keyboard_interrupt:
             try:
-                self._bab_loop(model, **kwargs)
+                success = self._bab_loop(model, **kwargs)
             except KeyboardInterrupt:
                 pass
         else:
-            self._bab_loop(model, **kwargs)
+            success = self._bab_loop(model, **kwargs)
+
         assert self._tree is not None
-        return self._solution_from_tree(model, self._tree)
+        if success:
+            return self._solution_from_tree(model, self._tree)
+
+        return None
 
     def _bab_loop(self, model, **kwargs):
         known_optimal_objective = kwargs.get('known_optimal_objective', None)
@@ -193,6 +198,9 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
             lower_bound=root_solution.lower_bound,
             upper_bound=root_solution.upper_bound,
         )
+
+        if not root_solution.lower_bound_success:
+            return False
 
         while not self.should_terminate(tree.state):
             self.logger.info('Tree state at beginning of iteration: {}', tree.state)
@@ -287,6 +295,8 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
         self.logger.info('Branch & Bound Converged?: {}', self.has_converged(tree.state))
         self.logger.info('Branch & Bound Timeout?: {}', self.galini.timelimit.timeout())
         self.logger.info('Branch & Bound Node Limit Exceeded?: {}', self.node_limit_exceeded(tree.state))
+
+        return True
 
     def _solution_from_tree(self, problem, tree):
         nodes_visited = tree.nodes_visited

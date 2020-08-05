@@ -80,10 +80,10 @@ class PyomoStatus(Status):
         return self._termination_condition == TerminationCondition.optimal
 
     def is_infeasible(self):
-        return self._termination_condition == TerminationCondition.infeasible
+        return self._termination_condition in [TerminationCondition.infeasible, TerminationCondition.infeasibleOrUnbounded]
 
     def is_unbounded(self):
-        return self._termination_condition == TerminationCondition.unbounded
+        return self._termination_condition in [TerminationCondition.unbounded, TerminationCondition.infeasibleOrUnbounded]
 
     def description(self):
         return str(self._termination_condition)

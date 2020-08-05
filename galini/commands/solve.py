@@ -84,8 +84,14 @@ class SolveCommand(CliCommandWithProblem):
 
         elapsed_counter.set_value(seconds_elapsed_since(start_time))
 
+        status_table = OutputTable('Solution', [
+            {'id': 'status', 'name': 'Status', 'type': 't'}
+        ])
+
         if solution is None:
-            raise RuntimeError('Algorithm did not return a solution')
+            status_table.add_row({'status': 'unboundedOrInfeasible'})
+            print_output_table([status_table], args)
+            return
 
         obj_table = OutputTable('Objectives', [
             {'id': 'name', 'name': 'Objective', 'type': 't'},
@@ -119,7 +125,7 @@ class SolveCommand(CliCommandWithProblem):
         for counter in galini.telemetry.counters_values():
             counter_table.add_row(counter)
 
-        print_output_table([obj_table, var_table, counter_table], args)
+        print_output_table([status_table, obj_table, var_table, counter_table], args)
 
     def help_message(self):
         return "Solve a MINLP"
