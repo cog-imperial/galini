@@ -93,6 +93,8 @@ class SolveCommand(CliCommandWithProblem):
             print_output_table([status_table], args)
             return
 
+        status_table.add_row({'status': solution.status.description()})
+
         obj_table = OutputTable('Objectives', [
             {'id': 'name', 'name': 'Objective', 'type': 't'},
             {'id': 'value', 'name': 'Value', 'type': 'f'},
