@@ -21,6 +21,7 @@ import pyomo.environ as pe
 from galini.algorithms import Algorithm
 from galini.branch_and_bound.solution import BabSolution, BabStatusInterrupted
 from galini.branch_and_bound.tree import BabTree
+from galini.branch_and_bound.telemetry import update_at_end_of_iteration
 from galini.branch_and_cut.node_storage import RootNodeStorage
 from galini.config import (
     NumericOption,
@@ -165,8 +166,6 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
         branching_strategy = self.branching_strategy
         node_selection_strategy = self.node_selection_strategy
 
-        bab_iteration = 0
-
         root_node_storage = RootNodeStorage(model)
         tree = BabTree(
             root_node_storage, branching_strategy, node_selection_strategy
@@ -178,18 +177,22 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
         with self._telemetry.timespan('branch_and_bound.find_initial_solution'):
             initial_solution = self.find_initial_solution(model, tree, tree.root)
 
+        prev_elapsed_time = None
+
         if initial_solution is not None:
             tree.add_initial_solution(initial_solution, self.galini.mc)
-            self._telemetry.log_at_end_of_iteration(bab_iteration)
             if self.should_terminate(tree.state):
+                delta_t, prev_elapsed_time = _compute_delta_t(self.galini, prev_elapsed_time)
+                update_at_end_of_iteration(self.galini, tree, delta_t)
                 return
 
         self.logger.info('Solving root problem')
         with self._telemetry.timespan('branch_and_bound.solve_problem_at_root'):
             root_solution = self.solve_problem_at_root(tree, tree.root)
         tree.update_root(root_solution)
-        self._telemetry.log_at_end_of_iteration(bab_iteration)
-        bab_iteration += 1
+
+        delta_t, prev_elapsed_time = _compute_delta_t(self.galini, prev_elapsed_time)
+        update_at_end_of_iteration(self.galini, tree, delta_t)
 
         self.logger.info('Root problem solved, tree state {}', tree.state)
         self.logger.info('Root problem solved, root solution {}', root_solution)
@@ -236,8 +239,10 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
                 )
                 self.logger.log_prune_bab_node(current_node.coordinate)
                 tree.fathom_node(current_node, update_nodes_visited=True)
-                self._telemetry.log_at_end_of_iteration(bab_iteration)
-                bab_iteration += 1
+
+                delta_t, prev_elapsed_time = _compute_delta_t(self.galini, prev_elapsed_time)
+                update_at_end_of_iteration(self.galini, tree, delta_t)
+
                 continue
 
             with self._telemetry.timespan('branch_and_bound.solve_problem_at_node'):
@@ -288,8 +293,9 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
                 solution.lower_bound_solution,
                 solution.upper_bound_solution,
             )
-            self._telemetry.log_at_end_of_iteration(bab_iteration)
-            bab_iteration += 1
+
+            delta_t, prev_elapsed_time = _compute_delta_t(self.galini, prev_elapsed_time)
+            update_at_end_of_iteration(self.galini, tree, delta_t)
 
         self.logger.info('Branch & Bound Finished: {}', tree.state)
         self.logger.info('Branch & Bound Converged?: {}', self.has_converged(tree.state))
@@ -328,3 +334,11 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
             has_converged=self.has_converged(tree.state),
             node_limit_exceeded=self.node_limit_exceeded(tree.state),
         )
+
+
+def _compute_delta_t(galini, prev_elapsed):
+    now = galini.timelimit.elapsed_time()
+    if prev_elapsed is None:
+        return now, now
+    delta_t = now - prev_elapsed
+    return delta_t, now

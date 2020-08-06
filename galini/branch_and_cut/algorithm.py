@@ -68,10 +68,6 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         self._branching_strategy = BranchAndCutBranchingStrategy()
         self._node_selection_strategy = BestLowerBoundSelectionStrategy()
 
-        # TODO(fra): refactor telemetry to support nested iterations
-        self._cut_loop_outer_iteration = 0
-        self._cut_loop_inner_iteration = 0
-
     # pylint: disable=line-too-long
     @staticmethod
     def algorithm_options():

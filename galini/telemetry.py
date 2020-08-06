@@ -16,8 +16,8 @@
 from contextlib import contextmanager
 from galini.timelimit import seconds_elapsed_since, current_time
 
-class Telemetry:
 
+class Telemetry:
     def __init__(self, galini):
         self._logger = galini.get_logger(__name__)
         self._counters = dict()
@@ -78,9 +78,11 @@ class Counter:
 
     def increment(self, amount=1):
         self._value += amount
+        return self._value
 
     def decrement(self, amount=1):
         self._value -= amount
+        return self._value
 
     @property
     def value(self):
