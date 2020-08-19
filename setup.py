@@ -142,7 +142,8 @@ setup(
         ],
         'galini.cuts_generators': [
             'outer_approximation=galini.outer_approximation:OuterApproximationCutsGenerator',
-            'triangle=galini.triangle:TriangleCutsGenerator'
+            'triangle=galini.triangle:TriangleCutsGenerator',
+            'sdp=galini.sdp:SdpCutsGenerator',
         ],
     },
     cmdclass={

@@ -75,6 +75,10 @@ class _NodeStorageBase:
         self.recompute_model_relaxation_bounds()
         return self.root._linear_model
 
+    @property
+    def relaxation_data(self):
+        return self.root._relaxation_data
+
     def recompute_model_relaxation_bounds(self):
         linear_model = self.root._linear_model
         for var, (lb, ub) in self._bounds.items():
@@ -142,7 +146,7 @@ class RootNodeStorage(_NodeStorageBase):
 
         # Lazily instantiate when creating linear model
         self._linear_model = None
-        self._aux_var_relaxation_map = None
+        self._relaxation_data = None
         self.model_to_relaxation_var_map = None
         self.cut_pool = None
         self.cut_node_storage = None
@@ -158,9 +162,9 @@ class RootNodeStorage(_NodeStorageBase):
 
         (
             self._linear_model,
-            self._aux_var_relaxation_map,
-            self.model_to_relaxation_var_map,
+            self._relaxation_data,
         ) = relax(self._model)
+        self.model_to_relaxation_var_map = self._relaxation_data.original_to_new_var_map
 
         # Pre-compute nonlinear relaxations objects
         # This is also needed to avoid branching on auxiliary variables

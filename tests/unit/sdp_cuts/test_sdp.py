@@ -1,73 +1,60 @@
 # pylint: skip-file
 import pytest
 import numpy as np
-import pyomo.environ as aml
-from galini.pyomo import problem_from_pyomo_model
+import pyomo.environ as pe
+from collections import namedtuple
+from suspect.pyomo import create_connected_model
+from galini.pyomo.util import update_solver_options, instantiate_solver_with_options
+from galini.solvers.solution import load_solution_from_model
 from galini.galini import Galini
-from galini.timelimit import set_timelimit
 from galini.branch_and_cut.algorithm import BranchAndCutAlgorithm
-from galini.branch_and_bound.relaxations import LinearRelaxation
-from galini.special_structure import propagate_special_structure, perform_fbbt
-from galini.core import Constraint
+from galini.relaxations.relax import relax
 from galini.sdp.cuts_generator import SdpCutsGenerator
+from galini.relaxations.relax import (relax_expression, update_relaxation_data, rebuild_relaxations)
 
-
-class FakeSolver:
-    name = 'branch_and_cut'
-    config = {
-        'obbt_simplex_maxiter': 100,
-    }
+FakeStorage = namedtuple('FakeStorage', ['relaxation_data'])
+FakeNode = namedtuple('FakeNode', ['storage'])
 
 
 def _linear_relaxation(problem):
-    bounds = perform_fbbt(
-        problem,
-        maxiter=10,
-        timelimit=60,
-    )
+    relaxed, data = relax(problem, use_linear_relaxation=True)
+    return relaxed, data
 
-    bounds, monotonicity, convexity = \
-        propagate_special_structure(problem, bounds)
-    return LinearRelaxation(
-        problem, bounds, monotonicity, convexity,
-        disable_mccormick_midpoint=True
-    )
+
+Q = [[28.0, 23.0, 0.0, 0.0, 0.0, 2.0, 0.0, 24.0],
+     [23.0, 0.0, -23.0, -44.0, 10.0, 0.0, 7.0, -7.0],
+     [0.0, -23.0, 18.0, 41.0, 0.0, -3.0, -5.0, 2.0],
+     [0.0, -44.0, 41.0, -5.0, 5.0, -1.0, 16.0, -50.0],
+     [0.0, 10.0, 0.0, 5.0, 0.0, -2.0, -4.0, 21.0],
+     [2.0, 0.0, -3.0, -1.0, -2.0, 34.0, -9.0, 20.0],
+     [0.0, 7.0, -5.0, 16.0, -4.0, -9.0, 0.0, 0.0],
+     [24.0, -7.0, 2.0, -50.0, 21.0, 20.0, 0.0, -45.0]]
+
+C = [-44, -48, 10, 45, 0, 2, 3, 4, 5]
+
+Qc = [[-28, 13, 5],
+      [13, 0, 0],
+      [0, 0, 0]]
+
+Qc2 = [[-28, 0, 5],
+       [0, 0, 3],
+       [0, 3, 0]]
 
 
 @pytest.fixture()
 def problem():
-    Q = [[28.0, 23.0, 0.0, 0.0, 0.0, 2.0, 0.0, 24.0],
-         [23.0, 0.0, -23.0, -44.0, 10.0, 0.0, 7.0, -7.0],
-         [0.0, -23.0, 18.0, 41.0, 0.0, -3.0, -5.0, 2.0],
-         [0.0, -44.0, 41.0, -5.0, 5.0, -1.0, 16.0, -50.0],
-         [0.0, 10.0, 0.0, 5.0, 0.0, -2.0, -4.0, 21.0],
-         [2.0, 0.0, -3.0, -1.0, -2.0, 34.0, -9.0, 20.0],
-         [0.0, 7.0, -5.0, 16.0, -4.0, -9.0, 0.0, 0.0],
-         [24.0, -7.0, 2.0, -50.0, 21.0, 20.0, 0.0, -45.0]]
-
-    C = [-44, -48, 10, 45, 0, 2, 3, 4, 5]
-
-    Qc = [
-        [-28, 13, 5],
-        [13, 0, 0],
-        [0, 0, 0],
-    ]
-
-    Qc2 = [
-        [-28, 0, 5],
-        [0, 0, 3],
-        [0, 3, 0],
-    ]
-
-    m = aml.ConcreteModel("model_1")
+    m = pe.ConcreteModel("model_1")
     m.I = range(8)
-    m.x = aml.Var(m.I, bounds=(0, 1))
-    m.f = aml.Objective(
+    m.x = pe.Var(m.I, bounds=(0, 1))
+    m.f = pe.Objective(
         expr=sum(-Q[i][j] * m.x[i] * m.x[j] for i in m.I for j in m.I) + sum(-C[i] * m.x[i] for i in m.I))
-    m.c = aml.Constraint(expr=sum(Qc[i][j] * m.x[i] * m.x[j] for i in m.I[0:3] for j in m.I[0:3]) >= -10)
-    m.c2 = aml.Constraint(expr=sum(Qc2[i][j] * m.x[i] * m.x[j] for i in m.I[0:3] for j in m.I[0:3]) >= -10)
+    m.c = pe.Constraint(expr=sum(Qc[i][j] * m.x[i] * m.x[j] for i in m.I[0:3] for j in m.I[0:3]) >= -10)
+    m.c2 = pe.Constraint(expr=sum(Qc2[i][j] * m.x[i] * m.x[j] for i in m.I[0:3] for j in m.I[0:3]) >= -10)
 
-    return problem_from_pyomo_model(m)
+    m.c3 = pe.Constraint(m.I, rule=lambda m, i: m.x[i]*m.x[i] >= 0)
+    cm, _ = create_connected_model(m)
+    return cm
+
 
 
 @pytest.mark.parametrize('cut_selection_strategy,expected_solution', [
@@ -79,16 +66,9 @@ def problem():
 ])
 def test_cut_selection_strategy(problem, cut_selection_strategy, expected_solution):
     galini = Galini()
-    relaxation = _linear_relaxation(problem)
-    run_id = 'test_run_sdp'
+    relaxed_problem, relax_data = _linear_relaxation(problem)
 
     galini.update_configuration({
-        'branch_and_cut': {
-            'cuts': {
-                'use_lp_cut_phase': True,
-                'use_milp_cut_phase': True,
-            },
-        },
         'cuts_generator': {
             'generators': ['sdp'],
             'sdp': {
@@ -104,54 +84,62 @@ def test_cut_selection_strategy(problem, cut_selection_strategy, expected_soluti
             },
         }
     })
+
+    storage = FakeStorage(relaxation_data=relax_data)
+    node = FakeNode(storage)
+
+    galini.timelimit.start_now()
+
     config = galini._config
     sdp_cuts_gen = SdpCutsGenerator(galini, config.cuts_generator.sdp)
-    algo = BranchAndCutAlgorithm(galini, FakeSolver(), telemetry=None)
-    relaxed_problem = relaxation.relax(problem)
-    algo._cuts_generators_manager.before_start_at_root(run_id, problem, None)
+    sdp_cuts_gen.before_start_at_root(problem, relaxed_problem)
+
     nbs_cuts = []
     mip_sols = []
+
     if cut_selection_strategy == "RANDOM":
         np.random.seed(0)
+
+    mip_solver = _instantiate_mip_solver()
+    _update_solver_options(mip_solver)
+
+    relaxed_problem._cuts = pe.ConstraintList()
+
     for iteration in range(5):
-        set_timelimit(60)
-        mip_solution = algo._mip_solver.solve(relaxed_problem)
+        mip_res = mip_solver.solve(relaxed_problem)
+        mip_solution = load_solution_from_model(mip_res, relaxed_problem)
         assert mip_solution.status.is_success()
-        mip_sols.append(mip_solution.objective.value)
+        mip_sols.append(mip_solution.objective)
         # Generate new cuts
-        new_cuts = algo._cuts_generators_manager.generate(run_id, problem, None, relaxed_problem, mip_solution, None, None)
+        new_cuts = sdp_cuts_gen.generate(problem, relaxed_problem, mip_solution, None, node)
+
+        print('NC = ', new_cuts)
+
         # Add cuts as constraints
         nbs_cuts.append(len(list(new_cuts)))
+
         for cut in new_cuts:
-            new_cons = Constraint(cut.name, cut.expr, cut.lower_bound, cut.upper_bound)
-            relaxation._relax_constraint(problem, relaxed_problem, new_cons)
+            relaxed_problem._cuts.add(cut)
+
+        #update_relaxation_data(relaxed_problem, storage.relaxation_data)
+        rebuild_relaxations(relaxed_problem, storage.relaxation_data, use_linear_relaxation=True)
+
+    print(nbs_cuts)
     assert np.allclose(mip_sols, expected_solution)
 
 
 def test_sdp_cuts_after_branching(problem):
     galini = Galini()
-    galini.update_configuration({
-        'cuts_generator': {
-            'generators': ['sdp'],
-            'sdp': {
-                'selection_size': 2,
-            },
-        }
-    })
-    run_id = 'test_run_sdp'
-
-    relaxation = _linear_relaxation(problem)
 
     # Test when branched on x0 in [0.5, 1]
-    x0 = problem.variable_view(problem.variables[0])
-    x0.set_lower_bound(0.5)
+    x0 = problem.x[0]
+    x0.setlb(0.5)
+    relaxation, relax_data = _linear_relaxation(problem)
+
+    storage = FakeStorage(relaxation_data=relax_data)
+    node = FakeNode(storage)
+
     galini.update_configuration({
-        'branch_and_cut': {
-            'cuts': {
-                'use_lp_cut_phase': True,
-                'use_milp_cut_phase': True,
-            },
-        },
         'cuts_generator': {
             'sdp': {
                 'domain_eps': 1e-3,
@@ -190,3 +178,23 @@ def test_sdp_cuts_after_branching(problem):
     assert(feas_solution.objective.value >= mip_sols[-1])
     sdp_cuts_gen.after_end_at_node(run_id, problem, None, mip_solution)
     sdp_cuts_gen.after_end_at_root(run_id, problem, None, mip_solution)
+
+
+def _update_solver_options(solver):
+    update_solver_options(
+        solver,
+        timelimit=30,
+        absolute_gap=1e-6,
+        relative_gap=1e-5,
+    )
+
+
+def _instantiate_mip_solver():
+    return instantiate_solver_with_options({
+        'name': 'cplex',
+        'options': {},
+        'timelimit_option': 'timelimit',
+        'maxiter_option': 'simplex_limits_iterations',
+        'relative_gap_option': 'mip_tolerances_mipgap',
+        'absolute_gap_option': 'mip_tolerances_absmipgap',
+    })

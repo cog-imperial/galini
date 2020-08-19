@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import pyomo.environ as pe
+import numpy as np
 from coramin.relaxations.auto_relax import (
     RelaxationCounter,
     _relax_root_to_leaf_map,
@@ -30,28 +31,106 @@ _relax_leaf_to_root_map[QuadraticExpression] = _relax_leaf_to_root_QuadraticExpr
 _relax_root_to_leaf_map[QuadraticExpression] = _relax_root_to_leaf_SumExpression
 
 
+class RelaxationData:
+    def __init__(self, model, new_model):
+        self.model = model
+        self.new_model = new_model
+        self.original_to_new_var_map = pe.ComponentMap()
+        self.aux_var_map = dict()
+        self.reverse_var_map = dict()
+        self.var_relax_map = pe.ComponentMap()
+        self.degree_map = pe.ComponentMap()
+        self.counter = RelaxationCounter()
+
+
+def relax_expression(model, expr, relaxation_side, data):
+    relaxation_side_map = pe.ComponentMap()
+    relaxation_side_map[expr] = relaxation_side
+
+    expr = _relax_expr(expr=expr, aux_var_map=data.aux_var_map, parent_block=model,
+                       relaxation_side_map=relaxation_side_map, counter=data.counter, degree_map=data.degree_map)
+    return expr
+
+
+def relax_constraint(model, cons, data, inplace=False):
+    body_degree = polynomial_degree(cons.body)
+    if body_degree is not None:
+        if body_degree <= 1:
+            return pe.Constraint(expr=cons.body)
+
+    if cons.has_lb() and cons.has_ub():
+        relaxation_side = RelaxationSide.BOTH
+    elif cons.has_lb():
+        relaxation_side = RelaxationSide.OVER
+    elif cons.has_ub():
+        relaxation_side = RelaxationSide.UNDER
+    else:
+        raise ValueError('Encountered a constraint without a lower or an upper bound: ' + str(cons))
+
+    relaxation_side = RelaxationSide.BOTH
+    new_body = relax_expression(model, cons.body, relaxation_side, data)
+
+    if inplace:
+        cons._body = new_body
+        return cons
+
+    lb, ub = cons.lb, cons.ub
+    if cons.has_lb() and cons.has_ub():
+        assert np.isclose(lb, ub)
+        return pe.Constraint(expr=new_body == lb)
+    elif cons.has_lb():
+        return pe.Constraint(expr=lb <= new_body)
+    elif cons.has_ub():
+        return pe.Constraint(expr=new_body <= ub)
+
+    raise ValueError('Encountered a constraint without a lower or an upper bound: ' + str(cons))
+
+
+def update_relaxation_data(model, data):
+    for var in model.component_data_objects(pe.Var, active=True, descend_into=True):
+        data.reverse_var_map[id(var)] = var
+
+    for aux_var_info, aux_var_value in data.aux_var_map.items():
+        _, relaxation = aux_var_value
+        if len(aux_var_info) == 2 and aux_var_info[1] == 'quadratic':
+            var = data.reverse_var_map[aux_var_info[0]]
+            vars = [var]
+        elif len(aux_var_info) == 3 and aux_var_info[2] == 'mul':
+            var0 = data.reverse_var_map[aux_var_info[0]]
+            var1 = data.reverse_var_map[aux_var_info[1]]
+            vars = [var0, var1]
+        else:
+            raise RuntimeError("Invalid aux var info ", aux_var_info, aux_var_value)
+
+        for var in vars:
+            if var not in data.var_relax_map:
+                data.var_relax_map[var] = [relaxation]
+            else:
+                data.var_relax_map[var].append(relaxation)
+
+
+def rebuild_relaxations(model, data, use_linear_relaxation=True):
+    for _, relaxation in data.aux_var_map.values():
+        relaxation.use_linear_relaxation = use_linear_relaxation
+        relaxation.rebuild()
+
+
 def relax(model, use_linear_relaxation=True):
     new_model = model.clone()
 
-    original_to_new_var_map = pe.ComponentMap()
+    data = RelaxationData(model, new_model)
 
     for var in model.component_data_objects(pe.Var,
                                             active=True,
                                             descend_into=True):
         new_var = new_model.find_component(var.getname(fully_qualified=True))
-        original_to_new_var_map[var] = new_var
+        data.original_to_new_var_map[var] = new_var
 
     model = new_model
-
-    aux_var_map = dict()
-
-    degree_map = pe.ComponentMap()
 
     model.relaxations = pe.Block()
     model.aux_vars = pe.VarList()
     model.aux_cons = pe.ConstraintList()
-
-    counter = RelaxationCounter()
 
     for obj in model.component_data_objects(ctype=pe.Objective, active=True):
         degree = polynomial_degree(obj.expr)
@@ -63,61 +142,14 @@ def relax(model, use_linear_relaxation=True):
 
         relaxation_side = RelaxationSide.UNDER
         relaxation_side = RelaxationSide.BOTH
-        relaxation_side_map = pe.ComponentMap()
-        relaxation_side_map[obj.expr] = relaxation_side
 
-        new_body = _relax_expr(expr=obj.expr, aux_var_map=aux_var_map, parent_block=model,
-                               relaxation_side_map=relaxation_side_map, counter=counter, degree_map=degree_map)
+        new_body = relax_expression(model, obj.expr, relaxation_side, data)
         obj._expr = new_body
 
     for cons in model.component_data_objects(ctype=pe.Constraint, active=True):
-        body_degree = polynomial_degree(cons.body)
-        if body_degree is not None:
-            if body_degree <= 1:
-                continue
+        relax_constraint(model, cons, data, inplace=True)
 
-        if cons.has_lb() and cons.has_ub():
-            relaxation_side = RelaxationSide.BOTH
-        elif cons.has_lb():
-            relaxation_side = RelaxationSide.OVER
-        elif cons.has_ub():
-            relaxation_side = RelaxationSide.UNDER
-        else:
-            raise ValueError('Encountered a constraint without a lower or an upper bound: ' + str(c))
+    update_relaxation_data(model, data)
+    rebuild_relaxations(model, data, use_linear_relaxation)
 
-        relaxation_side = RelaxationSide.BOTH
-        relaxation_side_map = pe.ComponentMap()
-        relaxation_side_map[cons.body] = relaxation_side
-
-        new_body = _relax_expr(expr=cons.body, aux_var_map=aux_var_map, parent_block=model,
-                               relaxation_side_map=relaxation_side_map, counter=counter, degree_map=degree_map)
-        cons._body = new_body
-
-    reverse_var_map = dict()
-    for var in model.component_data_objects(pe.Var, active=True):
-        reverse_var_map[id(var)] = var
-
-    var_relax_map = pe.ComponentMap()
-
-    for aux_var_info, aux_var_value in aux_var_map.items():
-        _, relaxation = aux_var_value
-        if len(aux_var_info) == 2 and aux_var_info[1] == 'quadratic':
-            var = reverse_var_map[aux_var_info[0]]
-            vars = [var]
-        elif len(aux_var_info) == 3 and aux_var_info[2] == 'mul':
-            var0 = reverse_var_map[aux_var_info[0]]
-            var1 = reverse_var_map[aux_var_info[1]]
-            vars = [var0, var1]
-        else:
-            raise RuntimeError("Invalid aux var info ", aux_var_info, aux_var_value)
-
-        for var in vars:
-            if var not in var_relax_map:
-                var_relax_map[var] = [relaxation]
-            else:
-                var_relax_map[var].append(relaxation)
-
-    for _, relaxation in aux_var_map.values():
-        relaxation.use_linear_relaxation = use_linear_relaxation
-        relaxation.rebuild()
-    return model, var_relax_map, original_to_new_var_map
+    return model, data

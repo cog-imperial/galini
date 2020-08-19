@@ -126,7 +126,6 @@ class Solution:
         return self.best_obj_estimate
 
 
-
 class SolutionPool:
     """Contains a (bounded) solution pool, sorted by objective value.
 
