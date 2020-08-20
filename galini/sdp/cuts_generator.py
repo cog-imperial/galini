@@ -265,12 +265,9 @@ class SdpCutsGenerator(CutsGenerator):
                 sum_expr = 0.0
 
                 for v1, v2, coef in zip(quad_v1_gen, quad_v2_gen, quad_coef):
-                    #v1 = problem.find_component(v1.getname(fully_qualified=True))
                     v1 = linear_problem.find_component(v1.getname(fully_qualified=True))
-                    #v2 = problem.find_component(v2.getname(fully_qualified=True))
                     v2 = linear_problem.find_component(v2.getname(fully_qualified=True))
-                    w = self._aux_var_map[id(v1), id(v2)]
-                    sum_expr += w * coef
+                    sum_expr += v1 * v2 * coef
 
                 lin_coef = evect_arr[0:dim_act]
                 sum_expr += evect[0] * evect[0]
@@ -280,10 +277,6 @@ class SdpCutsGenerator(CutsGenerator):
 
                 nb_sdp_cuts += 1
 
-                #relaxed_sum_expr = relax_expression(linear_problem, sum_expr, RelaxationSide.BOTH, relaxation_data)
-                #print('SUM = ', sum_expr)
-                #print('   -> ', relaxed_sum_expr)
-                #cut_expr = relaxed_sum_expr >= 0
                 cut_expr = sum_expr >= 0
 
                 # Avoid returning a wrong expression if there was an error generatin the cut expr.

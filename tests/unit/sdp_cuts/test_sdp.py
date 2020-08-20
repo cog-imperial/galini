@@ -3,6 +3,7 @@ import pytest
 import numpy as np
 import pyomo.environ as pe
 from collections import namedtuple
+from coramin.utils.coramin_enums import RelaxationSide
 from suspect.pyomo import create_connected_model
 from galini.pyomo.util import update_solver_options, instantiate_solver_with_options
 from galini.solvers.solution import load_solution_from_model
@@ -10,7 +11,7 @@ from galini.galini import Galini
 from galini.branch_and_cut.algorithm import BranchAndCutAlgorithm
 from galini.relaxations.relax import relax
 from galini.sdp.cuts_generator import SdpCutsGenerator
-from galini.relaxations.relax import (relax_expression, update_relaxation_data, rebuild_relaxations)
+from galini.relaxations.relax import (update_relaxation_data, rebuild_relaxations, relax_inequality)
 
 FakeStorage = namedtuple('FakeStorage', ['relaxation_data'])
 FakeNode = namedtuple('FakeNode', ['storage'])
@@ -18,6 +19,7 @@ FakeNode = namedtuple('FakeNode', ['storage'])
 
 def _linear_relaxation(problem):
     relaxed, data = relax(problem, use_linear_relaxation=True)
+    relaxed.name = problem.name + '_relaxed'
     return relaxed, data
 
 
@@ -51,7 +53,6 @@ def problem():
     m.c = pe.Constraint(expr=sum(Qc[i][j] * m.x[i] * m.x[j] for i in m.I[0:3] for j in m.I[0:3]) >= -10)
     m.c2 = pe.Constraint(expr=sum(Qc2[i][j] * m.x[i] * m.x[j] for i in m.I[0:3] for j in m.I[0:3]) >= -10)
 
-    m.c3 = pe.Constraint(m.I, rule=lambda m, i: m.x[i]*m.x[i] >= 0)
     cm, _ = create_connected_model(m)
     return cm
 
@@ -113,18 +114,16 @@ def test_cut_selection_strategy(problem, cut_selection_strategy, expected_soluti
         # Generate new cuts
         new_cuts = sdp_cuts_gen.generate(problem, relaxed_problem, mip_solution, None, node)
 
-        print('NC = ', new_cuts)
-
         # Add cuts as constraints
         nbs_cuts.append(len(list(new_cuts)))
 
         for cut in new_cuts:
-            relaxed_problem._cuts.add(cut)
+            relaxed_cut = relax_inequality(relaxed_problem, cut, RelaxationSide.BOTH, storage.relaxation_data)
+            relaxed_problem._cuts.add(relaxed_cut)
 
-        #update_relaxation_data(relaxed_problem, storage.relaxation_data)
+        update_relaxation_data(relaxed_problem, storage.relaxation_data)
         rebuild_relaxations(relaxed_problem, storage.relaxation_data, use_linear_relaxation=True)
 
-    print(nbs_cuts)
     assert np.allclose(mip_sols, expected_solution)
 
 
@@ -134,7 +133,7 @@ def test_sdp_cuts_after_branching(problem):
     # Test when branched on x0 in [0.5, 1]
     x0 = problem.x[0]
     x0.setlb(0.5)
-    relaxation, relax_data = _linear_relaxation(problem)
+    relaxed_problem, relax_data = _linear_relaxation(problem)
 
     storage = FakeStorage(relaxation_data=relax_data)
     node = FakeNode(storage)
@@ -154,30 +153,40 @@ def test_sdp_cuts_after_branching(problem):
             },
         }
     })
+
+    galini.timelimit.start_now()
+
     config = galini._config
     sdp_cuts_gen = SdpCutsGenerator(galini, config.cuts_generator.sdp)
-    algo = BranchAndCutAlgorithm(galini, FakeSolver(), telemetry=None)
-    relaxed_problem = relaxation.relax(problem)
-    algo._cuts_generators_manager.before_start_at_root(run_id, problem, None)
+    sdp_cuts_gen.before_start_at_root(problem, relaxed_problem)
+
     mip_sols = []
-    mip_solution = None
+
+    relaxed_problem._cuts = pe.ConstraintList()
+
+    mip_solver = _instantiate_mip_solver()
+    _update_solver_options(mip_solver)
+
     for iteration in range(5):
-        set_timelimit(60)
-        mip_solution = algo._mip_solver.solve(relaxed_problem)
+        mip_res = mip_solver.solve(relaxed_problem)
+        mip_solution = load_solution_from_model(mip_res, relaxed_problem)
         assert mip_solution.status.is_success()
-        mip_sols.append(mip_solution.objective.value)
+        mip_sols.append(mip_solution.objective)
         # Generate new cuts
-        new_cuts = algo._cuts_generators_manager.generate(run_id, problem, None, relaxed_problem, mip_solution, None, None)
+        new_cuts = sdp_cuts_gen.generate(problem, relaxed_problem, mip_solution, None, node)
+
         # Add cuts as constraints
         for cut in new_cuts:
-            new_cons = Constraint(cut.name, cut.expr, cut.lower_bound, cut.upper_bound)
-            relaxation._relax_constraint(problem, relaxed_problem, new_cons)
-    assert np.allclose(mip_sols,
-           [-187.53571428571428, -178.17645682147835, -175.10310263115286, -175.0895610878696, -175.03389759123812])
-    feas_solution = algo._nlp_solver.solve(relaxed_problem)
-    assert(feas_solution.objective.value >= mip_sols[-1])
-    sdp_cuts_gen.after_end_at_node(run_id, problem, None, mip_solution)
-    sdp_cuts_gen.after_end_at_root(run_id, problem, None, mip_solution)
+            relaxed_cut = relax_inequality(relaxed_problem, cut, RelaxationSide.BOTH, storage.relaxation_data)
+            relaxed_problem._cuts.add(relaxed_cut)
+
+        update_relaxation_data(relaxed_problem, storage.relaxation_data)
+        rebuild_relaxations(relaxed_problem, storage.relaxation_data, use_linear_relaxation=True)
+
+    assert np.allclose(
+        mip_sols,
+        [-187.53571428571428, -178.17645682147835, -175.10310263115286, -175.0895610878696, -175.03389759123812]
+    )
 
 
 def _update_solver_options(solver):

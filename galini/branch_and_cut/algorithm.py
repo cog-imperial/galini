@@ -15,7 +15,12 @@
 """Branch & Cut algorithm."""
 
 import pyomo.environ as pe
+from coramin.utils.coramin_enums import RelaxationSide
 from galini.branch_and_bound.algorithm import BranchAndBoundAlgorithm
+from galini.relaxations.relax import (
+    update_relaxation_data,
+    relax_inequality,
+)
 from galini.branch_and_bound.node import NodeSolution
 from galini.branch_and_bound.selection import BestLowerBoundSelectionStrategy
 from galini.branch_and_cut.bound_reduction import (
@@ -424,6 +429,8 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         cuts_state = CutsState()
         mip_solution = None
 
+        relaxation_data = node.storage.relaxation_data
+
         if node.parent:
             parent_cuts_count, mip_solution = self._add_cuts_from_parent(
                 node, model, linear_model
@@ -443,8 +450,12 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             # Add cuts as constraints
             new_cuts_constraints = []
             for cut in new_cuts:
-                new_cons = node.storage.cut_node_storage.add_cut(cut)
+                print('Relaxing cut ', cut)
+                relaxed_cut = relax_inequality(linear_model, cut, RelaxationSide.BOTH, relaxation_data)
+                print('   adding cut ', relaxed_cut)
+                new_cons = node.storage.cut_node_storage.add_cut(relaxed_cut)
                 new_cuts_constraints.append(new_cons)
+                update_relaxation_data(linear_model, relaxation_data)
 
             if self.galini.paranoid_mode:
                 # Check added cuts are violated

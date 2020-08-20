@@ -52,6 +52,28 @@ def relax_expression(model, expr, relaxation_side, data):
     return expr
 
 
+def relax_inequality(model, ineq_expr, relaxation_side, data):
+    if ineq_expr.nargs() == 3:
+        lb, expr, ub = ineq_expr.args
+    else:
+        assert ineq_expr.nargs() == 2
+        c1, c2 = ineq_expr.args
+        if type(c1) in pe.nonpyomo_leaf_types or not c1.is_expression_type():
+            assert c2.is_expression_type()
+            lb = c1
+            expr = c2
+            ub = None
+        elif type(c2) in pe.nonpyomo_leaf_types or not c2.is_expression_type():
+            assert c1.is_expression_type()
+            lb = None
+            expr = c1
+            ub = c2
+        else:
+            raise ValueError('Cannot handle inequality expression {} with args {}, {}'.format(ineq_expr, type(c1), type(c2)))
+    relaxed_expr = relax_expression(model, expr, relaxation_side, data)
+    return pe.inequality(lb, relaxed_expr, ub)
+
+
 def relax_constraint(model, cons, data, inplace=False):
     body_degree = polynomial_degree(cons.body)
     if body_degree is not None:
