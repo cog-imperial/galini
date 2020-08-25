@@ -450,9 +450,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             # Add cuts as constraints
             new_cuts_constraints = []
             for cut in new_cuts:
-                print('Relaxing cut ', cut)
                 relaxed_cut = relax_inequality(linear_model, cut, RelaxationSide.BOTH, relaxation_data)
-                print('   adding cut ', relaxed_cut)
                 new_cons = node.storage.cut_node_storage.add_cut(relaxed_cut)
                 new_cuts_constraints.append(new_cons)
                 update_relaxation_data(linear_model, relaxation_data)

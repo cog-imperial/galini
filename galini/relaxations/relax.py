@@ -114,13 +114,18 @@ def update_relaxation_data(model, data):
 
     for aux_var_info, aux_var_value in data.aux_var_map.items():
         _, relaxation = aux_var_value
-        if len(aux_var_info) == 2 and aux_var_info[1] == 'quadratic':
+        aux_var_info_len = len(aux_var_info)
+        if aux_var_info_len == 2 and aux_var_info[1] == 'quadratic':
             var = data.reverse_var_map[aux_var_info[0]]
             vars = [var]
-        elif len(aux_var_info) == 3 and aux_var_info[2] == 'mul':
+        elif aux_var_info_len == 3 and aux_var_info[2] == 'mul':
             var0 = data.reverse_var_map[aux_var_info[0]]
             var1 = data.reverse_var_map[aux_var_info[1]]
             vars = [var0, var1]
+        elif aux_var_info_len == 3 and aux_var_info[2] in ['pow', 'div']:
+            vars = []
+        elif aux_var_info_len == 2 and aux_var_info[1] == 'exp':
+            vars = []
         else:
             raise RuntimeError("Invalid aux var info ", aux_var_info, aux_var_value)
 
