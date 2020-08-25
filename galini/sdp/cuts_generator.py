@@ -267,13 +267,13 @@ class SdpCutsGenerator(CutsGenerator):
                 for v1, v2, coef in zip(quad_v1_gen, quad_v2_gen, quad_coef):
                     v1 = linear_problem.find_component(v1.getname(fully_qualified=True))
                     v2 = linear_problem.find_component(v2.getname(fully_qualified=True))
-                    sum_expr += v1 * v2 * coef
+                    sum_expr += v1 * v2 * float(coef)
 
                 lin_coef = evect_arr[0:dim_act]
                 sum_expr += evect[0] * evect[0]
                 for v, coef in zip(x_vars, lin_coef):
                     v = linear_problem.find_component(v.getname(fully_qualified=True))
-                    sum_expr += v * coef
+                    sum_expr += v * float(coef)
 
                 nb_sdp_cuts += 1
 
