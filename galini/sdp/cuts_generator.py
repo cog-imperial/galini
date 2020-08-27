@@ -176,7 +176,8 @@ class SdpCutsGenerator(CutsGenerator):
 
     def before_start_at_node(self, problem, relaxed_problem):
         # We need duals for this, so ask pyomo to import them.
-        relaxed_problem.dual = pe.Suffix(direction=pe.Suffix.IMPORT)
+        if not hasattr(relaxed_problem, 'dual'):
+            relaxed_problem.dual = pe.Suffix(direction=pe.Suffix.IMPORT)
 
         lower_bounds = np.zeros(self._num_vars)
         upper_bounds = np.zeros(self._num_vars)
