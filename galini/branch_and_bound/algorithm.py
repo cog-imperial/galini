@@ -147,7 +147,7 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
             try:
                 success = self._bab_loop(model, **kwargs)
             except KeyboardInterrupt:
-                pass
+                success = True
         else:
             success = self._bab_loop(model, **kwargs)
 
