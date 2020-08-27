@@ -37,6 +37,7 @@ class DefaultPrimalSearchStrategy:
 
         solution = self.algorithm._try_solve_convex_model(model, convexity=cvx)
         if solution is not None:
+            solution.best_obj_estimate = solution.objective
             return NodeSolution(solution, solution)
 
         # Don't pass a starting point since it's already loaded in the model

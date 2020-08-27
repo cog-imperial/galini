@@ -184,7 +184,7 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
             if self.should_terminate(tree.state):
                 delta_t, prev_elapsed_time = _compute_delta_t(self.galini, prev_elapsed_time)
                 update_at_end_of_iteration(self.galini, tree, delta_t)
-                return
+                return True
 
         self.logger.info('Solving root problem')
         with self._telemetry.timespan('branch_and_bound.solve_problem_at_root'):
