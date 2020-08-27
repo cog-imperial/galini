@@ -95,6 +95,11 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
                     default=120,
                     description='Total timelimit for cut rounds'
                 ),
+                NumericOption(
+                    'cut_violation_threshold',
+                    default=1e-5,
+                    description='Threshold to consider a cut violated.'
+                )
             ]),
             OptionsGroup('primal_search', [
                 StringOption('strategy', default='default')
@@ -535,11 +540,10 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
                 break
 
             for cut in cut_storage.cuts:
-                # TODO(fra): add cut violation parameter
                 if cut.active:
                     continue
 
-                if constraint_violation(cut) > 1e-5:
+                if constraint_violation(cut) > self.cuts_config.cut_violation_threshold:
                     cut.activate()
                     inherit_cuts_count += 1
                     num_violated_cuts += 1
