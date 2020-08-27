@@ -49,6 +49,11 @@ def increment_nodes_visited(galini):
     return update_counter(galini, 'branch_and_bound.nodes_visited', 1, initial_value=0)
 
 
+def increment_elapsed_time(galini):
+    """Increment the elapsed time gauge."""
+    return update_gauge(galini, 'elapsed_time', galini.timelimit.elapsed_time(), initial_value=0.0)
+
+
 def update_solution_bound(galini, tree, delta_t):
     """Increment the lower and upper bound and their integrals."""
     update_gauge(galini, 'branch_and_bound.lower_bound', tree.lower_bound)
@@ -65,5 +70,6 @@ def update_at_end_of_iteration(galini, tree, delta_t):
     """Update all bab counters at the end of one iteration."""
     bab_iteration = increment_nodes_visited(galini)
     update_solution_bound(galini, tree, delta_t)
+    increment_elapsed_time(galini)
     # finally, output all counters
     galini.telemetry.log_at_end_of_iteration(bab_iteration)
