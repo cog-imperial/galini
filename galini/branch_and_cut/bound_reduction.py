@@ -61,7 +61,9 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
     obbt_start_time = current_time()
 
     originally_integer = []
+    original_bounds = pe.ComponentMap()
     for var in linear_model.component_data_objects(ctype=pe.Var):
+        original_bounds[var] = var.bounds
         if var.is_continuous():
             originally_integer.append((var, var.domain))
             var.domain = pe.Reals
@@ -88,17 +90,29 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
         absolute_gap=absolute_gap,
     )
 
-    result = coramin_obbt.perform_obbt(
-        linear_model,
-        solver,
-        time_limit=time_left,
-        varlist=nonlinear_variables,
-        objective_bound=upper_bound,
-        warning_threshold=mc.epsilon
-    )
+    obbt_ex = None
+    result = None
+    try:
+        result = coramin_obbt.perform_obbt(
+            linear_model,
+            solver,
+            time_limit=time_left,
+            varlist=nonlinear_variables,
+            objective_bound=upper_bound,
+            warning_threshold=mc.epsilon
+        )
+    except Exception as ex:
+        obbt_ex = ex
 
     for var, domain in originally_integer:
         var.domain = domain
+
+    # If we encountered an exception in Coramin, restore bounds and then raise.
+    if obbt_ex is not None:
+        for var, (lb, ub) in original_bounds.items():
+            var.setlb(lb)
+            var.setub(ub)
+        raise obbt_ex
 
     if result is None:
         return
