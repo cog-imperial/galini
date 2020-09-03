@@ -15,6 +15,7 @@
 
 import sys
 
+import numpy as np
 import pyomo.environ as pe
 
 from galini.commands import (
@@ -72,6 +73,20 @@ class SolveCommand(CliCommandWithProblem):
         model._objective = new_objective
         model._objective.is_originally_minimizing = original_objective.is_minimizing()
         original_objective.deactivate()
+
+        for var in model.component_data_objects(pe.Var, active=True):
+            lb = var.lb if var.lb is not None else -np.inf
+            ub = var.ub if var.ub is not None else np.inf
+            value = var.value
+            if value < lb or value > ub:
+                if np.isinf(lb) or np.isinf(ub):
+                    value = 0.0
+                else:
+                    value = lb + (ub - lb) / 2.0
+                    if var.is_integer() or var.is_binary():
+                        value = np.rint(value)
+
+                var.set_value(value)
 
         algo = algo_cls(galini)
         solution = algo.solve(
