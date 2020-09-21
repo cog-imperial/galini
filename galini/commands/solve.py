@@ -78,7 +78,7 @@ class SolveCommand(CliCommandWithProblem):
             lb = var.lb if var.lb is not None else -np.inf
             ub = var.ub if var.ub is not None else np.inf
             value = var.value
-            if value < lb or value > ub:
+            if value is not None and (value < lb or value > ub):
                 if np.isinf(lb) or np.isinf(ub):
                     value = 0.0
                 else:
