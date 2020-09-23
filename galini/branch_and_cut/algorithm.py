@@ -444,7 +444,11 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
         cut_loop_start_time = current_time()
         self._cut_loop_inner_iteration = 0
-        while not self.cut_loop_should_terminate(cuts_state, cut_loop_start_time):
+        first_round_required = mip_solution is None
+
+        while first_round_required or not self.cut_loop_should_terminate(cuts_state, cut_loop_start_time):
+            first_round_required = False
+
             feasible, new_cuts, mip_solution = self._perform_cut_round(
                 model, linear_model, cuts_state, tree, node
             )
@@ -491,7 +495,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
         self._update_solver_options(self._mip_solver)
         try:
-            results = self._mip_solver.solve(linear_model)
+            results = self._mip_solver.solve(linear_model, tee=True)
         except ValueError as ex:
             self.logger.warning('Error in cut round {}: {}', cuts_state.round, ex)
             return False, None, None
