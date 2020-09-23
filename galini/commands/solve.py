@@ -66,13 +66,16 @@ class SolveCommand(CliCommandWithProblem):
                 raise ValueError('Algorithm does not support models with multiple objectives')
             original_objective = objective
 
-        if not original_objective.is_minimizing():
-            new_objective = pe.Objective(expr=-original_objective.expr, sense=pe.minimize)
+        if original_objective is None:
+            model._objective = pe.Objective(expr=0.0, sense=pe.minimize)
         else:
-            new_objective = pe.Objective(expr=original_objective.expr, sense=pe.minimize)
-        model._objective = new_objective
-        model._objective.is_originally_minimizing = original_objective.is_minimizing()
-        original_objective.deactivate()
+            if not original_objective.is_minimizing():
+                new_objective = pe.Objective(expr=-original_objective.expr, sense=pe.minimize)
+            else:
+                new_objective = pe.Objective(expr=original_objective.expr, sense=pe.minimize)
+            model._objective = new_objective
+            model._objective.is_originally_minimizing = original_objective.is_minimizing()
+            original_objective.deactivate()
 
         for var in model.component_data_objects(pe.Var, active=True):
             lb = var.lb if var.lb is not None else -np.inf
@@ -95,7 +98,8 @@ class SolveCommand(CliCommandWithProblem):
         )
 
         del model._objective
-        original_objective.activate()
+        if original_objective is not None:
+            original_objective.activate()
 
         elapsed_counter.set_value(seconds_elapsed_since(start_time))
 
@@ -116,14 +120,20 @@ class SolveCommand(CliCommandWithProblem):
         ])
 
         value = solution.objective
-        if not original_objective.is_minimizing():
-            if value is not None:
-                value = -value
+        if original_objective is not None:
+            if not original_objective.is_minimizing():
+                if value is not None:
+                    value = -value
 
-        obj_table.add_row({
-            'name': original_objective.name,
-            'value': value,
-        })
+            obj_table.add_row({
+                'name': original_objective.name,
+                'value': value,
+            })
+        else:
+            obj_table.add_row({
+                'name': None,
+                'value': 0.0,
+            })
 
         var_table = OutputTable('Variables', [
             {'id': 'name', 'name': 'Variable', 'type': 't'},
