@@ -125,6 +125,8 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
         original_var = model.find_component(var.getname(fully_qualified=True))
         new_lb = best_lower_bound(var, new_lb, var.lb, eps)
         new_ub = best_upper_bound(var, new_ub, var.ub, eps)
+        if np.abs(new_ub - new_lb) < eps:
+            new_lb = new_ub
         new_bounds[var] = (new_lb, new_ub)
         safe_set_bounds(var, new_lb, new_ub)
         safe_set_bounds(original_var, new_lb, new_ub)
