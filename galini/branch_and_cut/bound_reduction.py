@@ -14,6 +14,7 @@
 
 """OBBT step of branch-and-cut algorithm."""
 import coramin.domain_reduction.obbt as coramin_obbt
+import coramin.domain_reduction.filters as coramin_filters
 import numpy as np
 import pyomo.environ as pe
 from coramin.relaxations.iterators import relaxation_data_objects
@@ -93,11 +94,25 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
     obbt_ex = None
     result = None
     try:
+        (vars_to_minimize,
+         vars_to_maximize) = coramin_filters.aggressive_filter(candidate_variables=nonlinear_variables,
+                                                               relaxation=linear_model,
+                                                               solver=solver,
+                                                               objective_bound=upper_bound,
+                                                               tolerance=mc.epsilon,
+                                                               max_iter=10,
+                                                               improvement_threshold=5)
+        vars_to_tighten = vars_to_minimize
+        visited_vars = ComponentSet(vars_to_tighten)
+        for v in vars_to_maximize:
+            if v not in visited_vars:
+                vars_to_tighten.append(v)
+                visited_vars.add(v)
         result = coramin_obbt.perform_obbt(
             linear_model,
             solver,
             time_limit=time_left,
-            varlist=nonlinear_variables,
+            varlist=vars_to_tighten,
             objective_bound=upper_bound,
             warning_threshold=mc.epsilon
         )
