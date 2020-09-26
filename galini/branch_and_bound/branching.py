@@ -18,6 +18,8 @@ import copy
 import numpy as np
 import pyomo.environ as pe
 
+from galini.math import almost_ge, almost_le
+
 
 class BranchingPoint:
     def __init__(self, variable, points):
@@ -32,7 +34,7 @@ class BranchingPoint:
         )
 
 
-def branch_at_point(model, current_bounds, branching_point):
+def branch_at_point(model, current_bounds, branching_point, mc):
     """Branch problem at branching_point, returning a list of child problems."""
     current_bounds = pe.ComponentMap()
     for var in model.component_data_objects(pe.Var, active=True, descend_into=True):
@@ -47,8 +49,11 @@ def branch_at_point(model, current_bounds, branching_point):
     var = branching_point.variable
     var_lb, var_ub = current_bounds[var]
 
+    epsilon = mc.epsilon
     for point in branching_point.points:
-        if point < var_lb or point > var_ub:
+        is_less_than_ub = almost_le(point, var_ub, atol=epsilon)
+        is_greater_than_lb = almost_ge(point, var_lb, atol=epsilon)
+        if not is_less_than_ub or not is_greater_than_lb:
             raise RuntimeError(
                 'Branching outside variable bounds: {} in [{}, {}], branching at {}'.format(
                     var.name, var.lb, var.ub, point

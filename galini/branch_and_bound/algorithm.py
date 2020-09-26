@@ -205,6 +205,8 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
         if not root_solution.lower_bound_success:
             return False
 
+        mc = self.galini.mc
+
         while not self.should_terminate(tree.state):
             self.logger.info('Tree state at beginning of iteration: {}', tree.state)
             if not tree.has_nodes():
@@ -214,7 +216,7 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
             current_node = tree.next_node()
             if current_node.parent is None:
                 # This is the root node.
-                node_children, branching_point = tree.branch_at_node(current_node)
+                node_children, branching_point = tree.branch_at_node(current_node, mc)
                 self.logger.info( 'Branched at point {}', branching_point)
                 continue
 
@@ -272,7 +274,7 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
             )
 
             if not current_node_converged and node_relaxation_is_feasible_or_unbounded:
-                node_children, branching_point = tree.branch_at_node(current_node)
+                node_children, branching_point = tree.branch_at_node(current_node, mc)
                 self.logger.info('Branched at point {}', branching_point)
             else:
                 # We won't explore this part of the tree anymore.

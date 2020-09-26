@@ -51,9 +51,9 @@ class BabTree:
 
         self._add_node(self.root)
 
-    def branch_at_node(self, node):
+    def branch_at_node(self, node, mc):
         assert node.has_solution
-        children, point = node.branch()
+        children, point = node.branch(mc)
         if children is None:
             return None, None
         for child in children:

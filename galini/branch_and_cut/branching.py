@@ -246,14 +246,26 @@ def compute_branching_point(var, mip_solution, lambda_, mc):
     if not var.is_continuous():
         user_upper_bound = mc.user_integer_upper_bound
 
+    has_lb = True
     if lb is None or is_inf(lb, mc):
+        has_lb = False
         lb = -user_upper_bound
 
+    has_ub = True
     if ub is None or is_inf(ub, mc):
+        has_ub = False
         ub = user_upper_bound
+
+    # if unbounded on either side (or both), branch at midpoint
+    if x_bar is not None and (not has_lb or not has_ub):
+        return x_bar
 
     midpoint = lb + 0.5 * (ub - lb)
     if x_bar is None:
+        return midpoint
+    # The solver may have returned a point outside of the bounds.
+    # Avoid propagating the error
+    if x_bar < lb or x_bar > ub:
         return midpoint
     return lambda_ * midpoint + (1.0 - lambda_) * x_bar
 

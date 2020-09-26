@@ -104,12 +104,12 @@ class _NodeStorageBase:
 
             relaxation.rebuild()
 
-    def branch_at_point(self, branching_point):
+    def branch_at_point(self, branching_point, mc):
         assert self.branching_point is None
         self.branching_point = branching_point
 
         children_bounds = branch_at_point(
-            self.root._model, self._bounds, branching_point
+            self.root._model, self._bounds, branching_point, mc
         )
 
         return [

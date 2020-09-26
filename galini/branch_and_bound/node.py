@@ -127,7 +127,7 @@ class Node:
             )
         return solution.best_objective_estimate()
 
-    def branch(self, strategy=None):
+    def branch(self, mc, strategy=None):
         """Branch at the current node using strategy."""
         if self.children is not None:
             raise RuntimeError('Trying to branch on node with children.')
@@ -151,10 +151,10 @@ class Node:
         branching_point = strategy.branch(self, self.tree)
         if branching_point is None:
             return None, None
-        return self.branch_at_point(branching_point)
+        return self.branch_at_point(branching_point, mc)
 
-    def branch_at_point(self, branching_point):
-        children_node_storage = self.storage.branch_at_point(branching_point)
+    def branch_at_point(self, branching_point, mc):
+        children_node_storage = self.storage.branch_at_point(branching_point, mc)
         for child_storage in children_node_storage:
             self.add_children(child_storage, branching_point.variable)
         return self.children, branching_point
