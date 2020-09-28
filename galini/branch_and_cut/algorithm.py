@@ -222,32 +222,36 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             linear_model = node.storage.model_relaxation()
 
         if is_root:
-            self.logger.info('OBBT start')
-            with self._telemetry.timespan('branch_and_cut.obbt'):
-                obbt_solver = instantiate_solver_with_options(
-                    self.config['mip_solver'],
-                )
-
-                try:
-                    new_bounds = perform_obbt_on_model(
-                        obbt_solver,
-                        model,
-                        linear_model,
-                        upper_bound=tree.upper_bound,
-                        timelimit=self.bab_config['obbt_timelimit'],
-                        simplex_maxiter=self.bab_config['obbt_simplex_maxiter'],
-                        absolute_gap=self.bab_config['absolute_gap'],
-                        relative_gap=self.bab_config['relative_gap'],
-                        mc=self.galini.mc,
+            obbt_time = self.bab_config['obbt_timelimit']
+            if obbt_time > 0:
+                self.logger.info('OBBT start')
+                with self._telemetry.timespan('branch_and_cut.obbt'):
+                    obbt_solver = instantiate_solver_with_options(
+                        self.config['mip_solver'],
                     )
-                    node.storage.update_bounds(new_bounds)
-                except Exception as ex:
-                    self.logger.warning('OBBT Exception: {}', ex)
-            self.logger.info('OBBT completed. Starting one more round of FBBT')
-            bounds, mono, cvx = self._perform_fbbt_on_model(tree, node, model)
-            # Recompute linear relaxation to have better bounds on linear_model
-            node.storage.recompute_model_relaxation_bounds()
-            linear_model = node.storage.model_relaxation()
+
+                    try:
+                        new_bounds = perform_obbt_on_model(
+                            obbt_solver,
+                            model,
+                            linear_model,
+                            upper_bound=tree.upper_bound,
+                            timelimit=obbt_time,
+                            simplex_maxiter=self.bab_config['obbt_simplex_maxiter'],
+                            absolute_gap=self.bab_config['absolute_gap'],
+                            relative_gap=self.bab_config['relative_gap'],
+                            mc=self.galini.mc,
+                        )
+                        node.storage.update_bounds(new_bounds)
+                    except Exception as ex:
+                        self.logger.warning('OBBT Exception: {}', ex)
+                self.logger.info('OBBT completed. Starting one more round of FBBT')
+                bounds, mono, cvx = self._perform_fbbt_on_model(tree, node, model)
+                # Recompute linear relaxation to have better bounds on linear_model
+                node.storage.recompute_model_relaxation_bounds()
+                linear_model = node.storage.model_relaxation()
+            else:
+                self.logger.info('Skip OBBT')
 
         self.logger.info(
             'Starting Cut generation iterations. Maximum iterations={}',

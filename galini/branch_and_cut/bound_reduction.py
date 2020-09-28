@@ -94,14 +94,16 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
     obbt_ex = None
     result = None
     try:
-        (vars_to_minimize,
-         vars_to_maximize) = coramin_filters.aggressive_filter(candidate_variables=nonlinear_variables,
-                                                               relaxation=linear_model,
-                                                               solver=solver,
-                                                               objective_bound=upper_bound,
-                                                               tolerance=mc.epsilon,
-                                                               max_iter=10,
-                                                               improvement_threshold=5)
+        (vars_to_minimize, vars_to_maximize) = \
+            coramin_filters.aggressive_filter(
+                candidate_variables=nonlinear_variables,
+                relaxation=linear_model,
+                solver=solver,
+                objective_bound=upper_bound,
+                tolerance=mc.epsilon,
+                max_iter=10,
+                improvement_threshold=5
+            )
         vars_to_tighten = vars_to_minimize
         visited_vars = ComponentSet(vars_to_tighten)
         for v in vars_to_maximize:
