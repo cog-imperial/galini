@@ -174,18 +174,21 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
     def bab_config(self):
         return self._bab_config
 
-    def _update_solver_options(self, solver, timelimit=None):
+    def _update_solver_options(self, solver, timelimit=None, relative_gap=None):
         if timelimit is None:
             # Set sub solver timelimit to something reasonable:
             #  * at least 1 second
             #  * give one second for galini to finish
             timelimit = max(self.galini.timelimit.seconds_left() - 1, 1)
 
+        if relative_gap is None:
+            relative_gap = self.bab_config['relative_gap']
+
         update_solver_options(
             solver,
             timelimit=timelimit,
             absolute_gap=self.bab_config['absolute_gap'],
-            relative_gap=self.bab_config['relative_gap'],
+            relative_gap=relative_gap,
         )
 
     def find_initial_solution(self, model, tree, node):
@@ -317,7 +320,8 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         )
 
         if not mip_solution.status.is_success():
-            return NodeSolution(mip_solution, None)
+            # If we got this far, lower_bounding_solution is at least feasible
+            return NodeSolution(lower_bounding_solution, None)
 
         with self._telemetry.timespan('branch_and_cut.update_node_branching_decision'):
             self._update_node_branching_decision(
@@ -450,6 +454,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         self._cut_loop_inner_iteration = 0
         first_round_required = mip_solution is None
 
+        previous_mip_solution = None
         while first_round_required or not self.cut_loop_should_terminate(cuts_state, cut_loop_start_time):
             first_round_required = False
 
@@ -458,7 +463,11 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             )
 
             if not feasible:
+                if previous_mip_solution is not None:
+                    return True, cuts_state, previous_mip_solution
                 return False, cuts_state, mip_solution
+
+            previous_mip_solution = mip_solution
 
             # Add cuts as constraints
             new_cuts_constraints = []
