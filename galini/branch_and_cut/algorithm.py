@@ -313,6 +313,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         with self._telemetry.timespan('branch_and_cut.solve_mip'):
             mip_results = self._mip_solver.solve(linear_model)
             mip_solution = load_solution_from_model(mip_results, linear_model, solver=self._mip_solver)
+
         self.logger.info(
             'MILP solution after LP cut phase: {} {}',
             mip_solution.status,

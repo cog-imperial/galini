@@ -203,7 +203,8 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
         )
 
         if not root_solution.lower_bound_success:
-            return False
+            if not root_solution.upper_bound_success:
+                return False
 
         mc = self.galini.mc
 
@@ -217,7 +218,7 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
             if current_node.parent is None:
                 # This is the root node.
                 node_children, branching_point = tree.branch_at_node(current_node, mc)
-                self.logger.info( 'Branched at point {}', branching_point)
+                self.logger.info('Branched at point {}', branching_point)
                 continue
 
             self.logger.info(
