@@ -18,18 +18,18 @@ import galini.io.message_pb2 as proto
 DEFAULT_LEVEL = 0
 
 
-def text_message(name, run_id, content, level=None, timestamp=None):
+def text_message(name, content, level=None, timestamp=None):
     if level is None:
         level = DEFAULT_LEVEL
-    msg = message(name, run_id, timestamp)
+    msg = message(name, timestamp)
     msg.text.level = level
     msg.text.content = content
     return msg
 
 
-def tensor_message(name, run_id, filename, group, dataset, sizes,
+def tensor_message(name, filename, group, dataset, sizes,
                    timestamp=None):
-    msg = message(name, run_id, timestamp)
+    msg = message(name, timestamp)
     msg.tensor.filename = filename
     msg.tensor.group_ = group
     msg.tensor.dataset = dataset
@@ -37,20 +37,20 @@ def tensor_message(name, run_id, filename, group, dataset, sizes,
     return msg
 
 
-def solve_start_message(name, run_id, solver, timestamp=None):
-    msg = message(name, run_id, timestamp)
+def solve_start_message(name, solver, timestamp=None):
+    msg = message(name, timestamp)
     msg.solve_start.solver = solver
     return msg
 
 
-def solve_end_message(name, run_id, solver, timestamp=None):
-    msg = message(name, run_id, timestamp)
+def solve_end_message(name, solver, timestamp=None):
+    msg = message(name, timestamp)
     msg.solve_end.solver = solver
     return msg
 
 
-def update_variable_message(name, run_id, var_name, iteration, value, timestamp=None):
-    msg = message(name, run_id, timestamp)
+def update_variable_message(name, var_name, iteration, value, timestamp=None):
+    msg = message(name, timestamp)
     msg.update_variable.name = var_name
     if not isinstance(iteration, list):
         iteration = [iteration]
@@ -59,9 +59,9 @@ def update_variable_message(name, run_id, var_name, iteration, value, timestamp=
     return msg
 
 
-def add_bab_node_message(name, run_id, coordinate, lower_bound, upper_bound,
+def add_bab_node_message(name, coordinate, lower_bound, upper_bound,
                          branching_variables=None, timestamp=None):
-    msg = message(name, run_id, timestamp)
+    msg = message(name, timestamp)
     msg.add_bab_node.coordinate.extend(coordinate)
     msg.add_bab_node.lower_bound = lower_bound
     msg.add_bab_node.upper_bound = upper_bound
@@ -75,22 +75,20 @@ def add_bab_node_message(name, run_id, coordinate, lower_bound, upper_bound,
     return msg
 
 
-def prune_bab_node_message(name, run_id, coordinate, timestamp=None):
-    msg = message(name, run_id, timestamp)
+def prune_bab_node_message(name, coordinate, timestamp=None):
+    msg = message(name, timestamp)
     for value in coordinate:
         msg.prune_bab_node.coordinate.append(value)
     return msg
 
 
-def message(name, run_id, timestamp=None):
+def message(name, timestamp=None):
     if timestamp is None:
         timestamp = datetime.datetime.utcnow()
 
     msg = proto.Message()
     if name:
         msg.name = name
-    if run_id:
-        msg.run_id = run_id
     msg.timestamp = timestamp_to_uint64(timestamp)
     return msg
 

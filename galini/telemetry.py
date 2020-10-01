@@ -109,7 +109,9 @@ def timespan(telemetry, name):
     if counter is None:
         counter = telemetry.create_counter(name, 0.0)
 
+    telemetry._logger.log_solve_start(name)
     start = current_time()
     yield
     duration = seconds_elapsed_since(start)
+    telemetry._logger.log_solve_end(name)
     counter.increment(duration)

@@ -136,7 +136,7 @@ class LogManager(object):
             return
         self.writer.write(message)
 
-    def _log(self, name, run_id, lvl, msg, *args, **kwargs):
+    def _log(self, name, lvl, msg, *args, **kwargs):
         if lvl < self.level:
             return
         fmt_msg = msg.format(*args, **kwargs)
@@ -147,16 +147,16 @@ class LogManager(object):
             pylog_fmt_msg = fmt_msg
         self._pylogger.log(
             lvl,
-            '[{}][{}] {}'.format(name, run_id, pylog_fmt_msg),
+            '[{}] {}'.format(name, pylog_fmt_msg),
         )
 
-        message = text_message(name, run_id, fmt_msg, level=lvl)
+        message = text_message(name, fmt_msg, level=lvl)
         self._log_message(message)
 
-    def _tensor(self, name, run_id, group, dataset, data):
+    def _tensor(self, name, group, dataset, data):
         if not self.has_rich_logging:
             return
-        group = '{}/{}/{}'.format(name, run_id, group)
+        group = '{}/{}'.format(name, group)
         if group is None:
             h5_group = self.data_file
         else:
@@ -168,7 +168,6 @@ class LogManager(object):
             h5_group.create_dataset(dataset, data=data)
             message = tensor_message(
                 name,
-                run_id,
                 filename=self.data_filepath,
                 group=group,
                 dataset=dataset,
@@ -230,32 +229,25 @@ class Logger(object):
         kwargs: Any
             keyword arguments passed to msg.format
         """
-        # TODO(fra): manage run_id
         if lvl >= self.level:
-            self.manager._log(self.name, 0, lvl, msg, *args, **kwargs)
+            self.manager._log(self.name, lvl, msg, *args, **kwargs)
 
     def log_solve_start(self, solver):
-        # TODO(fra): manage run_id
         self.log_message(solve_start_message(
             name=self.name,
-            run_id=0,
             solver=solver,
         ))
 
     def log_solve_end(self, solver):
-        # TODO(fra): manage run_id
         self.log_message(solve_end_message(
             name=self.name,
-            run_id=0,
             solver=solver,
         ))
 
     def log_add_bab_node(self, coordinate, lower_bound, upper_bound,
                          branching_variables=None):
-        # TODO(fra): manage run_id
         self.log_message(add_bab_node_message(
             name=self.name,
-            run_id=0,
             coordinate=coordinate,
             lower_bound=lower_bound,
             upper_bound=upper_bound,
@@ -263,18 +255,14 @@ class Logger(object):
         ))
 
     def log_prune_bab_node(self, coordinate):
-        # TODO(fra): manage run_id
         self.log_message(prune_bab_node_message(
             name=self.name,
-            run_id=0,
             coordinate=coordinate,
         ))
 
     def update_variable(self, var_name, iteration, value):
-        # TODO(fra): manage run_id
         self.log_message(update_variable_message(
             name=self.name,
-            run_id=0,
             var_name=var_name,
             iteration=iteration,
             value=value,
@@ -292,5 +280,4 @@ class Logger(object):
         data : array-like
             the data to log
         """
-        # TODO(fra): manage run_id
-        return self.manager._tensor(self.name, 0, group, dataset, data)
+        return self.manager._tensor(self.name, group, dataset, data)
