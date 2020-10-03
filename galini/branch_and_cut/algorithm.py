@@ -390,7 +390,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             model, mip_solution_with_model_vars, self._nlp_solver, self.galini.mc, fix_all=True
         )
 
-        if primal_solution is not None:
+        if primal_solution is not None and primal_solution.status.is_success():
             return primal_solution
 
         self._update_solver_options(self._nlp_solver)
