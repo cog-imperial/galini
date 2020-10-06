@@ -23,6 +23,7 @@ from galini.relaxations.relax import (
 )
 from galini.branch_and_bound.node import NodeSolution
 from galini.branch_and_bound.selection import BestLowerBoundSelectionStrategy
+from galini.branch_and_bound.telemetry import update_counter
 from galini.branch_and_cut.bound_reduction import (
     perform_obbt_on_model, perform_fbbt_on_model
 )
@@ -292,6 +293,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             feasible, cuts_state, lower_bounding_solution = self._solve_lower_bounding_relaxation(
                 tree, node, model, linear_model
             )
+            update_counter(self.galini, 'branch_and_cut.cut_loop_iter', cuts_state.round, 0)
 
         if is_root:
             with self._telemetry.timespan('cuts_manager.after_end_at_root'):
@@ -444,34 +446,34 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
     def _perform_cut_loop(self, tree, node, model, linear_model):
         cuts_state = CutsState()
-        mip_solution = None
+        lp_solution = None
 
         relaxation_data = node.storage.relaxation_data
 
         if node.parent:
-            parent_cuts_count, mip_solution = self._add_cuts_from_parent(
-                node, model, linear_model
-            )
-            # TODO(fra): output telemetry
+            with self._telemetry.timespan('branch_and_cut.add_cuts_from_parent'):
+                parent_cuts_count, lp_solution = self._add_cuts_from_parent(
+                    node, model, linear_model
+                )
 
         cut_loop_start_time = current_time()
         self._cut_loop_inner_iteration = 0
-        first_round_required = mip_solution is None
+        first_round_required = lp_solution is None
 
-        previous_mip_solution = None
+        previous_lp_solution = None
         while first_round_required or not self.cut_loop_should_terminate(cuts_state, cut_loop_start_time):
             first_round_required = False
 
-            feasible, new_cuts, mip_solution = self._perform_cut_round(
+            feasible, new_cuts, lp_solution = self._perform_cut_round(
                 model, linear_model, cuts_state, tree, node
             )
 
             if not feasible:
-                if previous_mip_solution is not None:
-                    return True, cuts_state, previous_mip_solution
-                return False, cuts_state, mip_solution
+                if previous_lp_solution is not None:
+                    return True, cuts_state, previous_lp_solution
+                return False, cuts_state, lp_solution
 
-            previous_mip_solution = mip_solution
+            previous_lp_solution = lp_solution
 
             # Add cuts as constraints
             new_cuts_constraints = []
@@ -492,11 +494,11 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
             self.logger.debug(
                 'Updating CutState: State={}, Solution={}',
-                cuts_state, mip_solution
+                cuts_state, lp_solution
             )
 
             cuts_state.update(
-                mip_solution,
+                lp_solution,
                 paranoid=self.galini.paranoid_mode,
                 atol=self.bab_config['absolute_gap'],
                 rtol=self.bab_config['relative_gap'],
@@ -505,7 +507,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             if not new_cuts:
                 break
 
-        return True, cuts_state, mip_solution
+        return True, cuts_state, lp_solution
 
     def _perform_cut_round(self, model, linear_model, cuts_state, tree, node):
         self.logger.debug('Round {}. Solving linearized problem.', cuts_state.round)

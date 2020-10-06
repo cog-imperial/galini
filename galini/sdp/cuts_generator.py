@@ -208,6 +208,9 @@ class SdpCutsGenerator(CutsGenerator):
 
     def has_converged(self, state):
         """Termination criteria for cut generation loop."""
+        if not np.all(np.isfinite(self._domains)):
+            return True
+
         if (state.first_solution is None or
             state.previous_solution is None or
             state.latest_solution is None):

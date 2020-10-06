@@ -64,7 +64,7 @@ class OuterApproximationCutsGenerator(CutsGenerator):
 
     def _check_if_problem_is_nolinear(self, relaxed_problem):
         self._convex_relaxations_map = pe.ComponentMap()
-        for relaxation in relaxation_data_objects(relaxed_problem, active=True, descend_into=True):
+        for relaxation in relaxed_problem.galini_nonlinear_relaxations:
             is_convex = (
                 relaxation.is_rhs_convex() and
                 relaxation.relaxation_side in [RelaxationSide.BOTH, RelaxationSide.UNDER]
