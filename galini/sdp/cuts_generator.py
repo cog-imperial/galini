@@ -23,26 +23,16 @@ from os import path
 import numpy as np
 import pyomo.environ as pe
 from coramin.relaxations import relaxation_data_objects
-from coramin.utils.coramin_enums import RelaxationSide
 from coramin.relaxations.mccormick import PWMcCormickRelaxation
 from coramin.relaxations.univariate import PWXSquaredRelaxation
-from networkx import enumerate_all_cliques, from_numpy_matrix
+from networkx import enumerate_all_cliques, from_numpy_matrix, Graph
 from pyomo.core.expr.current import SumExpression
 from suspect.pyomo.quadratic import QuadraticExpression
 
-# from galini.abb.relaxation import AlphaBBRelaxation
 from galini.config import CutsGeneratorOptions, NumericOption, EnumOption
-from galini.relaxations.relax import (relax_expression, update_relaxation_data, rebuild_relaxations)
-# from galini.core import Constraint
-# from galini.core import LinearExpression, SumExpression, QuadraticExpression
 from galini.cuts import CutsGenerator
 from galini.math import is_close
-# from galini.logging import get_logger
-# from galini.math import mc, is_close
 from galini.quantities import relative_bound_improvement
-
-
-#logger = get_logger(__name__)
 
 
 class SdpCutsGenerator(CutsGenerator):
@@ -63,6 +53,7 @@ class SdpCutsGenerator(CutsGenerator):
     def __init__(self, galini, config):
         super().__init__(galini, config)
         self.galini = galini
+        self._telemetry = self.galini.telemetry
         self.logger = galini.get_logger(__name__)
 
         self._domain_eps = config['domain_eps']
@@ -209,6 +200,9 @@ class SdpCutsGenerator(CutsGenerator):
     def has_converged(self, state):
         """Termination criteria for cut generation loop."""
         if not np.all(np.isfinite(self._domains)):
+            return True
+
+        if not self._agg_list:
             return True
 
         if (state.first_solution is None or
@@ -518,6 +512,9 @@ class SdpCutsGenerator(CutsGenerator):
         ]
         self._variables = variables
 
+        num_vars = len(variables)
+        self._num_vars = num_vars
+
         var_idx_map = pe.ComponentMap([(var, idx) for idx, var in enumerate(variables)])
         self._var_idx_map = var_idx_map
 
@@ -534,9 +531,6 @@ class SdpCutsGenerator(CutsGenerator):
             []
             for _ in range(1 + len(constraints))
         ]
-
-        num_vars = len(variables)
-        self._num_vars = num_vars
 
         # Find all quadratic terms (across all objectives + constraints) and form an adjacency matrix for their indices
         adj_mat = np.zeros((num_vars, num_vars))
@@ -587,15 +581,17 @@ class SdpCutsGenerator(CutsGenerator):
             adj_mat_con = np.zeros((num_vars, num_vars))
             coeff_mat_con = np.zeros((num_vars, num_vars))
 
+            G = Graph()
             for (idx_var1, idx_var2, term_coeff) in quad_terms_per_con[con_idx]:
                 adj_mat_con[idx_var1, idx_var2] = 1
                 adj_mat_con[idx_var2, idx_var1] = 1
+                G.add_edge(idx_var1, idx_var2)
                 coeff_mat_con[idx_var1, idx_var2] = term_coeff
                 coeff_mat_con[idx_var2, idx_var1] = term_coeff
 
             # Get only cliques up the the dimension of the SDP decomposition
             agg_list_con = []
-            for clique in enumerate_all_cliques(from_numpy_matrix(adj_mat_con)):
+            for clique in enumerate_all_cliques(G):
                 if len(clique) < 2:
                     continue
                 elif len(clique) <= dim:
@@ -605,6 +601,7 @@ class SdpCutsGenerator(CutsGenerator):
 
             # Eliminate cliques that are subsets of other cliques
             agg_list_con = [x for x in agg_list_con if not any(x <= y for y in agg_list_con if x is not y)]
+
             # Aggregate coefficient info (input_nn) used as input for neural networks for each constraint
             for agg_idx, (clique, _) in enumerate(agg_list):
                 for clique_con in agg_list_con:
