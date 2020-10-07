@@ -33,6 +33,7 @@ from galini.config import CutsGeneratorOptions, NumericOption, EnumOption
 from galini.cuts import CutsGenerator
 from galini.math import is_close
 from galini.quantities import relative_bound_improvement
+from galini.timelimit import current_time, seconds_elapsed_since
 
 
 class SdpCutsGenerator(CutsGenerator):
@@ -67,6 +68,7 @@ class SdpCutsGenerator(CutsGenerator):
         self._big_m = config['big_m']
         self._thres_min_coeff_comb = config['thres_min_coeff_comb']
         self._cuts_relative_tolerance = config['convergence_relative_tolerance']
+        self._preprocess_time_limit = config['preprocess_time_limit']
 
         assert (0 <= self._sel_size), \
             "Selection size (how many cuts) needs to be a positive proportion/absolute number!"
@@ -139,6 +141,10 @@ class SdpCutsGenerator(CutsGenerator):
                           description='Termination criteria on lower bound improvement between '
                                       'two consecutive cut rounds <= relative_tolerance % of '
                                       'lower bound improvement from cut round'),
+            NumericOption('preprocess_time_limit',
+                          default=5,
+                          description="Time limit for the pre processing step at the root node. If pre processing "
+                                      "does not finish in time, no cuts will be generated."),
         ])
 
     def before_start_at_root(self, problem, relaxed_problem):
@@ -150,6 +156,8 @@ class SdpCutsGenerator(CutsGenerator):
 
         if self._agg_list is None:
             self._agg_list = self._get_sdp_decomposition(problem, relaxed_problem)
+            if not self._agg_list:
+                return
 
         self._mat = [np.zeros((i + 1, i + 1)) for i in self._possible_dim]
 
@@ -199,10 +207,10 @@ class SdpCutsGenerator(CutsGenerator):
 
     def has_converged(self, state):
         """Termination criteria for cut generation loop."""
-        if not np.all(np.isfinite(self._domains)):
+        if not self._agg_list:
             return True
 
-        if not self._agg_list:
+        if not np.all(np.isfinite(self._domains)):
             return True
 
         if (state.first_solution is None or
@@ -218,6 +226,9 @@ class SdpCutsGenerator(CutsGenerator):
         ) <= self._cuts_relative_tolerance
 
     def generate(self, problem, linear_problem, solution, tree, node):
+        if not self._agg_list:
+            return
+
         if not np.all(np.isfinite(self._domains)):
             return
 
@@ -504,6 +515,9 @@ class SdpCutsGenerator(CutsGenerator):
         return self._nns
 
     def _get_sdp_decomposition(self, problem, relaxed_problem):
+        start_time = current_time()
+        time_limit = self._preprocess_time_limit
+
         dim = self._dim
         agg_list = []
 
@@ -532,6 +546,9 @@ class SdpCutsGenerator(CutsGenerator):
             for _ in range(1 + len(constraints))
         ]
 
+        if seconds_elapsed_since(start_time) > time_limit:
+            return []
+
         # Find all quadratic terms (across all objectives + constraints) and form an adjacency matrix for their indices
         adj_mat = np.zeros((num_vars, num_vars))
 
@@ -550,6 +567,9 @@ class SdpCutsGenerator(CutsGenerator):
                     if isinstance(arg, QuadraticExpression):
                         quadratic_expr = arg
                         break
+
+            if seconds_elapsed_since(start_time) > time_limit:
+                return []
 
             if quadratic_expr is not None:
                 for term in quadratic_expr.terms:
@@ -578,6 +598,9 @@ class SdpCutsGenerator(CutsGenerator):
         # Look in each constraint at a time for cliques up to dim in size
         nb_objs = 1
         for con_idx, constraint in enumerate([objective, *constraints]):
+            if seconds_elapsed_since(start_time) > time_limit:
+                return []
+
             adj_mat_con = np.zeros((num_vars, num_vars))
             coeff_mat_con = np.zeros((num_vars, num_vars))
 
@@ -592,6 +615,9 @@ class SdpCutsGenerator(CutsGenerator):
             # Get only cliques up the the dimension of the SDP decomposition
             agg_list_con = []
             for clique in enumerate_all_cliques(G):
+                if seconds_elapsed_since(start_time) > time_limit:
+                    return []
+
                 if len(clique) < 2:
                     continue
                 elif len(clique) <= dim:
