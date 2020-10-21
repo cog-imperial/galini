@@ -45,7 +45,7 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
     @staticmethod
     def bab_options():
         return [
-            NumericOption('absolute_gap', default=1e-6),
+            NumericOption('absolute_gap', default=1e-8),
             NumericOption('relative_gap', default=1e-6),
             IntegerOption('node_limit', default=100000000),
             IntegerOption('root_node_feasible_solution_seed', default=None),
