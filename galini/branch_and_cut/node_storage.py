@@ -136,13 +136,14 @@ class NodeStorage(_NodeStorageBase):
 
 
 class RootNodeStorage(_NodeStorageBase):
-    def __init__(self, model):
+    def __init__(self, model, relaxation):
         bounds = pe.ComponentMap(
             (var, var.bounds)
             for var in model.component_data_objects(pe.Var, active=True)
         )
         super().__init__(root=self, parent=None, bounds=bounds)
         self._model = model
+        self._relaxation = relaxation
 
         # Lazily instantiate when creating linear model
         self._linear_model = None
@@ -163,7 +164,7 @@ class RootNodeStorage(_NodeStorageBase):
         (
             self._linear_model,
             self._relaxation_data,
-        ) = relax(self._model)
+        ) = self._relaxation.relax(self._model)
         self.model_to_relaxation_var_map = self._relaxation_data.original_to_new_var_map
 
         # Pre-compute nonlinear relaxations objects

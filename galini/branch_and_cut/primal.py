@@ -18,17 +18,31 @@ from galini.math import is_inf
 from galini.pyomo import safe_setub, safe_setlb
 from galini.solvers.solution import load_solution_from_model
 from galini.branch_and_bound.node import NodeSolution
-from galini.registry import Registry
 from pyutilib.common import ApplicationError
 
 
-class PrimalSearchStrategyRegistry(Registry):
-    """Registry of primal search strategies."""
-    def group_name(self):
-        return 'galini.primal_search'
+class InitialPrimalSearchStrategy:
+    """Initial primal search strategy interface."""
+    def solve(self, model, tree, node):
+        raise NotImplementedError('InitialPrimalSearchStrategy.solve')
 
 
-class DefaultPrimalSearchStrategy:
+class PrimalHeuristic:
+    def solve(self, model, linear_model, mip_solution, tree, node):
+        raise NotImplementedError('PrimalHeuristic.solve')
+
+
+class NoInitialPrimalSearchStrategy(InitialPrimalSearchStrategy):
+    """An initial primal search strategy that does nothing."""
+    def __init__(self, algorithm):
+        pass
+
+    def solve(self, model, tree, node):
+        return None
+
+
+class DefaultInitialPrimalSearchStrategy(InitialPrimalSearchStrategy):
+    """An initial primal search strategy that fixes integer variables and solves the NLP."""
     def __init__(self, algorithm):
         self.algorithm = algorithm
 
@@ -56,6 +70,39 @@ class DefaultPrimalSearchStrategy:
         if solution.status.is_success():
             return NodeSolution(None, solution)
         return None
+
+
+class DefaultPrimalHeuristic(PrimalHeuristic):
+    def __init__(self, algorithm):
+        self.algorithm = algorithm
+        self.galini = algorithm.galini
+
+    def solve(self, model, linear_model, mip_solution, tree, node):
+        assert mip_solution.status.is_success(), "Should be a feasible point for the relaxation"
+
+        model_var_map = node.storage.model_to_relaxation_var_map
+        mip_solution_with_model_vars = pe.ComponentMap(
+            (var, mip_solution.variables[model_var_map[var]])
+            for var in model.component_data_objects(pe.Var, active=True)
+        )
+
+        self.algorithm._update_solver_options(self.algorithm._nlp_solver)
+        primal_solution = solve_primal_with_starting_point(
+            model, mip_solution_with_model_vars, self.algorithm._nlp_solver, self.galini.mc, fix_all=True
+        )
+
+        if primal_solution is not None and primal_solution.status.is_success():
+            return primal_solution
+
+        self.algorithm._update_solver_options(self.algorithm._nlp_solver)
+        new_primal_solution = solve_primal(
+            model, mip_solution_with_model_vars, self.algorithm._nlp_solver, self.galini.mc
+        )
+
+        if new_primal_solution is not None:
+            primal_solution = new_primal_solution
+
+        return primal_solution
 
 
 def solve_primal(model, mip_solution, solver, mc):

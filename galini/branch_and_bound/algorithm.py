@@ -102,6 +102,10 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
     def node_selection_strategy(self):
         raise NotImplemented()
 
+    @abc.abstractmethod
+    def init_node_storage(self, model):
+        raise NotImplemented()
+
     @property
     @abc.abstractmethod
     def bab_config(self):
@@ -166,7 +170,7 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
         branching_strategy = self.branching_strategy
         node_selection_strategy = self.node_selection_strategy
 
-        root_node_storage = RootNodeStorage(model)
+        root_node_storage = self.init_node_storage(model)
         tree = BabTree(
             root_node_storage, branching_strategy, node_selection_strategy
         )

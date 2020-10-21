@@ -61,7 +61,7 @@ class BestLowerBoundSelectionStrategy(NodeSelectionStrategy):
                 return True
             return self_lb.objective_value() < other_lb.objective_value()
 
-    def __init__(self):
+    def __init__(self, algorithm):
         self.nodes = []
 
     def insert_node(self, node):

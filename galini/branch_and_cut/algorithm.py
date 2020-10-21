@@ -17,22 +17,19 @@
 import pyomo.environ as pe
 from coramin.utils.coramin_enums import RelaxationSide
 from galini.branch_and_bound.algorithm import BranchAndBoundAlgorithm
-from galini.relaxations.relax import (
-    update_relaxation_data,
-    relax_inequality,
-)
 from galini.branch_and_bound.node import NodeSolution
-from galini.branch_and_bound.selection import BestLowerBoundSelectionStrategy
 from galini.branch_and_bound.telemetry import update_counter
 from galini.branch_and_cut.bound_reduction import (
     perform_obbt_on_model, perform_fbbt_on_model
 )
-from galini.branch_and_cut.branching import compute_branching_decision, \
-    BranchAndCutBranchingStrategy
-from galini.branch_and_cut.primal import (
-    PrimalSearchStrategyRegistry,
-    solve_primal,
-    solve_primal_with_starting_point
+from galini.branch_and_cut.branching import compute_branching_decision
+from galini.branch_and_cut.node_storage import RootNodeStorage
+from galini.branch_and_cut.extensions import (
+    InitialPrimalSearchStrategyRegistry,
+    PrimalHeuristicRegistry,
+    NodeSelectionStrategyRegistry,
+    BranchingStrategyRegistry,
+    RelaxationRegistry,
 )
 from galini.branch_and_cut.state import CutsState
 from galini.config import (
@@ -71,8 +68,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         self._bab_config = self.config['bab']
         self.cuts_config = self.config['cuts']
 
-        self._branching_strategy = BranchAndCutBranchingStrategy()
-        self._node_selection_strategy = BestLowerBoundSelectionStrategy()
+        self._init_extensions()
 
     # pylint: disable=line-too-long
     @staticmethod
@@ -102,7 +98,19 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
                     description='Threshold to consider a cut violated.'
                 )
             ]),
-            OptionsGroup('primal_search', [
+            OptionsGroup('initial_primal_search', [
+                StringOption('strategy', default='default')
+            ]),
+            OptionsGroup('primal_heuristic', [
+                StringOption('strategy', default='default')
+            ]),
+            OptionsGroup('branching', [
+                StringOption('strategy', default='default')
+            ]),
+            OptionsGroup('node_selection', [
+                StringOption('strategy', default='default')
+            ]),
+            OptionsGroup('relaxation', [
                 StringOption('strategy', default='default')
             ]),
             OptionsGroup('mip_solver', [
@@ -163,6 +171,48 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             ]),
         ])
 
+    def _init_extensions(self):
+        self._init_initial_primal_search_strategy_extension()
+        self._init_primal_heuristic_extension()
+        self._init_branching_strategy_extension()
+        self._init_node_selection_strategy_extension()
+        self._init_relaxation_strategy_extension()
+
+    def _init_initial_primal_search_strategy_extension(self):
+        reg = InitialPrimalSearchStrategyRegistry()
+        strategy_name = self.config['initial_primal_search']['strategy']
+        strategy_cls = reg[strategy_name]
+        assert strategy_cls is not None
+        self._initial_primal_search_strategy = strategy_cls(self)
+
+    def _init_primal_heuristic_extension(self):
+        reg = PrimalHeuristicRegistry()
+        strategy_name = self.config['primal_heuristic']['strategy']
+        heuristic_cls = reg[strategy_name]
+        assert heuristic_cls is not None
+        self._primal_heuristic = heuristic_cls(self)
+
+    def _init_branching_strategy_extension(self):
+        reg = BranchingStrategyRegistry()
+        strategy_name = self.config['branching']['strategy']
+        strategy_cls = reg[strategy_name]
+        assert strategy_cls is not None
+        self._branching_strategy = strategy_cls(self)
+
+    def _init_node_selection_strategy_extension(self):
+        reg = NodeSelectionStrategyRegistry()
+        strategy_name = self.config['node_selection']['strategy']
+        strategy_cls = reg[strategy_name]
+        assert strategy_cls is not None
+        self._node_selection_strategy = strategy_cls(self)
+
+    def _init_relaxation_strategy_extension(self):
+        reg = RelaxationRegistry()
+        strategy_name = self.config['relaxation']['strategy']
+        strategy_cls = reg[strategy_name]
+        assert strategy_cls is not None
+        self._relaxation = strategy_cls(self)
+
     @property
     def branching_strategy(self):
         return self._branching_strategy
@@ -170,6 +220,9 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
     @property
     def node_selection_strategy(self):
         return self._node_selection_strategy
+
+    def init_node_storage(self, model):
+        return RootNodeStorage(model, self._relaxation)
 
     @property
     def bab_config(self):
@@ -194,12 +247,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
     def find_initial_solution(self, model, tree, node):
         try:
-            reg = PrimalSearchStrategyRegistry()
-            strategy_name = self.config['primal_search']['strategy']
-            strategy_cls = reg.get(strategy_name, None)
-            assert strategy_cls is not None
-            strategy = strategy_cls(self)
-            return strategy.solve(model, tree, node)
+            return self._initial_primal_search_strategy.solve(model, tree, node)
         except Exception as ex:
             if self.galini.paranoid_mode:
                 raise
@@ -349,7 +397,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         # Try to find a feasible solution
         with self._telemetry.timespan('branch_and_cut.solve_upper_bounding_problem'):
             primal_solution = self._solve_upper_bounding_problem(
-                model, node, linear_model, mip_solution
+                model, linear_model, mip_solution, tree, node
             )
 
         assert primal_solution is not None, 'Should return a solution even if not feasible'
@@ -378,32 +426,8 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
 
         return feasible, cuts_state, mip_solution
 
-    def _solve_upper_bounding_problem(self, model, node, linear_model, mip_solution):
-        assert mip_solution.status.is_success(), "Should be a feasible point for the relaxation"
-
-        model_var_map = node.storage.model_to_relaxation_var_map
-        mip_solution_with_model_vars = pe.ComponentMap(
-            (var, mip_solution.variables[model_var_map[var]])
-            for var in model.component_data_objects(pe.Var, active=True)
-        )
-
-        self._update_solver_options(self._nlp_solver)
-        primal_solution = solve_primal_with_starting_point(
-            model, mip_solution_with_model_vars, self._nlp_solver, self.galini.mc, fix_all=True
-        )
-
-        if primal_solution is not None and primal_solution.status.is_success():
-            return primal_solution
-
-        self._update_solver_options(self._nlp_solver)
-        new_primal_solution = solve_primal(
-            model, mip_solution_with_model_vars, self._nlp_solver, self.galini.mc
-        )
-
-        if new_primal_solution is not None:
-            primal_solution = new_primal_solution
-
-        return primal_solution
+    def _solve_upper_bounding_problem(self, model, linear_model, mip_solution, tree, node):
+        return self._primal_heuristic.solve(model, linear_model, mip_solution, tree, node)
 
     def _cuts_converged(self, state):
         cuts_close = (
@@ -478,10 +502,9 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             # Add cuts as constraints
             new_cuts_constraints = []
             for cut in new_cuts:
-                relaxed_cut = relax_inequality(linear_model, cut, RelaxationSide.BOTH, relaxation_data)
+                relaxed_cut = self._relaxation.relax_inequality(linear_model, cut, RelaxationSide.BOTH, relaxation_data)
                 new_cons = node.storage.cut_node_storage.add_cut(relaxed_cut)
                 new_cuts_constraints.append(new_cons)
-                update_relaxation_data(linear_model, relaxation_data)
 
             if self.galini.paranoid_mode:
                 # Check added cuts are violated

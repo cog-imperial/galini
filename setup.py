@@ -137,8 +137,21 @@ setup(
         'galini.algorithms': [
             'bac=galini.branch_and_cut:BranchAndCutAlgorithm',
         ],
-        'galini.primal_search': [
-            'default=galini.branch_and_cut.primal:DefaultPrimalSearchStrategy',
+        'galini.initial_primal_search': [
+            'default=galini.branch_and_cut.primal:DefaultInitialPrimalSearchStrategy',
+            'no_primal=galini.branch_and_cut.primal:NoInitialPrimalSearchStrategy',
+        ],
+        'galini.primal_heuristic': [
+            'default=galini.branch_and_cut.primal:DefaultPrimalHeuristic',
+        ],
+        'galini.branching_strategy': [
+            'default=galini.branch_and_cut.branching:BranchAndCutBranchingStrategy',
+        ],
+        'galini.node_selection_strategy': [
+            'default=galini.branch_and_bound.selection:BestLowerBoundSelectionStrategy',
+        ],
+        'galini.relaxation': [
+            'default=galini.branch_and_cut.relaxation:DefaultRelaxation',
         ],
         'galini.cuts_generators': [
             'outer_approximation=galini.outer_approximation:OuterApproximationCutsGenerator',

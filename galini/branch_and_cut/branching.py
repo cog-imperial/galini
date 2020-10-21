@@ -16,7 +16,6 @@
 
 import numpy as np
 import pyomo.environ as pe
-from coramin.relaxations import relaxation_data_objects
 
 from galini.branch_and_bound.branching import BranchingPoint
 from galini.branch_and_bound.strategy import BranchingStrategy
@@ -26,6 +25,9 @@ from galini.math import is_close, is_inf
 
 
 class BranchAndCutBranchingStrategy(BranchingStrategy):
+    def __init__(self, algorithm):
+        pass
+
     def branch(self, node, tree):
         branching_decision = node.storage.branching_decision
         if branching_decision is None:

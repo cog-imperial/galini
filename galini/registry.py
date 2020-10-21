@@ -33,8 +33,12 @@ class Registry(metaclass=abc.ABCMeta):
             self._registered[entry_point.name] = obj_cls
 
     def get(self, name, default=None):
-        """Return entry point associated with name."""
+        """Return the entry point associated with name."""
         return self._registered.get(name, default)
+
+    def __getitem__(self, item):
+        """Return the entry point associated with name."""
+        return self._registered[item]
 
     def keys(self):
         """Return the registered objects names."""
