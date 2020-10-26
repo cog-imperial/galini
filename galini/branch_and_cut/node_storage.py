@@ -19,9 +19,9 @@ from coramin.relaxations.univariate import PWXSquaredRelaxationData
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 
 from galini.branch_and_bound.branching import branch_at_point
+from galini.relaxations.relax import RelaxationData
 from galini.cuts.pool import CutNodeStorage, CutPool
 from galini.pyomo import safe_setlb, safe_setub
-from galini.relaxations.relax import relax
 
 
 class BranchingDecision:
@@ -161,10 +161,8 @@ class RootNodeStorage(_NodeStorageBase):
             assert self.cut_node_storage is not None
             return self._linear_model
 
-        (
-            self._linear_model,
-            self._relaxation_data,
-        ) = self._relaxation.relax(self._model)
+        self._relaxation_data = RelaxationData(self._model)
+        self._linear_model = self._relaxation.relax(self._model, self._relaxation_data)
         self.model_to_relaxation_var_map = self._relaxation_data.original_to_new_var_map
 
         # Pre-compute nonlinear relaxations objects

@@ -32,9 +32,8 @@ _relax_root_to_leaf_map[QuadraticExpression] = _relax_root_to_leaf_SumExpression
 
 
 class RelaxationData:
-    def __init__(self, model, new_model):
+    def __init__(self, model):
         self.model = model
-        self.new_model = new_model
         self.original_to_new_var_map = pe.ComponentMap()
         self.aux_var_map = dict()
         self.reverse_var_map = dict()
@@ -142,10 +141,8 @@ def rebuild_relaxations(model, data, use_linear_relaxation=True):
         relaxation.rebuild()
 
 
-def relax(model, use_linear_relaxation=True):
+def relax(model, data, use_linear_relaxation=True):
     new_model = model.clone()
-
-    data = RelaxationData(model, new_model)
 
     for var in model.component_data_objects(pe.Var,
                                             active=True,
@@ -179,4 +176,4 @@ def relax(model, use_linear_relaxation=True):
     update_relaxation_data(model, data)
     rebuild_relaxations(model, data, use_linear_relaxation)
 
-    return model, data
+    return model

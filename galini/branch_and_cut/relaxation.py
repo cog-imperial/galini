@@ -17,7 +17,7 @@ from galini.relaxations.relax import relax, relax_inequality, update_relaxation_
 
 
 class Relaxation:
-    def relax(self, model):
+    def relax(self, model, data):
         raise NotImplementedError('Relaxation.relax')
 
     def relax_inequality(self, model, ineq_expr, relaxation_side, data):
@@ -28,8 +28,8 @@ class DefaultRelaxation(Relaxation):
     def __init__(self, algorithm):
         pass
 
-    def relax(self, model):
-        return relax(model)
+    def relax(self, model, data):
+        return relax(model, data)
 
     def relax_inequality(self, model, ineq_expr, relaxation_side, data):
         relaxed_ineq = relax_inequality(model, ineq_expr, relaxation_side, data)
