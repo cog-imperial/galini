@@ -51,14 +51,14 @@ class OuterApproximationCutsGenerator(CutsGenerator):
         self._counter = 0
 
         self.convergence_relative_tol = config['convergence_relative_tol']
-        self.threshold = config['threshold']
+        self.threshold = config['deviation_threshold']
 
     @staticmethod
     def cuts_generator_options():
         """Quadratic Outer Approximation cuts generator options"""
         return CutsGeneratorOptions(
             OuterApproximationCutsGenerator.name, [
-            NumericOption('threshold', default=1e-3),
+            NumericOption('deviation_threshold', default=1e-5),
             NumericOption('convergence_relative_tol', default=1e-3),
         ])
 
@@ -103,12 +103,11 @@ class OuterApproximationCutsGenerator(CutsGenerator):
 
         cuts = []
         for relaxation, (rel_expr, rel_vars) in self._convex_relaxations_map.items():
-            # TODO(fra): add parameter for violation
             aux_var = relaxation.get_aux_var()
             rhs_expr = relaxation.get_rhs_expr()
             side = relaxation.relaxation_side
             deviation = get_deviation_adjusted_by_side(aux_var, rhs_expr, side)
-            if deviation < 1e-5:
+            if deviation < self.threshold:
                 continue
             diff_map = differentiate(rel_expr, wrt_list=rel_vars)
             cut_expr = pe.value(rel_expr) + sum(diff_map[i] * (v - pe.value(v)) for i, v in enumerate(rel_vars))
