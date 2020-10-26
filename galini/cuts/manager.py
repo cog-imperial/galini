@@ -14,6 +14,10 @@
 
 """Cuts generators manager."""
 
+import numpy as np
+from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
+from pyomo.core.expr.current import nonpyomo_leaf_types
+
 from galini.config.options import OptionsGroup, StringListOption
 from galini.registry import Registry
 from galini.timelimit import current_time, seconds_elapsed_since
@@ -129,7 +133,7 @@ class CutsGeneratorsManager:
             )
 
             for cut in cuts:
-                if False and not self.galini.debug_assert_(
+                if not self.galini.debug_assert_(
                         lambda: _check_cut_coefficients_are_numerically_reasonable(cut),
                         'Numerical coefficients in cut are not reasonable'):
                     from galini.ipython import embed_ipython
@@ -141,4 +145,19 @@ class CutsGeneratorsManager:
 
 
 def _check_cut_coefficients_are_numerically_reasonable(cut):
-    raise NotImplemented()
+    def enter_node(node):
+        return None, []
+
+    def exit_node(node, data):
+        node_type = type(node)
+        if node_type in nonpyomo_leaf_types:
+            return np.isfinite(node)
+        elif not node.is_expression_type() and not node.is_variable_type():
+            return np.isfinite(node.value)
+        return True
+
+    return StreamBasedExpressionVisitor(
+        enterNode=enter_node,
+        exitNode=exit_node,
+    ).walk_expression(cut)
+
