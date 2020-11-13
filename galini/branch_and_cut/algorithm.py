@@ -116,7 +116,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             OptionsGroup('mip_solver', [
                 StringOption(
                     'name',
-                    default='cplex_direct',
+                    default='cplex',
                     description='MIP solver name'
                 ),
                 StringOption(
@@ -126,17 +126,17 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
                 ),
                 StringOption(
                     'maxiter_option',
-                    default='simplex_limits_iterations',
+                    default='simplex limits iterations',
                     description='The name of the option to set the MIP solver maximum iterations'
                 ),
                 StringOption(
                     'relative_gap_option',
-                    default='mip_tolerances_mipgap',
+                    default='mip tolerances mipgap',
                     description='The name of the option to set the MIP solver relative gap tolerance'
                 ),
                 StringOption(
                     'absolute_gap_option',
-                    default='mip_tolerances_absmipgap',
+                    default='mip tolerances absmipgap',
                     description='The name of the option to set the MIP solver absolute gap tolerance'
                 ),
                 ExternalSolverOptions('options'),
@@ -144,7 +144,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             OptionsGroup('nlp_solver', [
                 StringOption(
                     'name',
-                    default='pypopt_direct',
+                    default='ipopt',
                     description='NLP solver name'
                 ),
                 StringOption(
