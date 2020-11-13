@@ -175,8 +175,6 @@ setup(
         'protobuf>=3.0',
         'h5py>=2.0',
         'networkx>=2.4',
-        'cppyad',
-        'pypopt>=0.6',
         'coramin>=0.1.0',
         'scipy>=1.5.2',
     ],
