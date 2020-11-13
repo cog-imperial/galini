@@ -155,7 +155,7 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
     return new_bounds
 
 
-def perform_fbbt_on_model(model, tree, node, maxiter, timelimit, eps):
+def perform_fbbt_on_model(model, tree, node, maxiter, timelimit, eps, skip_special_structure=False):
     """
 
     Parameters
@@ -189,8 +189,11 @@ def perform_fbbt_on_model(model, tree, node, maxiter, timelimit, eps):
         #branching_variable=branching_variable,
     )
 
-    monotonicity, convexity = \
-        propagate_special_structure(model, bounds)
+    if not skip_special_structure:
+        monotonicity, convexity = \
+            propagate_special_structure(model, bounds)
+    else:
+        monotonicity = convexity = None
 
     cause_infeasibility = None
     new_bounds_map = pe.ComponentMap()

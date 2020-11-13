@@ -266,7 +266,9 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         model = node.storage.model()
 
         try:
-            bounds, mono, cvx = self._perform_fbbt_on_model(tree, node, model)
+            self.logger.info('Start FBBT {} special structure.', 'without' if is_root else 'with')
+            # Skip computing mono and cvx at root node since it's recomputed after OBBT
+            bounds, mono, cvx = self._perform_fbbt_on_model(tree, node, model, skip_special_structure=is_root)
         except EmptyIntervalError:
             return NodeSolution(None, None)
 
@@ -620,7 +622,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             return solution
         return None
 
-    def _perform_fbbt_on_model(self, tree, node, model, maxiter=None):
+    def _perform_fbbt_on_model(self, tree, node, model, maxiter=None, skip_special_structure=False):
         if maxiter is None:
             maxiter = self.bab_config['fbbt_maxiter']
 
@@ -631,7 +633,8 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
                 node,
                 maxiter=maxiter,
                 timelimit=self.bab_config['fbbt_timelimit'],
-                eps=self.galini.mc.epsilon
+                eps=self.galini.mc.epsilon,
+                skip_special_structure=skip_special_structure,
             )
             if bounds is not None:
                 node.storage.update_bounds(bounds)
