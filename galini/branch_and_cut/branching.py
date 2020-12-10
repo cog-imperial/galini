@@ -16,12 +16,16 @@
 
 import numpy as np
 import pyomo.environ as pe
+from coramin.relaxations.mccormick import PWMcCormickRelaxation
 
 from galini.branch_and_bound.branching import BranchingPoint
 from galini.branch_and_bound.strategy import BranchingStrategy
 from galini.branch_and_bound.strategy import least_reduced_variable
 from galini.branch_and_cut.node_storage import BranchingDecision
 from galini.math import is_close, is_inf
+
+
+BILINEAR_RELAXATIONS_TYPES = (PWMcCormickRelaxation,)
 
 
 class BranchAndCutBranchingStrategy(BranchingStrategy):
@@ -162,6 +166,8 @@ def compute_nonlinear_infeasiblity_components(linear_problem, mip_solution):
         }
 
     for relaxation in linear_problem.galini_nonlinear_relaxations:
+        if not isinstance(relaxation, BILINEAR_RELAXATIONS_TYPES):
+            continue
         rhs_vars = relaxation.get_rhs_vars()
 
         if len(rhs_vars) > 2:

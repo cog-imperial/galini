@@ -18,6 +18,7 @@ import coramin.domain_reduction.filters as coramin_filters
 import numpy as np
 import pyomo.environ as pe
 from coramin.relaxations.iterators import relaxation_data_objects
+from galini.branch_and_cut.branching import BILINEAR_RELAXATIONS_TYPES
 from galini.math import is_close
 from galini.pyomo import safe_set_bounds
 from galini.pyomo.util import update_solver_options
@@ -72,13 +73,14 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
     # collect variables in nonlinear constraints
     nonlinear_variables = ComponentSet()
     for relaxation in relaxation_data_objects(linear_model, active=True, descend_into=True):
-        for var in relaxation.get_rhs_vars():
-            # Coramin will complain about variables that are fixed
-            if not var.has_lb() or not var.has_ub():
-                nonlinear_variables.add(var)
-            else:
-                if not np.abs(var.ub - var.lb) < mc.epsilon:
+        if not isinstance(relaxation, BILINEAR_RELAXATIONS_TYPES):
+            for var in relaxation.get_rhs_vars():
+                # Coramin will complain about variables that are fixed
+                if not var.has_lb() or not var.has_ub():
                     nonlinear_variables.add(var)
+                else:
+                    if not np.abs(var.ub - var.lb) < mc.epsilon:
+                        nonlinear_variables.add(var)
 
     time_left = timelimit - seconds_elapsed_since(obbt_start_time)
     nonlinear_variables = list(nonlinear_variables)
@@ -140,6 +142,8 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
 
     for var, new_lb, new_ub in zip(nonlinear_variables, *result):
         original_var = model.find_component(var.getname(fully_qualified=True))
+        if original_var is None:
+            continue
         new_lb = best_lower_bound(var, new_lb, var.lb, eps)
         new_ub = best_upper_bound(var, new_ub, var.ub, eps)
         if np.abs(new_ub - new_lb) < eps:

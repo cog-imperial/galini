@@ -14,13 +14,13 @@
 
 """Relaxation that replaces a convex function with an auxiliary variable."""
 
-from coramin.utils.coramin_enums import RelaxationSide, FunctionShape
+import math
+
+import pyomo.environ as pe
 from coramin.relaxations.custom_block import declare_custom_block
 from coramin.relaxations.relaxations_base import BaseRelaxationData, ComponentWeakRef
+from coramin.utils.coramin_enums import RelaxationSide
 from pyomo.core.expr.visitor import identify_variables
-import math
-import pyomo.environ as pe
-from coramin.relaxations._utils import _get_bnds_list
 
 
 @declare_custom_block(name='FactorableConvexExpressionRelaxation')

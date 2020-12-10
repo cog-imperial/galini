@@ -19,9 +19,9 @@ from coramin.relaxations.univariate import PWXSquaredRelaxationData
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 
 from galini.branch_and_bound.branching import branch_at_point
-from galini.relaxations.relax import RelaxationData
 from galini.cuts.pool import CutNodeStorage, CutPool
 from galini.pyomo import safe_setlb, safe_setub
+from galini.relaxations.relax import RelaxationData
 
 
 class BranchingDecision:

@@ -15,14 +15,11 @@
 """Functions to relax nonlinear pyomo expresions."""
 
 import networkx as nx
-
-from suspect.pyomo.quadratic import QuadraticExpression
-import pyomo.environ as pe
-from suspect.convexity.rules.quadratic import QuadraticRule
-from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
-from coramin.utils.coramin_enums import RelaxationSide, FunctionShape
+from coramin.utils.coramin_enums import RelaxationSide
 from galini.relaxations.multivariate import FactorableConvexExpressionRelaxation
-from coramin.relaxations.auto_relax import replace_sub_expression_with_aux_var
+from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
+from suspect.convexity.rules.quadratic import QuadraticRule
+from suspect.pyomo.quadratic import QuadraticExpression
 
 _convexity_rule = QuadraticRule()
 

@@ -21,6 +21,7 @@ from coramin.relaxations.auto_relax import (
     _relax_root_to_leaf_SumExpression,
     _relax_expr,
 )
+from coramin.relaxations import PWXSquaredRelaxation, PWUnivariateRelaxation
 from coramin.utils.coramin_enums import RelaxationSide
 from pyomo.core.expr.numvalue import polynomial_degree
 from suspect.pyomo.quadratic import QuadraticExpression
@@ -164,7 +165,7 @@ def relax(model, data, use_linear_relaxation=True):
 
         assert obj.is_minimizing()
 
-        relaxation_side = RelaxationSide.UNDER
+        # relaxation_side = RelaxationSide.UNDER
         relaxation_side = RelaxationSide.BOTH
 
         new_body = relax_expression(model, obj.expr, relaxation_side, data)
