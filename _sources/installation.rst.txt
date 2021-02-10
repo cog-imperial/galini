@@ -1,17 +1,11 @@
-Building & Installing GALINI
-============================
+Install GALINI
+==============
 
-To build GALINI you need:
+Install from release
+--------------------
 
-* GALINI source code
-* The dependencies specified in ``requirements.txt``
-* `Coramin <https://github.com/Coramin/Coramin>`_
-* CPLEX
-* Ipopt
-
-
-Installation
-------------
+Install from source
+-------------------
 
 Start by downloading GALINI source code using git:
 
@@ -44,32 +38,12 @@ Install Coramin and its dependencies:
     python setup.py install
 
 
-You need to install Ipopt, you can find more details on the
-`Coin OR <https://www.coin-or.org/Ipopt/documentation/node10.htm>`_ website.
+Install external solvers
+------------------------
 
-You also need to install CPLEX and its python library. If you installed CPLEX
-in ``/opt/cplex`` then:
-
-::
-
-    cd /opt/cplex/python/3.6/x86-64_linux
-    python3 setup.py install
-
-You need to set two environment variables to point to Ipopt include and library
-directories:
-
-::
-
-    export IPOPT_INCLUDE_DIR=/path/to/ipopt/include
-    export IPOPT_LIBRARY_DIR=/path/to/ipopt/lib
-
-After that, you can build and install GALINI:
-
-::
-
-    cd /path/to/galini
-    python setup.py build
-    python setup.py install
+GALINI requires a mixed-integer linear solver (default: cplex) and a
+non-linear solver (default: ipopt) installed. Any solver that is available
+to Pyomo can be used by GALINI by changing the :doc:`configuration <configuration>`.
 
 
 Check installation

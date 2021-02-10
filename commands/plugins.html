@@ -1,9 +1,10 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   <meta name="lang:clipboard.copy" content="Copy to clipboard">
@@ -54,14 +55,13 @@
     <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
     <script src="../_static/language_data.js"></script>
-    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="special_structure Command" href="special_structure.html" />
-    <link rel="prev" title="dot Command" href="dot.html" />
+    <link rel="prev" title="Available Commands" href="index.html" />
   
    
-  
 
   </head>
   <body dir=ltr
@@ -146,6 +146,7 @@
           </div>
         </div>
       
+      
     </div>
   </nav>
 </header>
@@ -173,13 +174,13 @@
               <div class="md-sidebar__inner">
                 <nav class="md-nav md-nav--primary" data-md-level="0">
   <label class="md-nav__title md-nav__title--site" for="__drawer">
-    <a href="../index.html" title="GALINI  documentation" class="md-nav__button md-logo">
+    <a href="../index.html" title="GALINI documentation" class="md-nav__button md-logo">
       
         <img src="../_static/" alt=" logo" width="48" height="48">
       
     </a>
     <a href="../index.html"
-       title="GALINI  documentation">GALINI: an extensible MINLP solver</a>
+       title="GALINI documentation">GALINI: an extensible MINLP solver</a>
   </label>
     <div class="md-nav__source">
       <a href="https://github.com/cog-imperial/galini" title="Go to repository" class="md-source" data-md-source="github">
@@ -235,24 +236,23 @@
 <h1 id="commands-plugins--page-root"><code class="docutils literal notranslate"><span class="pre">plugins</span></code> Command<a class="headerlink" href="#commands-plugins--page-root" title="Permalink to this headline">¶</a></h1>
 <p>Prints registered plugins by type. Currently available plugins type:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">solvers</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cuts</span></code></p></li>
 </ul>
 
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">usage</span><span class="p">:</span> <span class="n">galini</span> <span class="n">plugins</span> <span class="p">[</span><span class="o">-</span><span class="n">h</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="nb">format</span> <span class="p">{</span><span class="n">text</span><span class="p">,</span><span class="n">json</span><span class="p">}]</span> <span class="p">{</span><span class="n">solvers</span><span class="p">}</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">usage</span><span class="p">:</span> <span class="n">galini</span> <span class="n">plugins</span> <span class="p">[</span><span class="o">-</span><span class="n">h</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">output</span> <span class="n">OUTPUT</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="nb">format</span> <span class="p">{</span><span class="n">text</span><span class="p">,</span><span class="n">json</span><span class="p">}]</span> <span class="p">{</span><span class="n">cuts</span><span class="p">}</span>
 </pre></div>
 </div>
 
 
 <h2 id="example">Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ galini plugins solvers
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ galini plugins cuts
 
- ID          Name                           Description
-==========================================================================
-bac     branch_and_cut   Generic Branch &amp; Bound solver.
-ipopt   ipopt            NLP solver.
-mip     mip              MIP Solver that delegates to Cplex or CBC.
-slsqp   slsqp            NLP solver using Sequential Least Squares method.
+        ID                   Name                       Description
+================================================================================
+outer_approximation   outer_approximation   outer approximation cuts
+sdp                   sdp                   SDP cuts powered by machine learning
+triangle              triangle              cuts based on triangle inequalities
 </pre></div>
 </div>
 
@@ -268,7 +268,7 @@ slsqp   slsqp            NLP solver using Sequential Least Squares method.
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
           
-            <a href="dot.html" title="Material"
+            <a href="index.html" title="Available Commands"
                class="md-flex md-footer-nav__link md-footer-nav__link--prev"
                rel="prev">
               <div class="md-flex__cell md-flex__cell--shrink">
@@ -277,12 +277,12 @@ slsqp   slsqp            NLP solver using Sequential Least Squares method.
               <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
                 <span class="md-flex__ellipsis">
                   <span
-                      class="md-footer-nav__direction"> Previous </span> <code class="docutils literal notranslate"><span class="pre">dot</span></code> Command </span>
+                      class="md-footer-nav__direction"> Previous </span> Available Commands </span>
               </div>
             </a>
           
           
-            <a href="special_structure.html" title="Admonition"
+            <a href="special_structure.html" title="special_structure Command"
                class="md-flex md-footer-nav__link md-footer-nav__link--next"
                rel="next">
             <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title"><span
@@ -301,11 +301,11 @@ slsqp   slsqp            NLP solver using Sequential Least Squares method.
       <div class="md-footer-meta__inner md-grid">
         <div class="md-footer-copyright">
           <div class="md-footer-copyright__highlight">
-              &#169; Copyright 2020, Francesco Ceccon.
+              &#169; Copyright 2021, Francesco Ceccon.
               
           </div>
             Created using
-            <a href="http://www.sphinx-doc.org/">Sphinx</a> 2.4.1.
+            <a href="http://www.sphinx-doc.org/">Sphinx</a> 3.2.1.
              and
             <a href="https://github.com/bashtage/sphinx-material/">Material for
               Sphinx</a>

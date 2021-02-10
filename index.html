@@ -1,9 +1,10 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   <meta name="lang:clipboard.copy" content="Copy to clipboard">
@@ -54,13 +55,12 @@
     <script src="_static/underscore.js"></script>
     <script src="_static/doctools.js"></script>
     <script src="_static/language_data.js"></script>
-    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Building &amp; Installing GALINI" href="installation.html" />
+    <link rel="next" title="Install GALINI" href="installation.html" />
   
    
-  
 
   </head>
   <body dir=ltr
@@ -145,6 +145,7 @@
           </div>
         </div>
       
+      
     </div>
   </nav>
 </header>
@@ -171,13 +172,13 @@
               <div class="md-sidebar__inner">
                 <nav class="md-nav md-nav--primary" data-md-level="0">
   <label class="md-nav__title md-nav__title--site" for="__drawer">
-    <a href="#" title="GALINI  documentation" class="md-nav__button md-logo">
+    <a href="#" title="GALINI documentation" class="md-nav__button md-logo">
       
         <img src="_static/" alt=" logo" width="48" height="48">
       
     </a>
     <a href="#"
-       title="GALINI  documentation">GALINI: an extensible MINLP solver</a>
+       title="GALINI documentation">GALINI: an extensible MINLP solver</a>
   </label>
     <div class="md-nav__source">
       <a href="https://github.com/cog-imperial/galini" title="Go to repository" class="md-source" data-md-source="github">
@@ -261,13 +262,20 @@
 <h2 id="table-of-contents">Table of Contents<a class="headerlink" href="#table-of-contents" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="installation.html">Building &amp; Installing GALINI</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="installation.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Install GALINI</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#install-from-release">Install from release</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#install-from-source">Install from source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#install-external-solvers">Install external solvers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="installation.html#check-installation">Check installation</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Using GALINI</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#using-galini-as-a-command-line-tool">Using GALINI as a command line tool</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#using-galini-as-a-library">Using GALINI as a library</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="commands/index.html">Available Commands</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="commands/dot.html"><code class="docutils literal notranslate"><span class="pre">dot</span></code> Command</a></li>
 <li class="toctree-l2"><a class="reference internal" href="commands/plugins.html"><code class="docutils literal notranslate"><span class="pre">plugins</span></code> Command</a></li>
 <li class="toctree-l2"><a class="reference internal" href="commands/special_structure.html"><code class="docutils literal notranslate"><span class="pre">special_structure</span></code> Command</a></li>
 </ul>
@@ -302,12 +310,12 @@
       <nav class="md-footer-nav__inner md-grid">
           
           
-            <a href="installation.html" title="Admonition"
+            <a href="installation.html" title="Install GALINI"
                class="md-flex md-footer-nav__link md-footer-nav__link--next"
                rel="next">
             <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title"><span
                 class="md-flex__ellipsis"> <span
-                class="md-footer-nav__direction"> Next </span> Building &amp; Installing GALINI </span>
+                class="md-footer-nav__direction"> Next </span> Install GALINI </span>
             </div>
             <div class="md-flex__cell md-flex__cell--shrink"><i
                 class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
@@ -321,11 +329,11 @@
       <div class="md-footer-meta__inner md-grid">
         <div class="md-footer-copyright">
           <div class="md-footer-copyright__highlight">
-              &#169; Copyright 2020, Francesco Ceccon.
+              &#169; Copyright 2021, Francesco Ceccon.
               
           </div>
             Created using
-            <a href="http://www.sphinx-doc.org/">Sphinx</a> 2.4.1.
+            <a href="http://www.sphinx-doc.org/">Sphinx</a> 3.2.1.
              and
             <a href="https://github.com/bashtage/sphinx-material/">Material for
               Sphinx</a>
