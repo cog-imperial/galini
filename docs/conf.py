@@ -19,7 +19,7 @@ import sphinx_material
 # -- Project information -----------------------------------------------------
 
 project = 'GALINI'
-copyright = '2020, Francesco Ceccon'
+copyright = '2021, Francesco Ceccon'
 author = 'Francesco Ceccon'
 repo_url = 'https://github.com/cog-imperial/galini'
 

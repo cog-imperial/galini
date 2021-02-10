@@ -1,0 +1,27 @@
+[galini]
+timelimit = 300
+
+[branch_and_cut.bab]
+absolute_gap = 1e-8
+relative_gap = 1e-6
+
+[branch_and_cut.nlp_solver]
+name = 'ipopt'
+
+[branch_and_cut.nlp_solver.options]
+max_iter = 500
+
+[branch_and_cut.mip_solver]
+name = 'cplex'
+maxiter_option = 'simplex limits iterations'
+relative_gap_option = 'mip tolerances mipgap'
+absolute_gap_option = 'mip tolerances absmipgap'
+
+[branch_and_cut.mip_solver.options]
+'simplex tolerances feasibility' = 1e-5
+
+[logging]
+stdout = true
+
+[cuts_generator]
+generators = ['outer_approximation', 'triangle', 'sdp']

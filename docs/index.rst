@@ -39,6 +39,8 @@ Table of Contents
    :maxdepth: 2
 
    installation.rst
+   usage.rst
+   configuration.rst
    commands/index.rst
    branch_and_bound/index.rst
    branch_and_cut/index.rst

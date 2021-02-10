@@ -62,6 +62,8 @@ class Cut:
 class CutsGenerator(metaclass=abc.ABCMeta):
     """CutsGenerator interface."""
 
+    description = None
+
     def __init__(self, galini, config):
         pass
 

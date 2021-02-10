@@ -73,7 +73,7 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
     # collect variables in nonlinear constraints
     nonlinear_variables = ComponentSet()
     for relaxation in relaxation_data_objects(linear_model, active=True, descend_into=True):
-        if not isinstance(relaxation, BILINEAR_RELAXATIONS_TYPES):
+        if isinstance(relaxation, BILINEAR_RELAXATIONS_TYPES):
             for var in relaxation.get_rhs_vars():
                 # Coramin will complain about variables that are fixed
                 if not var.has_lb() or not var.has_ub():
@@ -110,7 +110,7 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
         visited_vars = ComponentSet(vars_to_tighten)
         for v in vars_to_maximize:
             if v not in visited_vars:
-                vars_to_tighten.append(v)
+                vars_to_tighten.add(v)
                 visited_vars.add(v)
         result = coramin_obbt.perform_obbt(
             linear_model,

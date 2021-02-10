@@ -22,14 +22,14 @@ from galini.commands import (
     print_output_table,
     add_output_format_parser_arguments,
 )
-from galini.solvers import SolversRegistry
+from galini.cuts import CutsGeneratorsRegistry
 
 
 class PluginsCommand(CliCommand):
     """Command to list registered plugins."""
 
     _methods = {
-        'algo': '_get_algos',
+        'cuts': '_get_cuts',
     }
 
     def execute(self, args):
@@ -47,17 +47,17 @@ class PluginsCommand(CliCommand):
         return "List registered plugins"
 
     def add_parser_arguments(self, parser):
-        parser.add_argument('selection', choices=['solvers'])
+        parser.add_argument('selection', choices=['cuts'])
         add_output_format_parser_arguments(parser)
 
-    def _get_algos(self):
-        table = OutputTable('Algorithms', [
+    def _get_cuts(self):
+        table = OutputTable('CutsGenerators', [
             {'id': 'id', 'name': 'ID', 'type': 't'},
             {'id': 'name', 'name': 'Name', 'type': 't'},
             {'id': 'description', 'name': 'Description', 'type': 't'}
         ])
 
-        registry = SolversRegistry()
+        registry = CutsGeneratorsRegistry()
 
         for key, solver in registry.items():
             table.add_row({

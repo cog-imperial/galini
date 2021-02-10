@@ -3,7 +3,7 @@
 
 Prints registered plugins by type. Currently available plugins type:
 
-* ``solvers``
+* ``cuts``
 
 
 Usage
@@ -11,7 +11,7 @@ Usage
 
 ::
 
-    usage: galini plugins [-h] [--format {text,json}] {solvers}
+    usage: galini plugins [-h] [--output OUTPUT] [--format {text,json}] {cuts}
 
 
 Example
@@ -19,12 +19,10 @@ Example
 
 ::
 
-    $ galini plugins solvers
+    $ galini plugins cuts
 
-     ID          Name                           Description
-    ==========================================================================
-    bac     branch_and_cut   Generic Branch & Bound solver.
-    ipopt   ipopt            NLP solver.
-    mip     mip              MIP Solver that delegates to Cplex or CBC.
-    slsqp   slsqp            NLP solver using Sequential Least Squares method.
-
+            ID                   Name                       Description
+    ================================================================================
+    outer_approximation   outer_approximation   outer approximation cuts
+    sdp                   sdp                   SDP cuts powered by machine learning
+    triangle              triangle              cuts based on triangle inequalities

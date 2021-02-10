@@ -39,6 +39,8 @@ class TriangleCutsGenerator(CutsGenerator):
     """
     name = 'triangle'
 
+    description = 'cuts based on triangle inequalities'
+
     def __init__(self, galini, config):
         super().__init__(galini, config)
         self.galini = galini

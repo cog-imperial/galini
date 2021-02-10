@@ -41,6 +41,8 @@ class OuterApproximationCutsGenerator(CutsGenerator):
 
     name = 'outer_approximation'
 
+    description = 'outer approximation cuts'
+
     def __init__(self, galini, config):
         super().__init__(galini, config)
         self.galini = galini
