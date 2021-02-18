@@ -30,6 +30,24 @@ Contributors
    :width: 80px
 
 
+Citing GALINI
+-------------
+
+If you use GALINI in your research, we kindly ask you to reference the
+`paper <http://www.optimization-online.org/DB_HTML/2021/01/8207.html>`_.
+You may also be interested in the `presentation at INFORMS 2020
+<https://www.youtube.com/watch?v=ul9UpWeKQf4>`_.
+
+::
+
+    @article{ceccon2020galini,
+      title={GALINI: An extensible mixed-integer quadratically-constrained optimization solver},
+      author={Ceccon, F. and Baltean-Lugojan, R. and Bynum, M. L. and Li, C. and Misener, R.},
+      journal={Optimization Online},
+      year={2020},
+      url={http://www.optimization-online.org/DB_HTML/2021/01/8207.html}
+    }
+
 
 License
 -------
