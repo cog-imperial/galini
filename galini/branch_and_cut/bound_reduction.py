@@ -26,7 +26,7 @@ from galini.timelimit import (
     current_time,
     seconds_elapsed_since,
 )
-from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.common.collections import ComponentSet
 from suspect.fbbt import perform_fbbt
 from suspect.interval import Interval
 from suspect.propagation import propagate_special_structure

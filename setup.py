@@ -166,7 +166,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'pyomo>=5.6.7',
-        'cog-suspect>=2.1.1',
+        'cog-suspect>=2.1.2',
         'numpy>=1.15',
         'toml',
         'pydot',
