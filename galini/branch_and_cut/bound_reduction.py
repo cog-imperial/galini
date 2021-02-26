@@ -84,6 +84,7 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
 
     time_left = timelimit - seconds_elapsed_since(obbt_start_time)
     nonlinear_variables = list(nonlinear_variables)
+    vars_to_tighten = nonlinear_variables
 
     update_solver_options(
         solver,
@@ -140,7 +141,7 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
 
     eps = mc.epsilon
 
-    for var, new_lb, new_ub in zip(nonlinear_variables, *result):
+    for var, new_lb, new_ub in zip(vars_to_tighten, *result):
         original_var = model.find_component(var.getname(fully_qualified=True))
         if original_var is None:
             continue
