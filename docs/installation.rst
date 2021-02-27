@@ -28,13 +28,9 @@ Then install GALINI Python dependencies:
 
     pip install requirements.txt
 
-Install Coramin and its dependencies:
+Finally, install GALINI:
 
 ::
-
-    git clone git@github.com:Coramin/Coramin.git
-    cd Coramin
-    pip install pyomo scipy numpy
     python setup.py install
 
 
