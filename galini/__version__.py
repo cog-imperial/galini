@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = '1.0.0'
+__version__ = '1.0.2'
 __author__ = 'Francesco Ceccon'
 __author_email__ = 'francesco@ceccon.me'
 __description__ = 'Mixed Integer Solver'
