@@ -23,7 +23,14 @@ if __name__ == '__main__':
 
     galini = Galini()
     galini.update_configuration({
+        'galini': {
+            'timelimit': 100,
+        },
         'logging': {
             'stdout': True,
         },
     })
+
+    model = get_pyomo_model()
+    solution = galini.solve(model)
+    print(solution)

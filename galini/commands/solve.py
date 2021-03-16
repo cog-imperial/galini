@@ -13,11 +13,6 @@
 # limitations under the License.
 """GALINI solve subcommand."""
 
-import sys
-
-import numpy as np
-import pyomo.environ as pe
-
 from galini.commands import (
     CliCommandWithProblem,
     OutputTable,
@@ -25,7 +20,6 @@ from galini.commands import (
     add_output_format_parser_arguments,
 )
 from galini.galini import Galini
-from galini.timelimit import seconds_elapsed_since, current_time
 
 
 DEFAULT_ALGORITHM = 'bac'
@@ -40,68 +34,7 @@ class SolveCommand(CliCommandWithProblem):
         if args.config:
             galini.update_configuration(args.config)
 
-        algo_cls = galini.get_algorithm(args.algorithm.lower())
-
-        if algo_cls is None:
-            available = ', '.join(galini.available_algorithms())
-            print(
-                'Algorithm {} not available. Available algorithms: {}'.format(
-                args.algorithm, available)
-            )
-            sys.exit(1)
-
-        galini_group = galini.get_configuration_group('galini')
-        timelimit = galini_group.get('timelimit')
-        elapsed_counter = galini.telemetry.create_gauge('elapsed_time', 0.0)
-
-        galini.timelimit.set_timelimit(timelimit)
-        galini.timelimit.start_now()
-
-        start_time = current_time()
-
-        # Check problem only has one objective, if it's maximisation convert it to minimisation
-        original_objective = None
-        for objective in model.component_data_objects(pe.Objective, active=True):
-            if original_objective is not None:
-                raise ValueError('Algorithm does not support models with multiple objectives')
-            original_objective = objective
-
-        if original_objective is None:
-            model._objective = pe.Objective(expr=0.0, sense=pe.minimize)
-        else:
-            if not original_objective.is_minimizing():
-                new_objective = pe.Objective(expr=-original_objective.expr, sense=pe.minimize)
-            else:
-                new_objective = pe.Objective(expr=original_objective.expr, sense=pe.minimize)
-            model._objective = new_objective
-            model._objective.is_originally_minimizing = original_objective.is_minimizing()
-            original_objective.deactivate()
-
-        for var in model.component_data_objects(pe.Var, active=True):
-            lb = var.lb if var.lb is not None else -np.inf
-            ub = var.ub if var.ub is not None else np.inf
-            value = var.value
-            if value is not None and (value < lb or value > ub):
-                if np.isinf(lb) or np.isinf(ub):
-                    value = 0.0
-                else:
-                    value = lb + (ub - lb) / 2.0
-                    if var.is_integer() or var.is_binary():
-                        value = np.rint(value)
-
-                var.set_value(value)
-
-        algo = algo_cls(galini)
-        solution = algo.solve(
-            model,
-            known_optimal_objective=args.known_optimal_objective
-        )
-
-        del model._objective
-        if original_objective is not None:
-            original_objective.activate()
-
-        elapsed_counter.set_value(seconds_elapsed_since(start_time))
+        solution = galini.solve(model, args.algorithm, known_optimal_objective=args.known_optimal_objective)
 
         status_table = OutputTable('Solution', [
             {'id': 'status', 'name': 'Status', 'type': 't'}
@@ -119,21 +52,10 @@ class SolveCommand(CliCommandWithProblem):
             {'id': 'value', 'name': 'Value', 'type': 'f'},
         ])
 
-        value = solution.objective
-        if original_objective is not None:
-            if not original_objective.is_minimizing():
-                if value is not None:
-                    value = -value
-
-            obj_table.add_row({
-                'name': original_objective.name,
-                'value': value,
-            })
-        else:
-            obj_table.add_row({
-                'name': None,
-                'value': 0.0,
-            })
+        obj_table.add_row({
+            'name': 'objective',
+            'value': solution.objective,
+        })
 
         var_table = OutputTable('Variables', [
             {'id': 'name', 'name': 'Variable', 'type': 't'},

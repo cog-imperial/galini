@@ -13,6 +13,9 @@
 # limitations under the License.
 
 """GALINI root object. Contains global state."""
+import pyomo.environ as pe
+import numpy as np
+
 from suspect.pyomo.quadratic import enable_standard_repn_for_quadratic_expression
 
 from galini.algorithms import AlgorithmsRegistry
@@ -21,7 +24,7 @@ from galini.cuts import CutsGeneratorsRegistry, CutsGeneratorsManager
 from galini.io.logging import LogManager
 from galini.math import MathContext
 from galini.telemetry import Telemetry
-from galini.timelimit import Timelimit
+from galini.timelimit import Timelimit, seconds_elapsed_since, current_time
 
 
 class Galini:
@@ -56,6 +59,79 @@ class Galini:
         self._log_manager.apply_config(self._config.logging)
         _update_math_context(self.mc, self.config)
         self.paranoid_mode = self.config['paranoid_mode']
+
+    def solve(self, model, algorithm=None, clone_model=True, known_optimal_objective=None):
+        if clone_model:
+            model = model.clone()
+
+        if algorithm is None:
+            algorithm = 'bac'
+
+        algo_cls = self.get_algorithm(algorithm.lower())
+
+        if algo_cls is None:
+            available = ', '.join(self.available_algorithms())
+            raise Exception(
+                'Algorithm {} not available. Available algorithms: {}'.format(algorithm, available)
+            )
+
+        galini_group = self.get_configuration_group('galini')
+        timelimit = galini_group.get('timelimit')
+        elapsed_counter = self.telemetry.create_gauge('elapsed_time', 0.0)
+
+        self.timelimit.set_timelimit(timelimit)
+        self.timelimit.start_now()
+
+        start_time = current_time()
+
+        # Check problem only has one objective, if it's maximisation convert it to minimisation
+        original_objective = None
+        for objective in model.component_data_objects(pe.Objective, active=True):
+            if original_objective is not None:
+                raise ValueError('Algorithm does not support models with multiple objectives')
+            original_objective = objective
+
+        if original_objective is None:
+            model._objective = pe.Objective(expr=0.0, sense=pe.minimize)
+        else:
+            if not original_objective.is_minimizing():
+                new_objective = pe.Objective(expr=-original_objective.expr, sense=pe.minimize)
+            else:
+                new_objective = pe.Objective(expr=original_objective.expr, sense=pe.minimize)
+            model._objective = new_objective
+            model._objective.is_originally_minimizing = original_objective.is_minimizing()
+            original_objective.deactivate()
+
+        for var in model.component_data_objects(pe.Var, active=True):
+            lb = var.lb if var.lb is not None else -np.inf
+            ub = var.ub if var.ub is not None else np.inf
+            value = var.value
+            if value is not None and (value < lb or value > ub):
+                if np.isinf(lb) or np.isinf(ub):
+                    value = 0.0
+                else:
+                    value = lb + (ub - lb) / 2.0
+                    if var.is_integer() or var.is_binary():
+                        value = np.rint(value)
+
+                var.set_value(value)
+
+        algo = algo_cls(self)
+        solution = algo.solve(
+            model,
+            known_optimal_objective=known_optimal_objective
+        )
+
+        del model._objective
+        if original_objective is not None:
+            original_objective.activate()
+            if not original_objective.is_minimizing():
+                if solution.objective is not None:
+                    solution.objective = -solution.objective
+
+        elapsed_counter.set_value(seconds_elapsed_since(start_time))
+
+        return solution
 
     def assert_(self, func, msg):
         if not func():

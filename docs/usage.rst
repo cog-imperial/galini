@@ -92,3 +92,26 @@ are useful when measuring performance or debugging GALINI.
 
 Using GALINI as a library
 -------------------------
+
+GALINI can be used as a library from Python scripts. You start by creating an
+instance of the ``Galini`` solver, then you can (optionally) update the solver
+configuration by calling the ``galini.update_configuration`` method, finally
+you can solve a Pyomo model by calling ``galini.solve``.
+
+.. code-block:: python
+
+    from galini.galini import Galini
+
+    galini = Galini()
+    galini.update_configuration({
+        'galini': {
+            'timelimit': 100,
+        },
+        'logging': {
+            'stdout': True,
+        },
+    })
+
+    model = get_pyomo_model()
+    solution = galini.solve(model)
+    print(solution)
