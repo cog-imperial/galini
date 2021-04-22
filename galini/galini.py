@@ -30,9 +30,13 @@ from galini.timelimit import Timelimit, seconds_elapsed_since, current_time
 class Galini:
     """Contains information about the current instance of galini."""
 
-    def __init__(self):
-        self._algos_reg = AlgorithmsRegistry()
-        self._cuts_gen_reg = CutsGeneratorsRegistry()
+    def __init__(self, algorithms_registry=None, cuts_generators_registry=None):
+        if algorithms_registry is None:
+            algorithms_registry = AlgorithmsRegistry()
+        if cuts_generators_registry is None:
+            cuts_generators_registry = CutsGeneratorsRegistry()
+        self._algos_reg = algorithms_registry
+        self._cuts_gen_reg = cuts_generators_registry
         self._log_manager = LogManager()
         self._config_manager = \
             ConfigurationManager(self._algos_reg, self._cuts_gen_reg)

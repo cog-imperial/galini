@@ -22,15 +22,7 @@ class Registry(metaclass=abc.ABCMeta):
     def __init__(self):
         self.group = self.group_name()
         self._registered = {}
-        for entry_point in self.iter_entry_points():
-            if entry_point.name in self._registered:
-                print(
-                    'Duplicate registered item {} found in {} registry.'.format(
-                    entry_point.name, self.group)
-                )
-                sys.exit(1)
-            obj_cls = entry_point.load()
-            self._registered[entry_point.name] = obj_cls
+        self._load_registered_classes()
 
     def get(self, name, default=None):
         """Return the entry point associated with name."""
@@ -53,6 +45,37 @@ class Registry(metaclass=abc.ABCMeta):
         """Return this registry group name."""
         pass
 
-    def iter_entry_points(self): # pragma: no cover
+    def _load_registered_classes(self):
+        self._registered = {}
+        for entry_point in self._iter_entry_points():
+            if entry_point.name in self._registered:
+                print(
+                    'Duplicate registered item {} found in {} registry.'.format(
+                    entry_point.name, self.group)
+                )
+                sys.exit(1)
+            obj_cls = entry_point.load()
+            self._registered[entry_point.name] = obj_cls
+
+    def _iter_entry_points(self): # pragma: no cover
         """Return an iterator over this registry entry points."""
         return pkg_resources.iter_entry_points(self.group_name())
+
+
+class StaticRegistry(Registry):
+    """Registry that uses a dictionary to store data."""
+    def __init__(self, group_name, values):
+        self.values = values
+        self._group_name = group_name
+        super().__init__()
+        self._load_registered_classes()
+
+    def group_name(self):
+        return self._group_name
+
+    def _load_registered_classes(self):
+        if self.values is None:
+            return
+        self._registered = {}
+        for key, obj_cls in self.values.items():
+            self._registered[key] = obj_cls
