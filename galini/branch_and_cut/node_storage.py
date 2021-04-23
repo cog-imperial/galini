@@ -96,11 +96,19 @@ class _NodeStorageBase:
             if isinstance(relaxation, PWXSquaredRelaxationData):
                 # w >= x^2: add an oa point in the midpoint
                 relaxation.clean_oa_points()
-                var_values = pe.ComponentMap()
                 x_var = relaxation.get_rhs_vars()[0]
-                midpoint = x_var.lb + 0.5*(x_var.ub - x_var.lb)
-                var_values[x_var] = midpoint
-                relaxation.add_oa_point(var_values)
+                if x_var.has_lb() and x_var.has_ub():
+                    midpoint = x_var.lb + 0.5*(x_var.ub - x_var.lb)
+                    relaxation.add_oa_point(pe.ComponentMap([(x_var, midpoint)]))
+                elif x_var.has_lb():
+                    if x_var.lb <= 0:
+                        relaxation.add_oa_point(pe.ComponentMap([(x_var, 1)]))
+                elif x_var.has_ub():
+                    if x_var.ub >= 0:
+                        relaxation.add_oa_point(pe.ComponentMap([(x_var, -1)]))
+                else:
+                    relaxation.add_oa_point(pe.ComponentMap([(x_var, -1)]))
+                    relaxation.add_oa_point(pe.ComponentMap([(x_var, 1)]))
 
             relaxation.rebuild()
 

@@ -148,7 +148,7 @@ def relax(model, data, use_linear_relaxation=True):
     for var in model.component_data_objects(pe.Var,
                                             active=True,
                                             descend_into=True):
-        new_var = new_model.find_component(var.getname(fully_qualified=True))
+        new_var = new_model.find_component(var)
         data.original_to_new_var_map[var] = new_var
 
     model = new_model
