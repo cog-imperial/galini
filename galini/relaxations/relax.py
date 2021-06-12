@@ -21,7 +21,7 @@ from coramin.relaxations.auto_relax import (
     _relax_root_to_leaf_SumExpression,
     _relax_expr,
 )
-from coramin.relaxations import PWXSquaredRelaxation, PWUnivariateRelaxation
+from coramin.relaxations import PWXSquaredRelaxation, PWUnivariateRelaxation, nonrelaxation_component_data_objects
 from coramin.utils.coramin_enums import RelaxationSide
 from pyomo.core.expr.numvalue import polynomial_degree
 from suspect.pyomo.quadratic import QuadraticExpression
@@ -157,7 +157,7 @@ def relax(model, data, use_linear_relaxation=True):
     model.aux_vars = pe.VarList()
     model.aux_cons = pe.ConstraintList()
 
-    for obj in model.component_data_objects(ctype=pe.Objective, active=True):
+    for obj in nonrelaxation_component_data_objects(model, ctype=pe.Objective, active=True):
         degree = polynomial_degree(obj.expr)
         if degree is not None:
             if degree <= 1:
@@ -171,7 +171,7 @@ def relax(model, data, use_linear_relaxation=True):
         new_body = relax_expression(model, obj.expr, relaxation_side, data)
         obj._expr = new_body
 
-    for cons in model.component_data_objects(ctype=pe.Constraint, active=True):
+    for cons in nonrelaxation_component_data_objects(model, ctype=pe.Constraint, active=True):
         relax_constraint(model, cons, data, inplace=True)
 
     update_relaxation_data(model, data)

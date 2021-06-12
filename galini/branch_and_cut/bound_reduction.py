@@ -142,7 +142,7 @@ def perform_obbt_on_model(solver, model, linear_model, upper_bound, timelimit, r
     eps = mc.epsilon
 
     for var, new_lb, new_ub in zip(vars_to_tighten, *result):
-        original_var = model.find_component(var.getname(fully_qualified=True))
+        original_var = model.find_component(var)
         if original_var is None:
             continue
         new_lb = best_lower_bound(var, new_lb, var.lb, eps)

@@ -22,7 +22,6 @@ from galini.algorithms import Algorithm
 from galini.branch_and_bound.solution import BabSolution, BabStatusInterrupted
 from galini.branch_and_bound.tree import BabTree
 from galini.branch_and_bound.telemetry import update_at_end_of_iteration
-from galini.branch_and_cut.node_storage import RootNodeStorage
 from galini.config import (
     NumericOption,
     IntegerOption,
@@ -265,10 +264,10 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
             )
             current_node_converged = is_close(
                 solution.lower_bound,
-                solution.upper_bound,
+                tree.upper_bound,
                 atol=self.bab_config['absolute_gap'],
                 rtol=self.bab_config['relative_gap'],
-            )
+            ) or solution.lower_bound > tree.upper_bound
 
             node_relaxation_is_feasible_or_unbounded = (
                     solution.lower_bound_solution is not None and
@@ -285,8 +284,8 @@ class BranchAndBoundAlgorithm(Algorithm, metaclass=abc.ABCMeta):
                 # We won't explore this part of the tree anymore.
                 # Add to fathomed nodes.
                 self.logger.info(
-                    'Fathom node {}, converged? {}, upper_bound_solution {}',
-                    current_node.coordinate, current_node_converged, solution.upper_bound_solution
+                    'Fathom node {}, lower_bound_solution: {}, tree upper bound: {}',
+                    current_node.coordinate, solution.lower_bound, tree.upper_bound
                 )
                 self.logger.log_prune_bab_node(current_node.coordinate)
                 tree.fathom_node(current_node, update_nodes_visited=False)

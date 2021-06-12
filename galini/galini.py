@@ -107,6 +107,8 @@ class Galini:
             original_objective.deactivate()
 
         for var in model.component_data_objects(pe.Var, active=True):
+            if var.is_fixed():
+                continue
             lb = var.lb if var.lb is not None else -np.inf
             ub = var.ub if var.ub is not None else np.inf
             value = var.value
