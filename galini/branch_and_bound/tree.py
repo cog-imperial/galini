@@ -163,7 +163,7 @@ class BabTree:
             lower_bound_solution.status.is_success()
         )
         if has_lower_bound_solution:
-            new_lower_bound_candidate = lower_bound_solution.objective_value()
+            new_lower_bound_candidate = lower_bound_solution.best_objective_estimate()
         else:
             new_lower_bound_candidate = None
 
@@ -181,12 +181,12 @@ class BabTree:
         # If there are no open nodes, then the lower bound is the lowest
         # of the fathomed nodes lower bounds.
         if self.open_nodes:
-            new_lower_bound = self._open_nodes_lower_bound(new_upper_bound)
+            new_lower_bound = self._open_nodes_lower_bound(new_lower_bound_candidate)
             return self._set_new_state(
                 new_lower_bound, new_upper_bound, update_nodes_visited)
 
         if self.fathomed_nodes:
-            new_lower_bound = self._fathomed_nodes_lower_bound(new_upper_bound)
+            new_lower_bound = self._fathomed_nodes_lower_bound(new_lower_bound_candidate)
             return self._set_new_state(
                 new_lower_bound, new_upper_bound, update_nodes_visited)
 
@@ -219,13 +219,13 @@ class BabTree:
         self.state = \
             TreeState(new_lower_bound, new_upper_bound, new_nodes_visited)
 
-    def _open_nodes_lower_bound(self, upper_bound=None):
+    def _open_nodes_lower_bound(self, lower_bound=None):
         return self._nodes_minimum_lower_bound(
             self.open_nodes.values(),
-            upper_bound,
+            lower_bound,
         )
 
-    def _fathomed_nodes_lower_bound(self, upper_bound=None):
+    def _fathomed_nodes_lower_bound(self, lower_bound=None):
         def _has_solution(node):
             if node.has_solution:
                 return False
@@ -235,14 +235,14 @@ class BabTree:
         # Filter only nodes with a solution and remove infeasible nodes
         return self._nodes_minimum_lower_bound(
             [n for n in self.fathomed_nodes if _has_solution(n)],
-            upper_bound,
+            lower_bound,
         )
 
-    def _nodes_minimum_lower_bound(self, nodes, upper_bound=None):
-        if upper_bound is None:
-            new_lower_bound = self.state.upper_bound
+    def _nodes_minimum_lower_bound(self, nodes, lower_bound=None):
+        if lower_bound is None:
+            new_lower_bound = self.state.lower_bound
         else:
-            new_lower_bound = upper_bound
+            new_lower_bound = lower_bound
 
         for node in nodes:
             if node.has_solution:

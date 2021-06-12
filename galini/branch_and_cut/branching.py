@@ -80,7 +80,7 @@ def compute_branching_decision(model, linear_model, root_bounds, mip_solution, w
         if branching_variable is None:
             return None
     linear_branching_variable = \
-        linear_model.find_component(branching_variable.getname(fully_qualified=True))
+        linear_model.find_component(branching_variable)
     point = compute_branching_point(linear_branching_variable, mip_solution, lambda_, mc)
     return BranchingDecision(variable=branching_variable, point=point)
 
@@ -135,7 +135,7 @@ def compute_branching_variable(problem, linear_problem, mip_solution,
     if branching_var is None:
         return None
 
-    return problem.find_component(branching_var.getname(fully_qualified=True))
+    return problem.find_component(branching_var)
 
 
 def compute_nonlinear_infeasiblity_components(linear_problem, mip_solution):

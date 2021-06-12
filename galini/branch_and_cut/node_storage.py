@@ -22,6 +22,7 @@ from galini.branch_and_bound.branching import branch_at_point
 from galini.cuts.pool import CutNodeStorage, CutPool
 from galini.pyomo import safe_setlb, safe_setub
 from galini.relaxations.relax import RelaxationData
+import math
 
 
 class BranchingDecision:
@@ -90,6 +91,16 @@ class _NodeStorageBase:
             aux_var = relaxation.get_aux_var()
             rhs_expr = relaxation.get_rhs_expr()
             new_lb, new_ub = compute_bounds_on_expr(rhs_expr)
+            if new_lb is None:
+                new_lb = -math.inf
+            if new_ub is None:
+                new_ub = math.inf
+            new_lb = max(new_lb, self._bounds.get(aux_var, (-math.inf, math.inf))[0])
+            new_ub = min(new_ub, self._bounds.get(aux_var, (-math.inf, math.inf))[1])
+            if new_lb == -math.inf:
+                new_lb = None
+            if new_ub == math.inf:
+                new_ub = None
             safe_setlb(aux_var, new_lb)
             safe_setub(aux_var, new_ub)
 
