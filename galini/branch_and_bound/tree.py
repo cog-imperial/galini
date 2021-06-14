@@ -180,26 +180,17 @@ class BabTree:
         # of their lower bounds.
         # If there are no open nodes, then the lower bound is the lowest
         # of the fathomed nodes lower bounds.
-        if self.open_nodes:
-            new_lower_bound = self._open_nodes_lower_bound(new_lower_bound_candidate)
-            return self._set_new_state(
-                new_lower_bound, new_upper_bound, update_nodes_visited)
-
-        if self.fathomed_nodes:
-            new_lower_bound = self._fathomed_nodes_lower_bound(new_lower_bound_candidate)
-            return self._set_new_state(
-                new_lower_bound, new_upper_bound, update_nodes_visited)
+        if self.open_nodes or self.fathomed_nodes:
+            new_lower_bound = min(self._open_nodes_lower_bound(new_lower_bound_candidate),
+                                  self._fathomed_nodes_lower_bound(new_lower_bound_candidate))
+            return self._set_new_state(new_lower_bound, new_upper_bound, update_nodes_visited)
 
         return self._set_new_state(None, new_upper_bound, update_nodes_visited)
 
     def _update_lower_bound(self, update_nodes_visited=True):
-        if self.open_nodes:
-            new_lower_bound = self._open_nodes_lower_bound()
-            return self._set_new_state(
-                new_lower_bound, None, update_nodes_visited)
-
-        if self.fathomed_nodes:
-            new_lower_bound = self._fathomed_nodes_lower_bound()
+        if self.open_nodes or self.fathomed_nodes:
+            new_lower_bound = min(self._open_nodes_lower_bound(),
+                                  self._fathomed_nodes_lower_bound())
             return self._set_new_state(
                 new_lower_bound, None, update_nodes_visited)
 
@@ -227,7 +218,7 @@ class BabTree:
 
     def _fathomed_nodes_lower_bound(self, lower_bound=None):
         def _has_solution(node):
-            if node.has_solution:
+            if not node.has_solution:
                 return False
             solution = node.state.lower_bound_solution
             return solution and solution.status.is_success()
@@ -251,5 +242,5 @@ class BabTree:
                 lower_bound = node.parent.lower_bound
 
             if lower_bound < new_lower_bound:
-                new_lower_bound = node.parent.lower_bound
+                new_lower_bound = lower_bound
         return new_lower_bound
