@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use GALINI in your research, we kindly ask you to reference this repository."
+title: GALINI
+authors:
+  - family-names: Ceccon
+    given-names: Francesco
+  - family-names: Radu
+    given-names: Baltean-Lugojan
+  - family-names: Bynum
+    given-names: Michael
+preferred-citation:
+  type: paper
+  title: "GALINI: An extensible mixed-integer quadratically-constrained optimization solver"
+  year: 2020
+  url: "http://www.optimization-online.org/DB_HTML/2021/01/8207.html"
+  journal: "Optimization Online"
+  authors:
+    - family-names: Ceccon
+      given-names: Francesco
+    - family-names: Radu
+      given-names: Baltean-Lugojan
+    - family-names: Bynum
+      given-names: Michael
+    - family-names: Chun
+      given-names: Li
+    - family-names: Misener
+      given-names: Ruth
