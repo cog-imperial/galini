@@ -5,3 +5,6 @@ numpy>=1.15.0
 coramin==0.1.1
 mkdocs
 mkdocstrings
+pytest
+pytest-cov
+pytest-benchmark
