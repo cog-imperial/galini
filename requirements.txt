@@ -8,3 +8,4 @@ mkdocstrings
 pytest
 pytest-cov
 pytest-benchmark
+protobuf==3.20
