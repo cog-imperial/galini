@@ -30,6 +30,8 @@ def load_solution_from_model(results, model, solver=None):
     termination_condition = results.solver.termination_condition
     status = PyomoStatus(termination_condition)
     if status.is_success():
+        if len(results.solution) > 0:
+            model.solutions.load_from(results)
         if hasattr(model, '_objective'):
             objective = model._objective
         else:
