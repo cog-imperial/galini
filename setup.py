@@ -165,7 +165,7 @@ setup(
     },
     include_package_data=True,
     install_requires=[
-        'pyomo>=5.6.7',
+        'pyomo>=6',
         'cog-suspect>=2.1.2',
         'numpy>=1.15',
         'toml',
@@ -175,7 +175,7 @@ setup(
         'protobuf>=3.0',
         'h5py>=2.0',
         'networkx>=2.4',
-        'coramin>=0.1.0',
+        'coramin==0.1.1',
         'scipy>=1.5.2',
     ],
     setup_requires=['pytest-runner'],
