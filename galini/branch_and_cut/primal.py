@@ -18,7 +18,7 @@ from galini.math import is_inf
 from galini.pyomo import safe_setub, safe_setlb
 from galini.solvers.solution import load_solution_from_model
 from galini.branch_and_bound.node import NodeSolution
-from pyutilib.common import ApplicationError
+from pyomo.common.errors import ApplicationError
 
 
 class InitialPrimalSearchStrategy:
@@ -224,10 +224,10 @@ def _compute_variable_starting_point_as_float(var, mc, value):
         return value
     # If var has both bounds, use midpoint
     lb = var.lb
-    if is_inf(lb, mc):
+    if lb is not None and is_inf(lb, mc):
         lb = None
     ub = var.ub
-    if is_inf(ub, mc):
+    if ub is not None and is_inf(ub, mc):
         ub = None
     if lb is not None and ub is not None:
         return lb + 0.5 * (ub - lb)

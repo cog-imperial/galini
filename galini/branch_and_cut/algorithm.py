@@ -363,7 +363,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
         # Solve MILP to obtain MILP solution
         self._update_solver_options(self._mip_solver)
         with self._telemetry.timespan('branch_and_cut.solve_mip'):
-            mip_results = self._mip_solver.solve(linear_model)
+            mip_results = self._mip_solver.solve(linear_model, load_solutions=False)
             mip_solution = load_solution_from_model(mip_results, linear_model, solver=self._mip_solver)
 
         self.logger.info(
@@ -581,7 +581,7 @@ class BranchAndCutAlgorithm(BranchAndBoundAlgorithm):
             num_violated_cuts = 0
 
             self._update_solver_options(self._mip_solver)
-            results = self._mip_solver.solve(linear_model)
+            results = self._mip_solver.solve(linear_model, load_solutions=False)
             lp_solution = load_solution_from_model(results, linear_model, solver=self._mip_solver)
 
             if not lp_solution.status.is_success():

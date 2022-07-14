@@ -1,5 +1,11 @@
+pyomo>=6
+cog-suspect>=2.1.3
 setuptools>=40.0.0
 numpy>=1.15.0
-coramin
+coramin==0.1.1
 mkdocs
 mkdocstrings
+pytest
+pytest-cov
+pytest-benchmark
+protobuf==3.20
